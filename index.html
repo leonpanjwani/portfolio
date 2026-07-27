@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  LEON PANJWANI — ENGINEERING PORTFOLIO
+  ----------------------------------------------------------------------------
+  TITLE PAGE   a blueprint drawing sheet: frame, ruler ticks, and an info block
+               flush in the bottom-right corner, all on an 11px grid.
+
+  ON LOAD      the name is sketched in on two left-aligned lines.
+
+  ON SCROLL    the sheet ROLLS UP like a scroll, bottom to top. The roll rides
+               exactly on the top edge of the white page coming up underneath,
+               so the paper leaving and the work section arriving are the same
+               movement. Meanwhile the name docks top-left and the info block
+               rises and flattens into the top-right menu.
+
+  PIXEL GRID   one continuous 11px grid runs behind BOTH the blueprint and the
+               white page (same anchor, so it never breaks at the join).
+
+  EDIT POINTS  NAME · CELLS · GRID · PHASE · ROLL   (top of the <script>)
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leon Panjwani — Engineering Portfolio</title>
+<meta name="description" content="Leon Panjwani — third-year MEng General Engineering student at the University of Sheffield, specialising in mechanical. Biomimetic AUVs, Energy-from-Waste plant design, and independent prototyping." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+/* ==========================================================================
+   1. PALETTE + GRID CONSTANTS
+   ========================================================================== */
+:root{
+  --blue:#3057E1; --blue-lt:#4A6DE5; --pale:#CED8F7; --navy:#002082;
+  --black:#333333; --white:#ffffff;   /* soft black: all dark text + the cursor */
+  --u:11px;              /* one pixel/grid cell */
+  --frame:31px;          /* +2px border ⇒ inner edge lands on 33px */
+  --maxw:1180px;
+  --display:"Chakra Petch","Helvetica Neue",Arial,sans-serif;
+  --mono:"Share Tech Mono",ui-monospace,Menlo,monospace;
+  --body:"Inter","Helvetica Neue",Arial,sans-serif;
+
+  /* Ink-on-worn-paper: streaky turbulence used as a MASK, so the ink is mostly
+     solid but thins out in patches — the look of something printed onto stock
+     that has been handled. Applied to the name, the info block and the cue. */
+  --print-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='p' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.04 0.9' numOctaves='4' seed='5' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.85 0 0 0 0.44'/></filter><rect width='300' height='300' filter='url(%23p)'/></svg>");
+}
+.printed{-webkit-mask-image:var(--print-mask); mask-image:var(--print-mask);
+  -webkit-mask-size:300px 300px;  mask-size:300px 300px;
+  -webkit-mask-repeat:repeat;     mask-repeat:repeat}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);background:var(--white);color:var(--black);
+  line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;text-wrap:pretty}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--blue);color:#fff}
+/* Width and left edge are set by JS in whole 11px cells, so both edges of every
+   section — and every box inside — land on a grid line. */
+.wrap{width:var(--wrapW,1100px);margin-left:var(--wrapL,32px);max-width:none;padding:0}
+
+/* ---- CURSOR AS GRID CELLS ----
+   The OS pointer is hidden and replaced by a cross of five 11px cells snapped
+   to the grid, so it reads as background cells lighting up. It sits ABOVE the
+   content (z-index 60) so the cards never swallow it — being visually part of
+   the grid is about the snapping and the block shape, not the stacking order.
+   Solid white over the blueprint, solid black over the white page. ---- */
+*{cursor:none}
+/* Each tile is 9px but the spacing stays at the 11px grid pitch, leaving a 2px
+   gap between tiles — so it reads as five separate cells, not one solid cross. */
+#cursor{position:fixed;left:0;top:0;width:9px;height:9px;z-index:60;
+  pointer-events:none;will-change:transform;
+  background:var(--cc,#fff);
+  box-shadow:-11px 0 0 var(--cc,#fff), 11px 0 0 var(--cc,#fff),
+              0 -11px 0 var(--cc,#fff), 0 11px 0 var(--cc,#fff);
+  transition:opacity .2s ease}
+
+/* ==========================================================================
+   2. THE ONE GRID
+   Fine (11px) and bold (55px) lines live in a SINGLE gradient per axis, so
+   they can never drift apart. Two separate layers is what produced the
+   "two grids slightly offset" look. Anchored to the frame's inner
+   bottom-right corner, which is also what the info block is anchored to.
+   ========================================================================== */
+#sheet{position:fixed;inset:0;z-index:0;pointer-events:none;background:var(--blue);
+  will-change:clip-path}
+#sheet .grid{position:absolute;inset:0;
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(206,216,247,.34) 0 1px, transparent 1px 11px,
+      rgba(206,216,247,.15) 11px 12px, transparent 12px 22px,
+      rgba(206,216,247,.15) 22px 23px, transparent 23px 33px,
+      rgba(206,216,247,.15) 33px 34px, transparent 34px 44px,
+      rgba(206,216,247,.15) 44px 45px, transparent 45px 55px),
+    repeating-linear-gradient(0deg,
+      rgba(206,216,247,.34) 0 1px, transparent 1px 11px,
+      rgba(206,216,247,.15) 11px 12px, transparent 12px 22px,
+      rgba(206,216,247,.15) 22px 23px, transparent 23px 33px,
+      rgba(206,216,247,.15) 33px 34px, transparent 34px 44px,
+      rgba(206,216,247,.15) 44px 45px, transparent 45px 55px);
+  background-size:55px 55px,55px 55px;
+  /* Anchored to the frame's inner TOP-LEFT corner. JS sizes the drawing area to
+     a whole number of squares and centres it, so ALL FOUR inner edges of the
+     white border land on grid lines — not just the two nearest the anchor. */
+  background-position:left var(--fx,33px) top var(--fy,33px)}
+/* ---- WEAR & TEAR ----
+   Scuffs and creases from a print that's been handled. Two turbulence fields
+   (long streaky wisps + finer blotches) plus a few drawn scratches, screened
+   over the blue so they lighten it like rubbed emulsion. Dial the opacity to
+   taste, or delete this element and its div to go back to a clean sheet. */
+#sheet .wear{position:absolute;inset:0;opacity:.38;mix-blend-mode:screen;
+  background-size:900px 650px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='650'><filter id='s' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.003 0.07' numOctaves='4' seed='11' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.4 0 0 0 -0.66'/></filter><filter id='b' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.011' numOctaves='3' seed='3' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.1 0 0 0 -0.74'/></filter><rect width='900' height='650' filter='url(%23s)' opacity='.5'/><rect width='900' height='650' filter='url(%23b)' opacity='.35'/><g stroke='white' fill='none' stroke-linecap='round' opacity='.2'><path d='M60 120 C180 96 300 150 420 118' stroke-width='1.2'/><path d='M520 380 C610 350 700 402 842 366' stroke-width='1'/><path d='M120 520 C210 486 300 542 380 500' stroke-width='.9'/><path d='M700 90 C762 140 782 200 812 252' stroke-width='.8'/><path d='M250 300 C300 330 340 300 400 322' stroke-width='.7'/></g></svg>")}
+#sheet .noise{position:absolute;inset:0;opacity:.22;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.55'/></svg>")}
+/* border drawn 2px INSIDE, so the element sits at (inset − 2) and its inner
+   edge lands exactly on --fx / --fy */
+#sheet .frame{position:absolute;border:2px solid var(--white);
+  left:calc(var(--fx,33px) - 2px);  right:calc(var(--fx,33px) - 2px);
+  top:calc(var(--fy,33px) - 2px);   bottom:calc(var(--fy,33px) - 2px)}
+
+/* ---- CORNER PAGE CURL ----
+   A real fold, not an overlay. Inside an L×L box at each corner, the diagonal
+   is the CREASE. It splits the box in two:
+     .hole — the corner side: the paper has lifted away, so you see the white
+             page underneath, shaded where the flap looms over it.
+     .flap — the inner side: the corner folded back on itself, so this is the
+             UNDERSIDE of the sheet (pale, not blue) with the tip pointing in.
+   Growing L peels the corner further. */
+#corners{position:fixed;inset:0;z-index:55;pointer-events:none}
+#corners .corner{position:absolute;width:0;height:0;pointer-events:none}
+#corners .corner .hole,#corners .corner .flap{position:absolute;inset:0}
+/* Four stacked shadows, widest first: a long soft one thrown well out across
+   the blueprint (this is what gives the lift its depth), then progressively
+   tighter ones down to a 1px line on the fold edge. */
+#corners .corner .flap{
+  filter:drop-shadow(calc(var(--sx,6px) * 6) calc(var(--sy,6px) * 6) 70px rgba(0,6,40,.5))
+         drop-shadow(calc(var(--sx,6px) * 3) calc(var(--sy,6px) * 3) 32px rgba(0,6,40,.6))
+         drop-shadow(var(--sx,6px) var(--sy,6px) 12px rgba(0,6,40,.55))
+         drop-shadow(0 0 1px rgba(0,6,40,.65))}
+
+#corners .corner.tl{top:0;left:0}
+#corners .corner.tr{top:0;right:0}
+#corners .corner.bl{bottom:0;left:0}
+#corners .corner.br{bottom:0;right:0}
+
+/* The flap is the BACK of the sheet: opaque white paper, no blue, nothing
+   showing through. Shading runs DARK AT THE SEAM (where it is still tucked
+   against the sheet and in its own shadow) to WHITE at the lifted tip, which
+   catches the light. The hole is the page underneath, darkest at the seam
+   where the flap overhangs it. Clip-paths are set by JS — the fold is not a
+   fixed 45°, so it can't be expressed in percentages here. */
+/* HOLE (the gap where the corner used to be): the flap overhangs the crease and
+   shades it, so it is DARKEST AT THE CREASE and lightens toward the screen
+   corner. Each gradient runs screen-corner → crease, light → dark. */
+/* FLAP = the reverse of the sheet, so it is BLUE — same stock as the roll,
+   which shows blue as it winds up. Dark at the seam (in its own shadow),
+   lightening toward the lifted tip that catches the light.
+   HOLE = the white page underneath, darkest at the seam where the flap
+   overhangs it, lightening toward the screen corner. */
+#corners .corner.tl{--sx:6px;--sy:6px}
+#corners .corner.tl .hole{background:linear-gradient(to bottom right,#ffffff 0%,#e9eaef 40%,#a5a8b4 100%)}
+#corners .corner.tl .flap{background:linear-gradient(to bottom right,#162c80 0%,#2F51C6 26%,#6E8CEE 64%,#AFC1F7 100%)}
+#corners .corner.tr{--sx:-6px;--sy:6px}
+#corners .corner.tr .hole{background:linear-gradient(to bottom left,#ffffff 0%,#e9eaef 40%,#a5a8b4 100%)}
+#corners .corner.tr .flap{background:linear-gradient(to bottom left,#162c80 0%,#2F51C6 26%,#6E8CEE 64%,#AFC1F7 100%)}
+#corners .corner.bl{--sx:6px;--sy:-6px}
+#corners .corner.bl .hole{background:linear-gradient(to top right,#ffffff 0%,#e9eaef 40%,#a5a8b4 100%)}
+#corners .corner.bl .flap{background:linear-gradient(to top right,#162c80 0%,#2F51C6 26%,#6E8CEE 64%,#AFC1F7 100%)}
+#corners .corner.br{--sx:-6px;--sy:-6px}
+#corners .corner.br .hole{background:linear-gradient(to top left,#ffffff 0%,#e9eaef 40%,#a5a8b4 100%)}
+#corners .corner.br .flap{background:linear-gradient(to top left,#162c80 0%,#2F51C6 26%,#6E8CEE 64%,#AFC1F7 100%)}
+
+/* ruler ticks — same anchor as the grid, so every tick meets a grid line */
+#sheet .tick{position:absolute;opacity:.9}
+#sheet .tick.t,#sheet .tick.b{left:0;right:0;height:var(--fy,33px);
+  background:
+    repeating-linear-gradient(90deg,var(--white) 0 1px,transparent 1px 11px) left var(--fx,33px) bottom 0/auto 7px repeat-x,
+    repeating-linear-gradient(90deg,var(--white) 0 1px,transparent 1px 55px) left var(--fx,33px) bottom 0/auto 15px repeat-x}
+#sheet .tick.t{top:0}
+#sheet .tick.b{bottom:0;transform:scaleY(-1)}
+#sheet .tick.l,#sheet .tick.r{top:0;bottom:0;width:var(--fx,33px);
+  background:
+    repeating-linear-gradient(0deg,var(--white) 0 1px,transparent 1px 11px) right 0 top var(--fy,33px)/7px auto repeat-y,
+    repeating-linear-gradient(0deg,var(--white) 0 1px,transparent 1px 55px) right 0 top var(--fy,33px)/15px auto repeat-y}
+#sheet .tick.l{left:0}
+#sheet .tick.r{right:0;transform:scaleX(-1)}
+
+/* The SAME grid, in ink, but SCROLLING WITH THE PAGE — anchored to the top of
+   the content. That's what lets the section boxes lock to it: every vertical
+   step below is a whole number of 11px cells, so box edges always land on a
+   line. (A fixed grid would slide under the boxes as you scroll.) */
+.content{
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(0,32,130,.10) 0 1px, transparent 1px 11px,
+      rgba(0,32,130,.045) 11px 12px, transparent 12px 22px,
+      rgba(0,32,130,.045) 22px 23px, transparent 23px 33px,
+      rgba(0,32,130,.045) 33px 34px, transparent 34px 44px,
+      rgba(0,32,130,.045) 44px 45px, transparent 45px 55px),
+    repeating-linear-gradient(0deg,
+      rgba(0,32,130,.10) 0 1px, transparent 1px 11px,
+      rgba(0,32,130,.045) 11px 12px, transparent 12px 22px,
+      rgba(0,32,130,.045) 22px 23px, transparent 23px 33px,
+      rgba(0,32,130,.045) 33px 34px, transparent 34px 44px,
+      rgba(0,32,130,.045) 44px 45px, transparent 45px 55px);
+  background-size:55px 55px,55px 55px;
+  /* Anchored to the CONTENT's own left edge, not to the viewport's right. The
+     right edge can be a fractional number of pixels on scaled displays, and
+     that fraction was what kept the boxes off the lines. --wrapL is a whole
+     number of squares from x=0, so the bold lines and the box edges coincide. */
+  background-position:var(--wrapL,55px) 0}
+
+/* ==========================================================================
+   3. THE ROLL
+   Sits on the top edge of the incoming white page. The sheet above it is
+   clipped away, so the paper appears to wind onto the tube as it travels up.
+   ========================================================================== */
+#roll{position:fixed;left:0;right:0;top:0;z-index:30;pointer-events:none;
+  opacity:0;will-change:transform}
+/* paper curving away into the roll — a contact shadow ABOVE the tube */
+#roll .shade{position:absolute;left:0;right:0;bottom:0;height:78px;
+  background:linear-gradient(180deg,rgba(0,10,60,0) 0%,rgba(0,10,60,.10) 55%,rgba(0,10,60,.42) 100%)}
+/* The rolled cylinder. Three things stop it reading as a rod:
+   1. wound-layer streaks at irregular intervals (the spiral of paper),
+   2. a wavy mask so neither edge is a straight line,
+   3. uneven corner radii.
+   NO drop shadow beneath — the only shadow is .shade, up on the blueprint. */
+/* top:-2px and a FLAT top edge on the mask. A wavy top edge cut into the tube
+   and exposed the white page behind it — that was the white bar. Only the
+   underside waves now, and the tube overlaps the sheet by 2px so no rounding
+   gap can open up. */
+#roll .tube{position:absolute;left:0;right:0;top:-2px;
+  border-radius:0 0 8px 10px / 0 0 10px 8px;
+  background:
+    repeating-linear-gradient(179.4deg,
+      rgba(255,255,255,.13) 0 1px, transparent 1px 6px,
+      rgba(0,0,60,.13)      6px 7px, transparent 7px 15px,
+      rgba(255,255,255,.08) 15px 16px, transparent 16px 23px,
+      rgba(0,0,60,.09)      23px 24px, transparent 24px 34px),
+    linear-gradient(180deg,
+      rgba(0,4,40,.75) 0 1px,
+      #24409f 1px,
+      #3B5FDB 14%,
+      #6E8CEE 30%,
+      #A8BCF6 41%,
+      #6E8CEE 54%,
+      #3B5FDB 70%,
+      #1B3390 86%,
+      rgba(0,4,40,.85) 100%);
+  /* gentle undulation only — amplitude 5 of 100, two long segments. Anything
+     more and the roll reads as crumpled rather than rolled. */
+  -webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='100' preserveAspectRatio='none'><path d='M0,0 L240,0 L240,96 C170,99 100,94 40,97 C27,98 13,97 0,96 Z' fill='white'/></svg>");
+          mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='100' preserveAspectRatio='none'><path d='M0,0 L240,0 L240,96 C170,99 100,94 40,97 C27,98 13,97 0,96 Z' fill='white'/></svg>");
+  -webkit-mask-size:240px 100%; mask-size:240px 100%;
+  -webkit-mask-repeat:repeat-x; mask-repeat:repeat-x}
+/* darker ends, so it reads as a cylinder rather than a flat bar */
+#roll .tube::before,#roll .tube::after{content:"";position:absolute;top:0;bottom:0;width:46px}
+#roll .tube::before{left:0;background:linear-gradient(90deg,rgba(0,6,45,.5),transparent)}
+#roll .tube::after{right:0;background:linear-gradient(270deg,rgba(0,6,45,.5),transparent)}
+
+/* ==========================================================================
+   4. FIXED LAYER — name + info cells (become the header)
+   ========================================================================== */
+#layer{position:fixed;inset:0;z-index:50;pointer-events:none}
+#headbar{position:absolute;top:0;left:0;right:0;background:var(--white);
+  border-bottom:1px solid rgba(0,32,130,.16);opacity:0}
+
+#name{position:absolute;font-family:var(--display);font-weight:700;
+  line-height:.86;letter-spacing:.005em;white-space:nowrap;
+  transform-origin:top left;will-change:transform;filter:url(#rough);pointer-events:auto}
+/* ---- PENCIL SKETCH, LEFT TO RIGHT ----
+   One hard-edged mask sweeps across the whole word, so the stroke travels
+   continuously left→right instead of each letter popping in on its own timer.
+   steps() makes the leading edge advance in scratchy bites, and the slight
+   slant (100deg) is the angle a pencil crosses a letter at. */
+#name .word{position:absolute;top:0;left:0;display:flex;will-change:transform;
+  -webkit-mask-image:linear-gradient(100deg,#000 50%,transparent 50%);
+          mask-image:linear-gradient(100deg,#000 50%,transparent 50%);
+  -webkit-mask-size:200% 100%;      mask-size:200% 100%;
+  -webkit-mask-repeat:no-repeat;    mask-repeat:no-repeat;
+  -webkit-mask-position:100% 0;     mask-position:100% 0}
+#name .word.drawn{animation:draw .5s steps(15,end) forwards}
+@keyframes draw{
+  from{-webkit-mask-position:100% 0; mask-position:100% 0}
+  to  {-webkit-mask-position:0% 0;   mask-position:0% 0}
+}
+/* ---- PENCIL SKETCH ----
+   Two things sell "drawn" rather than "faded in":
+   1. the reveal is an ANGLED band sweeping across the glyph in hard steps, the
+      way a pencil crosses a letter — not a straight horizontal wipe;
+   2. .ltr::before is an overdrawn ghost stroke, offset and rotated a touch,
+      which fades to a faint remnant — the doubled line you get when sketching
+      quickly and not quite retracing your own mark. */
+/* Outline type — same family as every heading, drawn as a stroke with no fill.
+   --sw is set per frame so the stroke's ON-SCREEN weight stays constant as the
+   name scales down into the header. */
+.ltr{position:relative;display:inline-block;color:transparent;
+  -webkit-text-stroke:var(--sw,2.5px) var(--ink,#ffffff);
+  paint-order:stroke fill}
+
+/* same left edge, size and weight as the info-box text bottom-right */
+#cue{position:absolute;font-family:var(--display);font-weight:700;font-size:.78rem;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--white);opacity:0;
+  display:flex;align-items:center;                /* centred in the same band */
+  transition:opacity .5s ease 1.1s;text-shadow:0 1px 3px rgba(0,8,50,.35)}
+#cue.on{opacity:1}
+
+/* The info block is PRINTED ON THE SHEET — it lives inside #sheet, so it just
+   sits in the bottom-right corner and gets rolled away with the paper. It no
+   longer travels or turns into the menu. */
+.cell{position:absolute;top:0;left:0;pointer-events:auto;overflow:hidden;
+  padding:0 10px;display:flex;flex-direction:column;justify-content:center;
+  border:1px solid rgba(206,216,247,.85);opacity:0;transition:opacity .4s ease}
+.cell.on{opacity:1}
+
+/* the menu is separate, and simply fades in as you scroll */
+#menu{position:absolute;display:flex;align-items:center;opacity:0;
+  pointer-events:none;font-family:var(--display);font-weight:700;font-size:.92rem;
+  letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
+#menu a{color:var(--ink,#fff);transition:color .15s ease}
+#menu a:hover{color:#FF6347}
+.cell .info{font-family:var(--display);font-weight:700;font-size:.78rem;
+  letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ck,#fff);white-space:nowrap;line-height:1.5}
+/* Hover = the text turns grey. No box, no background. */
+.cell .info a{border-bottom:1px solid currentColor;transition:color .15s ease}
+.cell .info a:hover{color:#FF6347}
+@media(max-width:820px){
+  .cell{padding:0 7px}
+  .cell .info{font-size:.56rem;white-space:normal;line-height:1.32;letter-spacing:.02em}
+  #menu{font-size:.62rem;letter-spacing:.05em}
+}
+
+/* ==========================================================================
+   5. STAGE + CONTENT
+   ========================================================================== */
+#stage{height:150vh}
+/* NOTE: no `background:` shorthand here — it would reset the background-image
+   set above and wipe the pixel grid. Only set the properties we mean to. */
+.content{position:relative;z-index:10;margin-top:-22vh;background-color:transparent;padding-top:110px}
+/* Everything steps in whole SQUARES (55px = 5 cells). The heading block is
+   exactly one square tall with its text centred inside it, so headings sit on
+   the middle line of a grid row. */
+section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
+.sec-head{display:flex;align-items:center;gap:11px;height:55px;margin-bottom:55px}
+.sec-head .num{font-family:var(--mono);font-size:.76rem;color:var(--blue)}
+.sec-head h2{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,4vw,2.4rem);
+  text-transform:uppercase;color:var(--navy)}
+
+.plates{display:grid;grid-template-columns:repeat(var(--cols,3),var(--cardW,330px));gap:55px}
+.plate{border:1px solid rgba(0,32,130,.18);background:var(--white);transition:border-color .2s,box-shadow .2s}
+.plate:hover{border-color:var(--blue);box-shadow:0 10px 30px rgba(48,87,225,.10)}
+/* whole-cell height, not aspect-ratio — 4/3 of a card width is fractional */
+.plate-img{position:relative;height:var(--imgH,264px);border-bottom:1px solid rgba(0,32,130,.18);
+  overflow:hidden;display:flex;align-items:center;justify-content:center;background:#F4F7FE}
+.plate-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.plate-img .ph{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;color:var(--blue);
+  text-align:center;padding:16px}
+.plate-body{padding:22px;background:var(--white)}
+.plate-no{font-family:var(--mono);font-size:.7rem;color:var(--blue);letter-spacing:.14em}
+.plate h3{font-family:var(--display);font-weight:700;font-size:1.28rem;margin:7px 0 5px;
+  line-height:1.15;color:var(--navy);text-wrap:balance}
+.plate .tags{font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;color:var(--navy);margin-bottom:14px}
+.beat{display:grid;grid-template-columns:84px 1fr;gap:12px;padding:10px 0;border-top:1px solid rgba(0,32,130,.14)}
+.beat .k{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--blue)}
+.beat .v{font-size:.92rem}
+.plate-links{margin-top:14px;display:flex;gap:16px;flex-wrap:wrap}
+.plate-links a{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--blue);border-bottom:1px solid rgba(0,32,130,.2);padding-bottom:3px;transition:.2s}
+.plate-links a:hover{color:#FF6347;border-color:#FF6347}
+@media(max-width:520px){.beat{grid-template-columns:1fr;gap:2px}}
+
+/* identical geometry to .plates — three groups, three cards, same columns and
+   gutters, so the row lines up with the work row and is centred by definition */
+.skills{display:grid;grid-template-columns:repeat(var(--cols,3),var(--cardW,330px));gap:55px}
+.skill{padding:22px;border:1px solid rgba(0,32,130,.18);background:var(--white)}
+.skill h3{font-family:var(--display);font-weight:700;font-size:.95rem;margin-bottom:10px;
+  text-transform:uppercase;color:var(--navy)}
+.skill ul{list-style:none}
+.skill li{font-size:.9rem;color:rgba(51,51,51,.78);padding:3px 0}
+
+/* capped to two card columns + a gutter, so the text block's right edge lands
+   on the same line as the second card above it */
+.about-big{font-family:var(--display);font-weight:600;font-size:clamp(1.3rem,3vw,2rem);
+  line-height:1.32;color:var(--navy);text-wrap:balance;
+  max-width:calc(var(--cardW,330px) * 2 + 55px)}
+.about-body{color:rgba(51,51,51,.80);margin-top:22px;font-size:1.04rem;
+  max-width:calc(var(--cardW,330px) * 2 + 55px)}
+.about-body b{color:var(--black)}
+
+.contact h2.big{font-family:var(--display);font-weight:700;font-size:clamp(2.2rem,8vw,5rem);
+  line-height:1;text-transform:uppercase;color:var(--navy)}
+.email{display:flex;width:fit-content;align-items:center;gap:12px;margin-top:22px;
+  font-family:var(--display);font-size:clamp(1.05rem,3vw,1.6rem);
+  border-bottom:2px solid rgba(0,32,130,.2);padding-bottom:6px;transition:.2s}
+.email:hover{border-color:#FF6347;color:#FF6347}
+.email span{color:var(--blue)}
+/* one square tall, one square of clearance above — sits on the grid like the
+   boxes, and shares the text block's left edge */
+.btn{display:inline-flex;align-items:center;height:55px;padding:0 22px;margin-top:55px;
+  font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
+  border:1px solid var(--black);background:var(--white);transition:.2s}
+.btn:hover{background:#FF6347;border-color:#FF6347;color:#fff}
+
+footer{padding:22px 0;display:flex;
+  justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--mono);
+  font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(51,51,51,.62)}
+
+.rv{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+  .rv{opacity:1!important;transform:none!important}
+  html{scroll-behavior:auto}
+  .ltr{opacity:1!important;clip-path:none!important;animation:none!important}
+}
+</style>
+</head>
+
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="rough" x="-6%" y="-6%" width="112%" height="112%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="3" seed="9" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="1.1" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div id="cursor"></div>
+
+<div id="sheet">
+  <div class="grid"></div><div class="wear"></div><div class="noise"></div>
+  <div class="tick t"></div><div class="tick b"></div>
+  <div class="tick l"></div><div class="tick r"></div>
+  <div class="frame"></div>
+  <!-- printed on the sheet, so both roll away with it -->
+  <div id="cue" class="printed">Scroll ↓</div>
+</div>
+
+<!-- The folds live ABOVE the info block and the name: those are printed ON the
+     sheet, so lifting a corner has to carry them out of sight, not sit under
+     them. -->
+<div id="corners">
+  <div class="corner tl"><div class="hole"></div><div class="flap"></div></div>
+  <div class="corner tr"><div class="hole"></div><div class="flap"></div></div>
+  <div class="corner bl"><div class="hole"></div><div class="flap"></div></div>
+  <div class="corner br"><div class="hole"></div><div class="flap"></div></div>
+</div>
+
+<div id="roll"><div class="shade"></div><div class="tube"></div></div>
+
+<div id="layer">
+  <div id="headbar"></div>
+  <div id="name" aria-label="Leon Panjwani"></div>
+  <nav id="menu">
+    <a href="#work">Work</a><a href="#skills">Skills</a>
+    <a href="#about">About</a><a href="#contact">Contact</a>
+  </nav>
+</div>
+
+<div id="stage"></div>
+
+<div class="content" id="content">
+
+  <!-- ⚠️ PLACEHOLDER PROJECTS — send me your real ones and I'll swap them in. -->
+  <section id="work">
+    <div class="wrap">
+      <div class="sec-head rv"><span class="num">01</span><h2>Work</h2></div>
+      <div class="plates">
+
+        <article class="plate rv">
+          <div class="plate-img">
+            <img src="img/auv.jpg" alt="Biomimetic AUV" onerror="this.remove()" />
+            <div class="ph">[ PLATE 01 — ADD img/auv.jpg ]</div>
+          </div>
+          <div class="plate-body">
+            <div class="plate-no">PLATE 01</div>
+            <h3>Biomimetic AUV — design &amp;&nbsp;build</h3>
+            <div class="tags">MECHATRONICS · TEAM PROJECT · FUSION&nbsp;360</div>
+            <div class="beat"><div class="k">Problem</div><div class="v">Build a working submersible that propels itself the way aquatic animals do, rather than with a conventional&nbsp;propeller.</div></div>
+            <div class="beat"><div class="k">Approach</div><div class="v">Co-designed and constructed the vehicle, then used computational analysis to validate the propulsion and structure before&nbsp;manufacture.</div></div>
+            <div class="beat"><div class="k">Outcome</div><div class="v">A fully functional submersible, documented to full-detail manufacturing drawings costed for theoretical mass&nbsp;production.</div></div>
+            <div class="plate-links"><a href="#">Report ↗</a><a href="#">Photos ↗</a></div>
+          </div>
+        </article>
+
+        <article class="plate rv">
+          <div class="plate-img">
+            <img src="img/helmet.jpg" alt="Inflatable helmet prototype" onerror="this.remove()" />
+            <div class="ph">[ PLATE 02 — ADD img/helmet.jpg ]</div>
+          </div>
+          <div class="plate-body">
+            <div class="plate-no">PLATE 02</div>
+            <h3>Pocket-sized inflatable&nbsp;helmet</h3>
+            <div class="tags">INDEPENDENT R&amp;D · PROTOTYPING ·&nbsp;MATERIALS</div>
+            <div class="beat"><div class="k">Problem</div><div class="v">Cyclists skip helmets because they are awkward to carry. Could one inflate to full size and pack down to pocket&nbsp;size?</div></div>
+            <div class="beat"><div class="k">Approach</div><div class="v">Self-directed: researched collapsing structures and the market to set the requirements, then fabricated prototypes in TPU-laminated nylon, testing thermal bonding, airtight sealing and pressure&nbsp;retention.</div></div>
+            <div class="beat"><div class="k">Outcome</div><div class="v">Successive working prototypes, each narrowing down the bonding method that best held&nbsp;pressure.</div></div>
+            <div class="plate-links"><a href="#">Write-up ↗</a></div>
+          </div>
+        </article>
+
+        <article class="plate rv">
+          <div class="plate-img">
+            <img src="img/efw.jpg" alt="Energy-from-Waste facility design" onerror="this.remove()" />
+            <div class="ph">[ PLATE 03 — ADD img/efw.jpg ]</div>
+          </div>
+          <div class="plate-body">
+            <div class="plate-no">PLATE 03</div>
+            <h3>Energy-from-Waste facility&nbsp;design</h3>
+            <div class="tags">PROCESS DESIGN · THERMOFLUIDS · TEAM&nbsp;PROJECT</div>
+            <div class="beat"><div class="k">Problem</div><div class="v">Design a large-scale Energy-from-Waste plant end to end, from waste arriving on site to energy leaving&nbsp;it.</div></div>
+            <div class="beat"><div class="k">Approach</div><div class="v">Engineered the mechanical and process flow across waste sorting, incineration and energy recovery, then tested the design against financial and feasibility&nbsp;analysis.</div></div>
+            <div class="beat"><div class="k">Outcome</div><div class="v">Delivered as a formal tender proposal and defended in&nbsp;presentation.</div></div>
+            <div class="plate-links"><a href="#">Tender PDF ↗</a></div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="skills">
+    <div class="wrap">
+      <div class="sec-head rv"><span class="num">02</span><h2>Skills &amp;&nbsp;tools</h2></div>
+      <div class="skills rv">
+        <div class="skill"><h3>Software &amp; CAD</h3>
+          <ul><li>Fusion 360</li><li>MATLAB</li><li>ANSYS</li></ul></div>
+        <div class="skill"><h3>Practical &amp; workshop</h3>
+          <ul><li>3D printing</li><li>Soldering</li><li>Machining</li></ul></div>
+        <div class="skill"><h3>Engineering methods</h3>
+          <ul><li>Thermal &amp; fluid modelling</li><li>Prototyping</li><li>Technical pitching &amp; documentation</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about">
+    <div class="wrap">
+      <div class="sec-head rv"><span class="num">03</span><h2>About</h2></div>
+      <p class="about-big rv">I like the breadth of general engineering — CAD one week, a thermal model the&nbsp;next.</p>
+      <p class="about-body rv">Third-year <b>MEng General Engineering</b> student at the University of Sheffield,
+        specialising in mechanical and on track for <b>First-Class Honours</b> (76% second-year average;
+        Thermal &amp; Fluids 87%, Materials 81%, Electromechanical 79%). My work runs from Energy-from-Waste
+        facilities to biomimetic AUVs, and I take independent projects as far as physical prototypes.</p>
+      <p class="about-body rv">Two team-challenge <b>Distinctions</b>: <b>Engineering You're Hired</b> (2026), where I
+        led the team that designed and pitched a self-sufficient life-support solution for Mars mission
+        expansion — voted most effective solution and presentation — and the <b>Global Engineering
+        Challenge</b> (2025) for a sustainable rural transport scheme in South Africa. Looking for a
+        summer 2027 internship where I can contribute to real&nbsp;hardware.</p>
+      <a class="btn rv" href="cv.pdf" download>Download CV</a>
+    </div>
+  </section>
+
+  <section id="contact" class="contact">
+    <div class="wrap">
+      <div class="sec-head rv"><span class="num">04</span><h2>Contact</h2></div>
+      <h2 class="big rv">Let's build<br>something.</h2>
+      <a class="email rv" href="mailto:hello@leonpanjwani.com"><span>→</span> hello@leonpanjwani.com</a>
+      <a class="email rv" href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener"><span>→</span> linkedin.com/in/leonpanjwani</a>
+    </div>
+  </section>
+
+  <footer class="wrap">
+    <span>© <span id="year"></span> Leon&nbsp;Panjwani</span>
+    <span>London /&nbsp;Sheffield</span>
+    <span><a href="https://linkedin.com/in/leonpanjwani">LinkedIn</a></span>
+  </footer>
+
+</div>
+
+<script>
+/* ==========================================================================
+   EDIT ZONE
+   ========================================================================== */
+const NAME = ["LEON","PANJWANI."];       // 2 lines on the title page, 1 docked
+
+const CELLS = [
+  {slot:"L1", info:"University of Sheffield",              nav:"Work",    href:"#work"},
+  {slot:"L2", info:"MEng General Engineering (Mech)",      nav:"Skills",  href:"#skills"},
+  {slot:"L3", info:"Sheffield / London",                   nav:"About",   href:"#about"},
+  {slot:"R",  info:`hello@leonpanjwani.com<br><a href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener">linkedin.com/in/leonpanjwani</a>`,
+              nav:"Contact", href:"#contact"}
+];
+
+const GRID = { unit:11, inset:33, leftCells:24, rightCells:25, rowCells:4 };
+
+/* Fractions of the roll's travel. The info block no longer moves — it is
+   printed on the sheet and rolls away with it — so all that's left is the name
+   docking and the menu fading in. */
+const PHASE = { nameFrom:0.01, nameTo:0.26, menuFrom:0.10, menuTo:0.38 };
+
+/* Tube thickness: the further you scroll, the more paper is wound on, so the
+   roll visibly fattens. */
+const ROLL = { minH:12, maxH:76 };
+
+/* ==========================================================================
+   SETUP
+   ========================================================================== */
+const layer=document.getElementById("layer"), nameEl=document.getElementById("name"),
+      sheet=document.getElementById("sheet"), headbar=document.getElementById("headbar"),
+      cue=document.getElementById("cue"), content=document.getElementById("content"),
+      roll=document.getElementById("roll"), tube=roll.querySelector(".tube"),
+      cursorEl=document.getElementById("cursor"), menu=document.getElementById("menu");
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* Each line is ONE text run, not a span per letter. Per-letter spans each
+   carry their own stroke, so where two boxes meet the strokes stack and leave
+   a visible seam through the outline. As a single run the glyph outlines are
+   stroked together and the line reads as one continuous shape. */
+const words=[];
+NAME.forEach(w=>{
+  const wd=document.createElement("div"); wd.className="word";
+  const s=document.createElement("span"); s.className="ltr"; s.textContent=w;
+  wd.appendChild(s); nameEl.appendChild(wd); words.push(wd);
+});
+
+/* cells go INSIDE the sheet, so the roll clips them away with the paper */
+const cells=CELLS.map(c=>{
+  const d=document.createElement("div"); d.className="cell printed";
+  d.innerHTML=`<div class="info">${c.info}</div>`;
+  sheet.appendChild(d); return d;
+});
+
+/* ==========================================================================
+   MATHS
+   ========================================================================== */
+const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+const seg=(p,a,b)=>clamp((p-a)/(b-a));
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const RGB={pale:[206,216,247],white:[255,255,255],black:[51,51,51],navy:[0,32,130]};
+const mix=(c1,c2,t)=>`rgb(${Math.round(lerp(c1[0],c2[0],t))},${Math.round(lerp(c1[1],c2[1],t))},${Math.round(lerp(c1[2],c2[2],t))})`;
+
+let M={}, mouseX=-1, mouseY=-1;
+
+/* the four peelable sheet corners */
+const corners=["tl","tr","bl","br"].map(k=>{
+  const el=document.querySelector("#corners .corner."+k);
+  return {el, hole:el.querySelector(".hole"), flap:el.querySelector(".flap"),
+          x:k[1], y:k[0]};
+});
+
+function measure(){
+  /* clientWidth/Height, never innerWidth/Height: the latter includes the
+     scrollbar, which the fixed sheet and the vh unit exclude. */
+  const doc=document.documentElement;
+  const vw=doc.clientWidth, vh=doc.clientHeight, U=GRID.unit, IN=GRID.inset;
+  const small=vw<820;
+  /* ---- THE DRAWING AREA ----
+     The sheet fills the viewport, so sheet coordinates and viewport
+     coordinates are the same thing — one space, no conversions. The area
+     inside the white border is a whole number of SQUARES and centred, so all
+     four of its inner edges land on grid lines. */
+  const SQ=5*U;
+  const innerW=Math.floor((vw-2*IN)/SQ)*SQ;
+  const innerH=Math.floor((vh-2*IN)/SQ)*SQ;
+  const fx=Math.round((vw-innerW)/2), fy=Math.round((vh-innerH)/2);
+  const RA=fx+innerW, BA=fy+innerH;               // frame's inner bottom-right
+  const snapY=v=>fy+Math.round((v-fy)/SQ)*SQ;
+
+  /* ---- the white page's boxes, on the same squares ----
+     The content spans the drawing area, so the page below lines up with the
+     frame above it. */
+  const cols = vw<760?1 : vw<1100?2 : 3;
+  const cardW= Math.max(SQ,Math.floor((innerW-(cols-1)*SQ)/cols/SQ)*SQ);
+  const wrapW= cols*cardW+(cols-1)*SQ;
+  /* Centre the block on real pixels, not to the nearest square. Columns are a
+     whole number of squares, so the leftover is up to one square — rounding it
+     to a square dumped the whole remainder on one side, which is what made the
+     page look left-heavy. The content grid is anchored to --wrapL, so the
+     cards still sit on it whatever the offset. */
+  const wrapL= fx+Math.max(0,Math.round((innerW-wrapW)/2));
+  const sCols=cols, skillW=cardW;      // skills mirror the work grid exactly
+  const rs=doc.style;
+  rs.setProperty("--fx",fx+"px");        rs.setProperty("--fy",fy+"px");
+  rs.setProperty("--wrapW",wrapW+"px");  rs.setProperty("--wrapL",wrapL+"px");
+  rs.setProperty("--cardW",cardW+"px");  rs.setProperty("--cols",cols);
+  rs.setProperty("--skillW",skillW+"px");rs.setProperty("--sCols",sCols);
+  rs.setProperty("--imgH",Math.max(SQ,Math.round(cardW*0.68/SQ)*SQ)+"px");
+
+  const heroFS=Math.min(vw*(small?0.135:0.115),165);
+  nameEl.style.fontSize=heroFS+"px";
+  nameEl.style.transform="none";
+  words.forEach(w=>w.style.transform="none");
+  const r0=words[0].getBoundingClientRect();
+  const lh=r0.height, gap=heroFS*0.30;
+
+  /* title and cue sit three squares in from the content column; the DOCKED
+     name still lands on wrapL so the header lines up with the cards */
+  const heroX=wrapL+(small?0:2*SQ), heroY=snapY(vh*0.26);
+  nameEl.style.left=heroX+"px"; nameEl.style.top=heroY+"px";
+
+  /* The docked header lines up with the CONTENT column, so the name and the
+     menu sit over the same edges as the cards below them. */
+  const headH=small?44:55, dockH=small?18:24;
+  const nScale=dockH/lh;
+  const nx=wrapL, ny=Math.round((headH-dockH)/2);
+  const headInset=fy;      // header occupies the first grid row inside the frame
+
+  /* ---- info block: 10 squares wide × 3 high, flush into the frame's inner
+     bottom-right corner. SHEET-relative — it's printed on the paper. ---- */
+  const bSq   = innerW>=13*SQ ? 10 : 8;
+  const leftW = (bSq/2)*SQ, rightW=(bSq/2)*SQ, rowH=SQ;
+  const bw=leftW+rightW, bh=rowH*3;
+  const bx=RA-bw, by=BA-bh;
+  const local={ L1:[0,0,leftW,rowH], L2:[0,rowH,leftW,rowH], L3:[0,rowH*2,leftW,rowH],
+                R:[leftW,0,rightW,bh] };
+  cells.forEach((el,i)=>{
+    const l=local[CELLS[i].slot];
+    el.style.left=(bx+l[0])+"px"; el.style.top=(by+l[1])+"px";
+    el.style.width=l[2]+"px";     el.style.height=l[3]+"px";
+  });
+
+  /* menu: right edge on the content column's right edge, mirroring the name */
+  menu.style.right=(vw-(wrapL+wrapW))+"px";
+  menu.style.height=headH+"px";
+  menu.style.gap=(small?22:SQ)+"px";
+
+  /* cue: name's left edge, on the info block's second row (sheet-relative) */
+  cue.style.left=heroX+"px"; cue.style.top=(by+rowH)+"px"; cue.style.height=rowH+"px";
+
+  M={vw,vh,small,headH,nScale,nx,ny,heroX,heroY,lh,RA,BA,U,headInset,wrapL,
+     w2From:[0,lh], w2To:[r0.width+gap,0]};
+
+  headbar.style.height=headH+"px";
+}
+
+/* ==========================================================================
+   SCROLL → STATE
+   ========================================================================== */
+function update(){
+  const vh=M.vh;
+  /* The roll rides the top edge of the white page, so "paper leaving" and
+     "page arriving" are literally the same number. */
+  const rollY=content.getBoundingClientRect().top;
+  const travel=content.offsetTop||1;            // scroll distance for a full roll
+  const p=clamp(1-rollY/travel);                 // 0 = untouched sheet, 1 = rolled away
+
+  /* clip the sheet at the roll line */
+  sheet.style.clipPath=`inset(0 0 ${Math.max(0,vh-rollY)}px 0)`;
+
+  /* place the roll; the tube thickens as more paper winds onto it */
+  const tubeH=lerp(ROLL.minH,ROLL.maxH,p);
+  const onScreen=rollY>-(tubeH+80) && rollY<vh+80;
+  roll.style.opacity=onScreen?1:0;
+  if(onScreen){
+    roll.style.transform=`translateY(${rollY}px)`;
+    tube.style.height=tubeH+"px";
+  }
+
+  /* How far the paper's edge has swept past the header zone. 0 = paper still
+     across the top (header tucks below the frame edge, white ink);
+     1 = paper gone (header sits at the very top, dark ink). */
+  const paperT=clamp((110-rollY)/110);
+  const hOff=lerp(M.headInset,0,paperT);  // header tucks inside the frame
+
+  /* name: 2 lines → 1, docking top-left */
+  const q=ease(seg(p,PHASE.nameFrom,PHASE.nameTo));
+  nameEl.style.transform=
+    `translate(${lerp(0,M.nx-M.heroX,q)}px,${lerp(0,M.ny+hOff-M.heroY,q)}px) scale(${lerp(1,M.nScale,q)})`;
+  words[1].style.transform=
+    `translate(${lerp(M.w2From[0],M.w2To[0],q)}px,${lerp(M.w2From[1],M.w2To[1],q)}px)`;
+  /* ink: pale on the paper, soft black once the paper has gone */
+  nameEl.style.setProperty("--ink",mix(RGB.white,RGB.black,paperT));
+  nameEl.style.setProperty("--sw",lerp(2.5,1.4/M.nScale,q).toFixed(2)+"px");
+
+  /* the menu simply fades in as you scroll; the info block never moves */
+  const mq=ease(seg(p,PHASE.menuFrom,PHASE.menuTo));
+  menu.style.opacity=mq;
+  menu.style.top=hOff+"px";
+  menu.style.pointerEvents=mq>.6?"auto":"none";
+  menu.style.setProperty("--ink",mix(RGB.white,RGB.navy,paperT));
+
+  headbar.style.opacity=Math.min(mq,paperT);
+  headbar.style.transform=`translateY(${hOff}px)`;
+
+  /* ---- grid cursor ----
+     Snap to the cell the pointer is inside, measured back from the grid's
+     anchor so the cross always coincides with real grid cells. Pale over the
+     paper, ink over the page — decided by the pointer's own position. */
+  if(mouseX>=0){
+    const U=M.U||11, onPaper=mouseY<rollY;
+    const cx=onPaper ? M.RA-Math.ceil((M.RA-mouseX)/U)*U
+                     : M.wrapL+Math.floor((mouseX-M.wrapL)/U)*U;
+    /* The two grids have different vertical origins — the blueprint's is fixed
+       to the sheet, the page's scrolls from the content's top edge — so snap
+       against whichever surface the pointer is actually over. */
+    const cy=onPaper ? M.BA-Math.ceil((M.BA-mouseY)/U)*U
+                     : rollY+Math.floor((mouseY-rollY)/U)*U;
+    /* +1px centres the 9px tile inside its 11px cell */
+    cursorEl.style.transform=`translate(${cx+1}px,${cy+1}px)`;
+    /* white on paper, soft black on the page */
+    cursorEl.style.setProperty("--cc",onPaper?"#ffffff":"#333333");
+  }
+
+  /* ---- corner curl: the corner is PINCHED AND CARRIED to the pointer ----
+     Pinch corner C, drag it to P, and the crease is the perpendicular bisector
+     of CP — meeting the edges at Lx=(a²+b²)/2a and Ly=(a²+b²)/2b. The key
+     point I had wrong before: the flap's tip is P itself (C reflected in the
+     crease), NOT the far corner of a box. Pinning the tip to the pointer is
+     what makes the corner travel *with* the cursor instead of away from it. */
+  if(!reduce) corners.forEach(c=>{
+    const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:M.vh;
+    const el=c.el;
+    if(mouseX<0 || rollY<=py+10){ el.style.width=el.style.height="0px"; return; }
+
+    const raw=Math.hypot(mouseX-px,mouseY-py);
+    const grab=clamp((330-raw)/170);            // eases in, so nothing pops
+    let a=Math.abs(mouseX-px)*grab, b=Math.abs(mouseY-py)*grab;
+    if(a<1&&b<1){ el.style.width=el.style.height="0px"; return; }
+    /* stop a near-zero leg sending the other one to infinity */
+    a=Math.max(a,b*0.22); b=Math.max(b,a*0.22);
+
+    const s=a*a+b*b, Lx=s/(2*a), Ly=s/(2*b);
+    const W=Math.max(Lx,a), H=Math.max(Ly,b);
+    el.style.width=W.toFixed(1)+"px"; el.style.height=H.toFixed(1)+"px";
+
+    /* (u,v) measured inward from the corner → element-local px */
+    const fx=c.x==="l"?(u=>u):(u=>W-u), fy=c.y==="t"?(v=>v):(v=>H-v);
+    const pt=(u,v)=>`${fx(u).toFixed(1)}px ${fy(v).toFixed(1)}px`;
+    const A=pt(Lx,0), B=pt(0,Ly);
+    c.hole.style.clipPath=`polygon(${pt(0,0)},${A},${B})`;   // page revealed
+    c.flap.style.clipPath=`polygon(${A},${B},${pt(a,b)})`;   // tip at the cursor
+  });
+}
+
+/* ==========================================================================
+   GRID LOCK — round every box to a whole number of cells
+   Horizontal edges are already exact (widths are set in cells). Vertical is
+   the hard part: text sets its own height, so a card can finish mid-cell.
+   Equalise each row, round its height UP to the next line (up, never down, so
+   nothing clips), then pad each section out to a whole number of cells so the
+   next section still starts on a line.
+   ========================================================================== */
+function lockGrid(){
+  const SQ=5*GRID.unit;                       // round to whole squares
+  document.querySelectorAll(".plates,.skills").forEach(row=>{
+    const kids=[...row.children];
+    kids.forEach(k=>{k.style.height="auto"});
+    const tall=Math.max(...kids.map(k=>k.getBoundingClientRect().height));
+    const h=Math.ceil(tall/SQ)*SQ;
+    kids.forEach(k=>{k.style.height=h+"px"});
+  });
+  document.querySelectorAll(".content section").forEach(s=>{
+    s.style.paddingBottom="110px";
+    const over=Math.round(s.getBoundingClientRect().height)%SQ;
+    s.style.paddingBottom=(110+(over?SQ-over:0))+"px";
+  });
+}
+
+let ticking=false;
+function onScroll(){
+  if(!ticking){ticking=true;requestAnimationFrame(()=>{update();ticking=false})}
+}
+addEventListener("scroll",onScroll,{passive:true});
+let rsz;
+addEventListener("resize",()=>{
+  measure(); update();
+  clearTimeout(rsz); rsz=setTimeout(lockGrid,120);   // re-lock after reflow
+});
+addEventListener("mousemove",e=>{
+  mouseX=e.clientX; mouseY=e.clientY;
+  onScroll();                              // rAF-throttled, so this is cheap
+},{passive:true});
+/* hide the grid cursor when the pointer leaves the window */
+addEventListener("mouseleave",()=>{cursorEl.style.opacity=0},{passive:true});
+addEventListener("mouseenter",()=>{cursorEl.style.opacity=1},{passive:true});
+
+/* ==========================================================================
+   INTRO
+   ========================================================================== */
+function intro(){
+  measure(); update(); lockGrid();
+  if(reduce){
+    words.forEach(w=>w.classList.add("drawn"));
+    cells.forEach(c=>c.classList.add("on")); cue.classList.add("on"); update(); return;
+  }
+  /* one continuous left→right stroke per line, the second following the first */
+  words.forEach((w,i)=>setTimeout(()=>w.classList.add("drawn"),i*430));
+  const done=(words.length-1)*430+520;
+  cells.forEach((c,i)=>setTimeout(()=>c.classList.add("on"),done+140+i*80));
+  setTimeout(()=>{cue.classList.add("on");update()},done+120);
+}
+
+const io=("IntersectionObserver" in window)?new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}
+}),{threshold:.12,rootMargin:"0px 0px -8% 0px"}):null;
+document.querySelectorAll(".rv").forEach(el=>io?io.observe(el):el.classList.add("in"));
+
+document.getElementById("year").textContent=new Date().getFullYear();
+
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(intro)}
+else{addEventListener("load",intro)}
+</script>
+</body>
+</html>
