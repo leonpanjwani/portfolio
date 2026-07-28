@@ -72,7 +72,11 @@ a{color:inherit;text-decoration:none}
    content (z-index 60) so the cards never swallow it — being visually part of
    the grid is about the snapping and the block shape, not the stacking order.
    One colour everywhere — tomato, the same accent the buttons use on hover. ---- */
-*{cursor:none}
+/* Only hide the real pointer where there IS one. On a touch screen there is no
+   pointer to replace, and hiding it breaks nothing visible but does break
+   hybrid devices (iPad + trackpad), so gate it on a fine pointer. */
+@media (pointer:fine){*{cursor:none}}
+@media (pointer:coarse){#cursor{display:none}}
 /* Each tile is 9px but the spacing stays at the 11px grid pitch, leaving a 2px
    gap between tiles — so it reads as five separate cells, not one solid cross. */
 #cursor{position:fixed;left:0;top:0;width:9px;height:9px;z-index:60;
@@ -120,6 +124,13 @@ a{color:inherit;text-decoration:none}
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='650'><filter id='s' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.003 0.07' numOctaves='4' seed='11' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.4 0 0 0 -0.66'/></filter><filter id='b' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.011' numOctaves='3' seed='3' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.1 0 0 0 -0.74'/></filter><rect width='900' height='650' filter='url(%23s)' opacity='.5'/><rect width='900' height='650' filter='url(%23b)' opacity='.35'/><g stroke='white' fill='none' stroke-linecap='round' opacity='.2'><path d='M60 120 C180 96 300 150 420 118' stroke-width='1.2'/><path d='M520 380 C610 350 700 402 842 366' stroke-width='1'/><path d='M120 520 C210 486 300 542 380 500' stroke-width='.9'/><path d='M700 90 C762 140 782 200 812 252' stroke-width='.8'/><path d='M250 300 C300 330 340 300 400 322' stroke-width='.7'/></g></svg>")}
 #sheet .noise,#headbar .noise{position:absolute;inset:0;opacity:.22;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.55'/></svg>")}
+/* Two full-screen blended layers over a turbulence texture is the other big
+   mobile cost. The fine grain is invisible on a small high-DPI screen anyway,
+   so drop it there and ease off the wear. */
+@media(max-width:820px){
+  #sheet .wear,#headbar .wear{opacity:.24}
+  #sheet .noise,#headbar .noise{display:none}
+}
 /* border drawn 2px INSIDE, so the element sits at (inset − 2) and its inner
    edge lands exactly on --fx / --fy */
 #sheet .frame{position:absolute;border:2px solid var(--white);
@@ -140,11 +151,21 @@ a{color:inherit;text-decoration:none}
 /* Four stacked shadows, widest first: a long soft one thrown well out across
    the blueprint (this is what gives the lift its depth), then progressively
    tighter ones down to a 1px line on the fold edge. */
+/* What sells the lift is the CONTRAST between the flap's lit tip and the
+   darkest point of the hole — not the blur radius. So: one wide soft halo for
+   depth, then a tight, genuinely dark core right under the fold, plus a 2px
+   near-black line of contact occlusion on the crease itself. */
 #corners .corner .flap{
-  filter:drop-shadow(calc(var(--sx,6px) * 6) calc(var(--sy,6px) * 6) 70px rgba(0,6,40,.5))
-         drop-shadow(calc(var(--sx,6px) * 3) calc(var(--sy,6px) * 3) 32px rgba(0,6,40,.6))
-         drop-shadow(var(--sx,6px) var(--sy,6px) 12px rgba(0,6,40,.55))
-         drop-shadow(0 0 1px rgba(0,6,40,.65))}
+  filter:drop-shadow(calc(var(--sx,6px) * 7) calc(var(--sy,6px) * 7) 90px rgba(0,6,40,.55))
+         drop-shadow(calc(var(--sx,6px) * 3) calc(var(--sy,6px) * 3) 34px rgba(0,6,40,.72))
+         drop-shadow(var(--sx,6px) var(--sy,6px) 10px rgba(0,6,40,.75))
+         drop-shadow(0 0 2px rgba(0,6,40,.9))}
+/* one shadow only on phones — four stacked filters on a clip-path that changes
+   every frame is the single most expensive thing on this page */
+@media(max-width:820px){
+  #corners .corner .flap{
+    filter:drop-shadow(calc(var(--sx,6px) * 3) calc(var(--sy,6px) * 3) 28px rgba(0,6,40,.7))}
+}
 
 #corners .corner.tl{top:0;left:0}
 #corners .corner.tr{top:0;right:0}
@@ -165,17 +186,20 @@ a{color:inherit;text-decoration:none}
    lightening toward the lifted tip that catches the light.
    HOLE = the white page underneath, darkest at the seam where the flap
    overhangs it, lightening toward the screen corner. */
+/* The hole runs to a deep grey at the crease, not a mid grey. The flap is
+   directly overhead there and blocks nearly all the light; stopping at #a5a8b4
+   is what made the fold read flat. */
 #corners .corner.tl{--sx:6px;--sy:6px}
-#corners .corner.tl .hole{background:linear-gradient(to bottom right,#ffffff 0%,#e9eaef 40%,#a5a8b4 100%)}
+#corners .corner.tl .hole{background:linear-gradient(to bottom right,#ffffff 0%,#eceef3 30%,#b9bdc9 62%,#7f8492 85%,#5f6472 100%)}
 #corners .corner.tl .flap{background:linear-gradient(to bottom right,#162c80 0%,#2F51C6 26%,#6E8CEE 64%,#AFC1F7 100%)}
 #corners .corner.tr{--sx:-6px;--sy:6px}
-#corners .corner.tr .hole{background:linear-gradient(to bottom left,#ffffff 0%,#e9eaef 40%,#a5a8b4 100%)}
+#corners .corner.tr .hole{background:linear-gradient(to bottom left,#ffffff 0%,#eceef3 30%,#b9bdc9 62%,#7f8492 85%,#5f6472 100%)}
 #corners .corner.tr .flap{background:linear-gradient(to bottom left,#162c80 0%,#2F51C6 26%,#6E8CEE 64%,#AFC1F7 100%)}
 #corners .corner.bl{--sx:6px;--sy:-6px}
-#corners .corner.bl .hole{background:linear-gradient(to top right,#ffffff 0%,#e9eaef 40%,#a5a8b4 100%)}
+#corners .corner.bl .hole{background:linear-gradient(to top right,#ffffff 0%,#eceef3 30%,#b9bdc9 62%,#7f8492 85%,#5f6472 100%)}
 #corners .corner.bl .flap{background:linear-gradient(to top right,#162c80 0%,#2F51C6 26%,#6E8CEE 64%,#AFC1F7 100%)}
 #corners .corner.br{--sx:-6px;--sy:-6px}
-#corners .corner.br .hole{background:linear-gradient(to top left,#ffffff 0%,#e9eaef 40%,#a5a8b4 100%)}
+#corners .corner.br .hole{background:linear-gradient(to top left,#ffffff 0%,#eceef3 30%,#b9bdc9 62%,#7f8492 85%,#5f6472 100%)}
 #corners .corner.br .flap{background:linear-gradient(to top left,#162c80 0%,#2F51C6 26%,#6E8CEE 64%,#AFC1F7 100%)}
 
 /* ruler ticks — same anchor as the grid, so every tick meets a grid line */
@@ -364,10 +388,16 @@ a{color:inherit;text-decoration:none}
 /* ==========================================================================
    5. STAGE + CONTENT
    ========================================================================== */
-#stage{height:150vh}
+/* svh, not vh. On mobile, vh is measured against the viewport with the URL bar
+   HIDDEN, but measure() reads clientHeight, which is the height right now — so
+   the two disagree by the height of that bar and the roll jumps as it slides
+   away mid-scroll. svh is the small (bar-visible) viewport, which is stable.
+   The vh line stays first as a fallback for browsers without svh. */
+#stage{height:150vh;height:150svh}
 /* NOTE: no `background:` shorthand here — it would reset the background-image
    set above and wipe the pixel grid. Only set the properties we mean to. */
-.content{position:relative;z-index:10;margin-top:-22vh;background-color:transparent;padding-top:110px}
+.content{position:relative;z-index:10;margin-top:-22vh;margin-top:-22svh;
+  background-color:transparent;padding-top:110px}
 /* Everything steps in whole SQUARES (55px = 5 cells). The heading block is
    exactly one square tall with its text centred inside it, so headings sit on
    the middle line of a grid row. */
@@ -636,6 +666,9 @@ const layer=document.getElementById("layer"), nameEl=document.getElementById("na
       roll=document.getElementById("roll"), tube=roll.querySelector(".tube"),
       cursorEl=document.getElementById("cursor"), menu=document.getElementById("menu");
 const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* A touch screen has no hover, so anything driven by pointer position needs a
+   second way in. Checked once — a device doesn't change input type mid-visit. */
+const coarse=matchMedia("(pointer: coarse)").matches;
 
 /* Each line is ONE text run, not a span per letter. Per-letter spans each
    carry their own stroke, so where two boxes meet the strokes stack and leave
@@ -839,14 +872,26 @@ function update(){
      point I had wrong before: the flap's tip is P itself (C reflected in the
      crease), NOT the far corner of a box. Pinning the tip to the pointer is
      what makes the corner travel *with* the cursor instead of away from it. */
+  /* ---- TOUCH ----
+     There is no pointer to pinch with, and the finger is already spoken for —
+     it's the scroll. So on a coarse pointer the fold is driven by the roll
+     itself: the corners lift as the sheet starts to travel, then get consumed
+     by it. Same geometry below, just a different source for (a,b). */
   if(!reduce) corners.forEach(c=>{
     const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:M.vh;
     const el=c.el;
-    if(mouseX<0 || rollY<=py+10){ el.style.width=el.style.height="0px"; return; }
+    if((mouseX<0&&!coarse) || rollY<=py+10){ el.style.width=el.style.height="0px"; return; }
 
-    const raw=Math.hypot(mouseX-px,mouseY-py);
-    const grab=clamp((330-raw)/170);            // eases in, so nothing pops
-    let a=Math.abs(mouseX-px)*grab, b=Math.abs(mouseY-py)*grab;
+    let a,b;
+    if(coarse){
+      /* peels in over the first 40% of the roll, then holds */
+      const lift=ease(clamp(p/0.40))*Math.min(96,M.vw*0.22);
+      a=lift; b=lift;
+    }else{
+      const raw=Math.hypot(mouseX-px,mouseY-py);
+      const grab=clamp((330-raw)/170);          // eases in, so nothing pops
+      a=Math.abs(mouseX-px)*grab; b=Math.abs(mouseY-py)*grab;
+    }
     if(a<1&&b<1){ el.style.width=el.style.height="0px"; return; }
     /* stop a near-zero leg sending the other one to infinity */
     a=Math.max(a,b*0.22); b=Math.max(b,a*0.22);
@@ -893,8 +938,14 @@ function onScroll(){
   if(!ticking){ticking=true;requestAnimationFrame(()=>{update();ticking=false})}
 }
 addEventListener("scroll",onScroll,{passive:true});
-let rsz;
+let rsz, lastW=innerWidth;
 addEventListener("resize",()=>{
+  /* Mobile browsers fire resize every time the URL bar slides in or out, which
+     would re-run measure() and lockGrid() continuously through a scroll. Only
+     a WIDTH change can actually alter the layout, so ignore height-only events
+     on touch devices. On desktop every resize still counts. */
+  if(coarse && innerWidth===lastW) return;
+  lastW=innerWidth;
   measure(); update();
   clearTimeout(rsz); rsz=setTimeout(lockGrid,120);   // re-lock after reflow
 });
