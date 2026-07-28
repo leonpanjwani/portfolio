@@ -381,7 +381,8 @@ a{color:inherit;text-decoration:none}
 .cell .info a:hover{color:var(--tomato)}
 @media(max-width:820px){
   .cell{padding:0 7px}
-  .cell .info{font-size:.56rem;white-space:normal;line-height:1.32;letter-spacing:.02em}
+  /* the block is a full-width single column on mobile, so there's room to read */
+  .cell .info{font-size:.62rem;white-space:normal;line-height:1.32;letter-spacing:.02em}
   #menu{font-size:.62rem;letter-spacing:.05em}
 }
 
@@ -698,7 +699,10 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 const RGB={pale:[206,216,247],white:[255,255,255],black:[51,51,51],navy:[0,32,130]};
 const mix=(c1,c2,t)=>`rgb(${Math.round(lerp(c1[0],c2[0],t))},${Math.round(lerp(c1[1],c2[1],t))},${Math.round(lerp(c1[2],c2[2],t))})`;
 
-let M={}, mouseX=-1, mouseY=-1;
+/* grabbed: the corner currently held by a finger, or springing back from one.
+   Declared here because update() reads it and runs before the touch handlers
+   further down are reached. */
+let M={}, mouseX=-1, mouseY=-1, grabbed=null;
 
 /* the four peelable sheet corners */
 const corners=["tl","tr","bl","br"].map(k=>{
@@ -711,8 +715,12 @@ function measure(){
   /* clientWidth/Height, never innerWidth/Height: the latter includes the
      scrollbar, which the fixed sheet and the vh unit exclude. */
   const doc=document.documentElement;
-  const vw=doc.clientWidth, vh=doc.clientHeight, U=GRID.unit, IN=GRID.inset;
+  const vw=doc.clientWidth, vh=doc.clientHeight, U=GRID.unit;
   const small=vw<820;
+  /* A 33px border is fine on a 1400px sheet and absurd on a 390px one — it ate
+     nearly a third of the width, because the drawing area is rounded DOWN to
+     whole squares and the remainder becomes border. Two cells on a phone. */
+  const IN=small?2*U:GRID.inset;
   /* ---- THE DRAWING AREA ----
      The sheet fills the viewport, so sheet coordinates and viewport
      coordinates are the same thing — one space, no conversions. The area
@@ -761,36 +769,75 @@ function measure(){
      short deliberate margin (3 cells) instead of tracking the content column —
      the name and the menu sit close to the screen edges. Both are centred in
      the blue, i.e. in the bar minus its 2px closing rule. */
-  const headH=small?44:55, dockH=small?18:24, RULE=2;
+  const headH=small?44:55, RULE=2;
   /* Clear of the sheet's frame, not level with it: fx lands the text exactly on
      the border line showing through below the bar, so step two cells inside it. */
   const pad=fx+(small?U:2*U);
-  const nScale=dockH/lh;
+
+  /* The menu is measured FIRST, because the docked name has to fit in whatever
+     room it leaves. On a phone the two were overlapping: a fixed 18px dock
+     height made the name ~180px wide, the menu needs ~190px, and there are only
+     ~310px between the margins. Rather than guess at font metrics, scale the
+     name to the space that actually remains. */
+  menu.style.right=pad+"px";
+  menu.style.height=(headH-RULE)+"px";
+  menu.style.gap=(small?U:SQ)+"px";
+  const menuW=menu.getBoundingClientRect().width;
+
+  const r1=words[1].getBoundingClientRect();
+  const lockupW=r0.width+gap+r1.width;      // the one-line name at hero size
+  let dockH=small?18:24;
+  let nScale=dockH/lh;
+  if(small){
+    const avail=vw-2*pad-menuW-2*U;         // two cells of breathing room
+    nScale=Math.min(nScale,Math.max(0.10,avail/lockupW));
+    dockH=lh*nScale;                        // so it still centres in the bar
+  }
   const nx=pad, ny=Math.round((headH-RULE-dockH)/2);
   const headInset=0;       // the bar sits flush at the top of the viewport
 
-  /* ---- info block: 10 squares wide × 3 high, flush into the frame's inner
-     bottom-right corner. SHEET-relative — it's printed on the paper. ---- */
-  const bSq   = innerW>=13*SQ ? 10 : 8;
-  const leftW = (bSq/2)*SQ, rightW=(bSq/2)*SQ, rowH=SQ;
-  const bw=leftW+rightW, bh=rowH*3;
-  const bx=RA-bw, by=BA-bh;
-  const local={ L1:[0,0,leftW,rowH], L2:[0,rowH,leftW,rowH], L3:[0,rowH*2,leftW,rowH],
-                R:[leftW,0,rightW,bh] };
+  /* ---- info block, flush into the frame's inner bottom-right corner ----
+     DESKTOP: 10 squares wide × 3 high — three stacked cells on the left, one
+     tall one on the right. That block is 440–550px wide, which simply does not
+     exist on a portrait phone, so it ran off the left edge.
+     MOBILE: the same four cells become ONE column spanning the drawing width,
+     with short 3-cell rows so the stack doesn't swallow the bottom third.
+
+     Anchored by right/bottom, not left/top. #sheet is fixed to the viewport and
+     on mobile the viewport GROWS as the URL bar slides away — a top-anchored
+     block drifts off the frame's bottom edge as that happens, whereas a
+     bottom-anchored one stays welded to it. ---- */
+  /* Stack when the wide block genuinely wouldn't fit, not merely when the
+     screen is "small" — an iPad at 768px has 715px of drawing width and every
+     reason to keep the desktop arrangement. */
+  const stack = innerW < 9*SQ;
+  let local, bw, bh;
+  if(stack){
+    const r=3*U, rR=4*U;                 // 33px rows; 44 for the two-line cell
+    bw=innerW; bh=r*3+rR;
+    local={ L1:[0,0,bw,r], L2:[0,r,bw,r], L3:[0,r*2,bw,r], R:[0,r*3,bw,rR] };
+  }else{
+    const bSq   = innerW>=13*SQ ? 10 : 8;
+    const leftW = (bSq/2)*SQ, rightW=(bSq/2)*SQ, rowH=SQ;
+    bw=leftW+rightW; bh=rowH*3;
+    local={ L1:[0,0,leftW,rowH], L2:[0,rowH,leftW,rowH], L3:[0,rowH*2,leftW,rowH],
+            R:[leftW,0,rightW,bh] };
+  }
   cells.forEach((el,i)=>{
     const l=local[CELLS[i].slot];
-    el.style.left=(bx+l[0])+"px"; el.style.top=(by+l[1])+"px";
-    el.style.width=l[2]+"px";     el.style.height=l[3]+"px";
+    el.style.left="auto";  el.style.top="auto";
+    el.style.right =(fx+(bw-(l[0]+l[2])))+"px";
+    el.style.bottom=(fy+(bh-(l[1]+l[3])))+"px";
+    el.style.width=l[2]+"px";  el.style.height=l[3]+"px";
   });
 
-  /* menu: mirrors the name — same short inset from the opposite screen edge,
-     centred in the same band of blue */
-  menu.style.right=pad+"px";
-  menu.style.height=(headH-RULE)+"px";
-  menu.style.gap=(small?22:SQ)+"px";
 
-  /* cue: name's left edge, on the info block's second row (sheet-relative) */
-  cue.style.left=heroX+"px"; cue.style.top=(by+rowH)+"px"; cue.style.height=rowH+"px";
+  /* cue: desktop — the info block's middle row, to the left of it. Mobile —
+     the block is full width now, so the cue sits one cell ABOVE it instead of
+     colliding with it. Bottom-anchored for the same reason as the cells. */
+  cue.style.left=heroX+"px"; cue.style.top="auto";
+  cue.style.bottom=(stack ? fy+bh+U : fy+bh-2*SQ)+"px";
+  cue.style.height=(stack?3*U:SQ)+"px";
 
   M={vw,vh,small,headH,nScale,nx,ny,heroX,heroY,lh,RA,BA,U,headInset,wrapL,pad,
      w2From:[0,lh], w2To:[r0.width+gap,0]};
@@ -802,15 +849,22 @@ function measure(){
    SCROLL → STATE
    ========================================================================== */
 function update(){
-  const vh=M.vh;
+  /* Read the height FRESH every frame. M.vh is captured at measure() time, and
+     on mobile the viewport grows by ~60px the moment the URL bar slides away —
+     a stale height made the clip too shallow, which is exactly the bug where
+     blueprint stayed visible below the roll. */
+  const vh=document.documentElement.clientHeight;
   /* The roll rides the top edge of the white page, so "paper leaving" and
      "page arriving" are literally the same number. */
   const rollY=content.getBoundingClientRect().top;
   const travel=content.offsetTop||1;            // scroll distance for a full roll
   const p=clamp(1-rollY/travel);                 // 0 = untouched sheet, 1 = rolled away
 
-  /* clip the sheet at the roll line */
-  sheet.style.clipPath=`inset(0 0 ${Math.max(0,vh-rollY)}px 0)`;
+  /* Clip in PERCENT of the sheet's own box rather than in measured pixels. 100%
+     is the element's true height by definition, so the cut cannot drift from
+     the roll no matter what the viewport does underneath it. */
+  const rc=Math.max(0,Math.min(rollY,vh));
+  sheet.style.clipPath=`inset(0 0 calc(100% - ${rc.toFixed(1)}px) 0)`;
 
   /* place the roll; the tube thickens as more paper winds onto it */
   const tubeH=lerp(ROLL.minH,ROLL.maxH,p);
@@ -873,25 +927,19 @@ function update(){
      crease), NOT the far corner of a box. Pinning the tip to the pointer is
      what makes the corner travel *with* the cursor instead of away from it. */
   /* ---- TOUCH ----
-     There is no pointer to pinch with, and the finger is already spoken for —
-     it's the scroll. So on a coarse pointer the fold is driven by the roll
-     itself: the corners lift as the sheet starts to travel, then get consumed
-     by it. Same geometry below, just a different source for (a,b). */
+     On a phone the corner is DRAGGED, not hovered: only the corner currently
+     held by a finger (or springing back from one) curls, and its tip tracks the
+     touch exactly — grab = 1, no distance falloff — so it behaves like lifting
+     a page. See the touch handlers below. */
   if(!reduce) corners.forEach(c=>{
-    const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:M.vh;
+    const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:vh;
     const el=c.el;
-    if((mouseX<0&&!coarse) || rollY<=py+10){ el.style.width=el.style.height="0px"; return; }
+    const idle = coarse ? c!==grabbed : mouseX<0;
+    if(idle || rollY<=py+10){ el.style.width=el.style.height="0px"; return; }
 
-    let a,b;
-    if(coarse){
-      /* peels in over the first 40% of the roll, then holds */
-      const lift=ease(clamp(p/0.40))*Math.min(96,M.vw*0.22);
-      a=lift; b=lift;
-    }else{
-      const raw=Math.hypot(mouseX-px,mouseY-py);
-      const grab=clamp((330-raw)/170);          // eases in, so nothing pops
-      a=Math.abs(mouseX-px)*grab; b=Math.abs(mouseY-py)*grab;
-    }
+    const raw=Math.hypot(mouseX-px,mouseY-py);
+    const grab=coarse?1:clamp((330-raw)/170);   // desktop eases in, so nothing pops
+    let a=Math.abs(mouseX-px)*grab, b=Math.abs(mouseY-py)*grab;
     if(a<1&&b<1){ el.style.width=el.style.height="0px"; return; }
     /* stop a near-zero leg sending the other one to infinity */
     a=Math.max(a,b*0.22); b=Math.max(b,a*0.22);
@@ -956,6 +1004,62 @@ addEventListener("mousemove",e=>{
 /* hide the grid cursor when the pointer leaves the window */
 addEventListener("mouseleave",()=>{cursorEl.style.opacity=0},{passive:true});
 addEventListener("mouseenter",()=>{cursorEl.style.opacity=1},{passive:true});
+
+/* ==========================================================================
+   TOUCH — PEEL A CORNER LIKE A PAGE
+   There is no hover on a phone, so the fold has to be a deliberate gesture.
+   Put a finger down inside a corner's grab radius and that corner follows it
+   exactly: the flap's tip IS the touch point, which is what makes it feel like
+   lifting the corner of a real page rather than watching an animation.
+   Scrolling is suppressed ONLY while a corner is held, so a swipe anywhere
+   else on the sheet still scrolls normally. Let go and it falls back.
+   ========================================================================== */
+let springRAF=0;
+const GRAB_R=132;                    // ~13mm, a comfortable thumb target
+
+function cornerNear(x,y){
+  const vh=document.documentElement.clientHeight;
+  const rollY=content.getBoundingClientRect().top;
+  for(const c of corners){
+    const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:vh;
+    if(rollY<=py+10) continue;                 // no paper left on that corner
+    if(Math.hypot(x-px,y-py)<GRAB_R) return c;
+  }
+  return null;
+}
+
+addEventListener("touchstart",e=>{
+  if(!coarse||reduce) return;
+  const t=e.touches[0], c=cornerNear(t.clientX,t.clientY);
+  if(!c) return;
+  cancelAnimationFrame(springRAF);
+  grabbed=c; mouseX=t.clientX; mouseY=t.clientY; onScroll();
+},{passive:true});
+
+/* non-passive: holding a corner has to be able to stop the page scrolling */
+addEventListener("touchmove",e=>{
+  if(!grabbed) return;
+  e.preventDefault();
+  const t=e.touches[0];
+  mouseX=t.clientX; mouseY=t.clientY; onScroll();
+},{passive:false});
+
+/* spring back: ease-out, so it drops away quickly and settles, like paper */
+function letGo(){
+  if(!grabbed) return;
+  const c=grabbed, vh=document.documentElement.clientHeight;
+  const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:vh;
+  const x0=mouseX, y0=mouseY, t0=performance.now(), D=340;
+  (function step(now){
+    const k=clamp((now-t0)/D), s=1-Math.pow(1-k,3);
+    mouseX=lerp(x0,px,s); mouseY=lerp(y0,py,s);
+    update();
+    if(k<1){ springRAF=requestAnimationFrame(step) }
+    else   { grabbed=null; mouseX=mouseY=-1; update() }
+  })(t0);
+}
+addEventListener("touchend",letGo,{passive:true});
+addEventListener("touchcancel",letGo,{passive:true});
 
 /* ==========================================================================
    INTRO
