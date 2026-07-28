@@ -325,23 +325,22 @@ a{color:inherit;text-decoration:none}
 #name{position:absolute;font-family:var(--display);font-weight:700;
   line-height:.86;letter-spacing:.005em;white-space:nowrap;
   transform-origin:top left;will-change:transform;pointer-events:auto}
-/* ---- PENCIL SKETCH, LEFT TO RIGHT ----
-   One hard-edged mask sweeps across the whole word, so the stroke travels
-   continuously left→right instead of each letter popping in on its own timer.
-   steps() makes the leading edge advance in scratchy bites, and the slight
-   slant (100deg) is the angle a pencil crosses a letter at. */
-/* The roughen filter lives HERE, not on #name. #name's children are absolutely
-   positioned, so #name's own border box is 0×0 — and a percentage filter region
-   measured against a zero box collapses, which is what was slicing the letters.
-   .word has a real box, so the region resolves to something meaningful. */
+/* ---- DRAWN, THEN SHADED, LEFT TO RIGHT ----
+   Two sweeps, a beat apart, both travelling left→right:
+     1. the OUTLINE arrives under a hard-edged mask on .word — one continuous
+        pass across the whole line, not letter by letter;
+     2. the HATCH fills in behind it (see .ltr), like a draughtsman going back
+        over the letterforms to shade them.
+   No roughen filter and no steps() any more: both existed to make the stroke
+   look hand-drawn, and a crisp edge is what's wanted. The 100deg tilt stays —
+   a drawing is shaded on a slight diagonal, not with a vertical wipe. */
 #name .word{position:absolute;top:0;left:0;display:flex;will-change:transform;
-  filter:url(#rough);
   -webkit-mask-image:linear-gradient(100deg,#000 50%,transparent 50%);
           mask-image:linear-gradient(100deg,#000 50%,transparent 50%);
   -webkit-mask-size:200% 100%;      mask-size:200% 100%;
   -webkit-mask-repeat:no-repeat;    mask-repeat:no-repeat;
   -webkit-mask-position:100% 0;     mask-position:100% 0}
-#name .word.drawn{animation:draw .5s steps(15,end) forwards}
+#name .word.drawn{animation:draw .55s cubic-bezier(.33,0,.15,1) forwards}
 /* The sweep is a 100° gradient, so its edge is tilted ~10° off vertical. At rest
    that edge sits on the element's right edge — which means the BOTTOM-right
    corner is already past it and stays masked out. That corner is exactly where
@@ -352,19 +351,30 @@ a{color:inherit;text-decoration:none}
   from{-webkit-mask-position:100% 0; mask-position:100% 0}
   to  {-webkit-mask-position:0% 0;   mask-position:0% 0}
 }
-/* ---- PENCIL SKETCH ----
-   Two things sell "drawn" rather than "faded in":
-   1. the reveal is an ANGLED band sweeping across the glyph in hard steps, the
-      way a pencil crosses a letter — not a straight horizontal wipe;
-   2. .ltr::before is an overdrawn ghost stroke, offset and rotated a touch,
-      which fades to a faint remnant — the doubled line you get when sketching
-      quickly and not quite retracing your own mark. */
-/* Outline type — same family as every heading, drawn as a stroke with no fill.
-   --sw is set per frame so the stroke's ON-SCREEN weight stays constant as the
-   name scales down into the header. */
+/* ---- OUTLINE + DRAFTING HATCH ----
+   The letterform is a crisp stroke with no fill of its own; the "shading" is a
+   45° hatch — the way a section is filled on a drawing — clipped to the glyphs
+   with background-clip:text. Because the fill IS a background, revealing it is
+   just growing its width from 0 to 100%, which gives the left-to-right shading
+   pass for free and needs no second mask.
+
+   --sw and --k are both set per frame from JS. --sw holds the stroke's ON-SCREEN
+   weight constant as the name scales down into the header, and --k does the same
+   for the hatch: it is the inverse of the current scale, so the lines keep a
+   constant pitch on screen instead of compressing into a solid smear. */
 .ltr{position:relative;display:inline-block;color:transparent;
   -webkit-text-stroke:var(--sw,2.5px) var(--ink,#ffffff);
-  paint-order:stroke fill}
+  paint-order:stroke fill;
+  background-image:repeating-linear-gradient(45deg,
+    rgba(255,255,255,.62) 0                        calc(1.1px * var(--k,1)),
+    transparent           calc(1.1px * var(--k,1)) calc(6px   * var(--k,1)));
+  background-repeat:no-repeat;
+  background-position:0 0;
+  background-size:0% 100%;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+  transition:background-size .95s cubic-bezier(.25,.6,.3,1)}
+#name .word.shaded .ltr{background-size:100% 100%}
 
 /* same left edge, size and weight as the info-box text bottom-right */
 #cue{position:absolute;font-family:var(--display);font-weight:700;font-size:.78rem;
@@ -492,22 +502,13 @@ footer{padding:22px 0;display:flex;
 @media(prefers-reduced-motion:reduce){
   .rv{opacity:1!important;transform:none!important}
   html{scroll-behavior:auto}
-  .ltr{opacity:1!important;clip-path:none!important;animation:none!important}
+  .ltr{opacity:1!important;clip-path:none!important;animation:none!important;
+       transition:none!important}
 }
 </style>
 </head>
 
 <body>
-
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <!-- Generous region. A filter clips its own output to this box, and the
-       stroked glyphs overflow their line box (line-height is .86), so a tight
-       region shaves flats off the tops, bottoms and sides of the letters. -->
-  <filter id="rough" x="-20%" y="-35%" width="140%" height="170%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="3" seed="9" result="n"/>
-    <feDisplacementMap in="SourceGraphic" in2="n" scale="1.1" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-</svg>
 
 <div id="cursor"></div>
 
@@ -931,6 +932,9 @@ function update(){
   /* ink stays white: the name never leaves the blueprint */
   nameEl.style.setProperty("--ink","#ffffff");
   nameEl.style.setProperty("--sw",lerp(2.5,1.4/M.nScale,q).toFixed(2)+"px");
+  /* inverse of the name's current scale — keeps the hatch pitch constant on
+     screen while the name shrinks ~5× into the header */
+  nameEl.style.setProperty("--k",lerp(1,1/M.nScale,q).toFixed(3));
 
   /* the menu simply fades in as you scroll; the info block never moves */
   const mq=ease(seg(p,PHASE.menuFrom,PHASE.menuTo));
@@ -1119,7 +1123,7 @@ addEventListener("touchcancel",letGo,{passive:true});
 function intro(){
   measure(); update(); lockGrid();
   if(reduce){
-    words.forEach(w=>w.classList.add("drawn","inked"));
+    words.forEach(w=>w.classList.add("drawn","inked","shaded"));
     cells.forEach(c=>c.classList.add("on")); cue.classList.add("on"); update(); return;
   }
   /* one continuous left→right stroke per line, the second following the first */
@@ -1127,6 +1131,9 @@ function intro(){
     w.classList.add("drawn");
     /* mask off once the line is fully drawn, so nothing stays clipped */
     w.addEventListener("animationend",()=>w.classList.add("inked"),{once:true});
+    /* the shading follows the outline across, a beat behind it — the outline
+       has to exist before there is anything to shade in */
+    setTimeout(()=>w.classList.add("shaded"),240);
   },i*430));
   const done=(words.length-1)*430+520;
   cells.forEach((c,i)=>setTimeout(()=>c.classList.add("on"),done+140+i*80));
