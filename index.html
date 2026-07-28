@@ -45,8 +45,10 @@
   --pale:#bdc5dd;        /* drawn lines on the blueprint */
   --paper:#e9ebf3;       /* flat light panels */
   --white:#ffffff;
-  --shadow:9,16,42;      /* derived: navy driven down to near-black, as RGB
-                            components so alphas can be composed from it */
+  /* Shadow ink is navy driven down to near-black: rgba(9,16,42,a). Written as
+     literals, NOT as rgba(var(--x),a) — if that substitution fails the whole
+     declaration is invalid at computed-value time, and for a background that
+     means transparent. That is what left the roll unpainted on iOS. */
   --black:#192c64;       /* kept as an alias so text rules read unchanged */
   --tomato:#FF6347;      /* accent: hover state + the cursor */
   --u:11px;              /* one pixel/grid cell */
@@ -165,18 +167,18 @@ a{color:inherit;text-decoration:none}
    depth, then a tight, genuinely dark core right under the fold, plus a 2px
    near-black line of contact occlusion on the crease itself. */
 #corners .corner .flap{
-  filter:drop-shadow(calc(var(--sx,6px) * 9) calc(var(--sy,6px) * 9) 120px rgba(var(--shadow),.80))
-         drop-shadow(calc(var(--sx,6px) * 4) calc(var(--sy,6px) * 4) 44px rgba(var(--shadow),.92))
-         drop-shadow(calc(var(--sx,6px) * 1.5) calc(var(--sy,6px) * 1.5) 15px rgba(var(--shadow),.95))
-         drop-shadow(0 0 3px rgba(var(--shadow),1))}
+  filter:drop-shadow(calc(var(--sx,6px) * 9) calc(var(--sy,6px) * 9) 120px rgba(9,16,42,.80))
+         drop-shadow(calc(var(--sx,6px) * 4) calc(var(--sy,6px) * 4) 44px rgba(9,16,42,.92))
+         drop-shadow(calc(var(--sx,6px) * 1.5) calc(var(--sy,6px) * 1.5) 15px rgba(9,16,42,.95))
+         drop-shadow(0 0 3px rgba(9,16,42,1))}
 /* Three instead of four on phones — stacked filters on a clip-path that
    changes every frame is the most expensive thing on this page — but NOT a
    weaker shadow, which is what made the fold invisible on mobile before. */
 @media(max-width:820px){
   #corners .corner .flap{
-    filter:drop-shadow(calc(var(--sx,6px) * 5) calc(var(--sy,6px) * 5) 60px rgba(var(--shadow),.85))
-           drop-shadow(calc(var(--sx,6px) * 1.5) calc(var(--sy,6px) * 1.5) 16px rgba(var(--shadow),.95))
-           drop-shadow(0 0 3px rgba(var(--shadow),1))}
+    filter:drop-shadow(calc(var(--sx,6px) * 5) calc(var(--sy,6px) * 5) 60px rgba(9,16,42,.85))
+           drop-shadow(calc(var(--sx,6px) * 1.5) calc(var(--sy,6px) * 1.5) 16px rgba(9,16,42,.95))
+           drop-shadow(0 0 3px rgba(9,16,42,1))}
 }
 
 #corners .corner.tl{top:0;left:0}
@@ -284,7 +286,7 @@ a{color:inherit;text-decoration:none}
       rgba(255,255,255,.08) 15px 16px, transparent 16px 23px,
       rgba(9,16,42,.09)      23px 24px, transparent 24px 34px),
     linear-gradient(180deg,
-      rgba(var(--shadow),.78) 0 1px,
+      rgba(9,16,42,.78) 0 1px,
       #16264f 1px,
       #243f8f 14%,
       #4d67b8 30%,
@@ -292,7 +294,7 @@ a{color:inherit;text-decoration:none}
       #4d67b8 54%,
       #243f8f 70%,
       #16264f 86%,
-      rgba(var(--shadow),.88) 100%);
+      rgba(9,16,42,.88) 100%);
   /* gentle undulation only — amplitude 5 of 100, two long segments. Anything
      more and the roll reads as crumpled rather than rolled. */
   -webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='100' preserveAspectRatio='none'><path d='M0,0 L240,0 L240,96 C170,99 100,94 40,97 C27,98 13,97 0,96 Z' fill='white'/></svg>");
@@ -366,8 +368,8 @@ a{color:inherit;text-decoration:none}
   -webkit-text-stroke:var(--sw,2.5px) var(--ink,#ffffff);
   paint-order:stroke fill;
   background-image:repeating-linear-gradient(45deg,
-    rgba(255,255,255,.62) 0                        calc(1.1px * var(--k,1)),
-    transparent           calc(1.1px * var(--k,1)) calc(6px   * var(--k,1)));
+    rgba(255,255,255,.62) 0                              calc(var(--hw,1.1px) * var(--k,1)),
+    transparent           calc(var(--hw,1.1px) * var(--k,1)) calc(var(--hp,6px) * var(--k,1)));
   background-repeat:no-repeat;
   background-position:0 0;
   background-size:0% 100%;
@@ -777,6 +779,16 @@ function measure(){
 
   const heroFS=Math.min(vw*(small?0.135:0.115),165);
   nameEl.style.fontSize=heroFS+"px";
+  /* Hatch pitch and stroke weight are proportions of the LETTER, not fixed
+     pixels. The name is 165px on a desktop and ~53px on a phone, so a fixed
+     6px pitch that reads as fine hatching on one is coarse stripes on the
+     other, and a fixed 2.5px stroke is three times heavier relative to the
+     glyph. Both now scale with the type, with floors so they stay renderable. */
+  const hp=Math.max(3,heroFS*0.038);          // hatch pitch
+  nameEl.style.setProperty("--hp",hp.toFixed(2)+"px");
+  nameEl.style.setProperty("--hw",Math.max(.6,hp*0.18).toFixed(2)+"px");
+  const sw0=Math.max(1.25,heroFS*0.0152);     // stroke at hero size
+  const sw1=small?0.9:1.4;                    // stroke once docked, on screen
   nameEl.style.transform="none";
   words.forEach(w=>w.style.transform="none");
   const r0=words[0].getBoundingClientRect();
@@ -820,7 +832,11 @@ function measure(){
     dockH=lh*nScale;                        // so it still centres in the bar
   }
   const nx=pad, ny=Math.round((headH-RULE-dockH)/2);
-  const headInset=0;       // the bar sits flush at the top of the viewport
+  /* While the paper is still across the top, the bar is invisible (it fades in
+     with paperT) and the name/menu are sitting on the SHEET — so at y=0 they
+     land on top of its ruler ticks and cut through the frame's top border. They
+     tuck one frame inset down until the paper clears, then rise into the bar. */
+  const headInset=fy;
 
   /* ---- info block, flush into the frame's inner bottom-right corner ----
      DESKTOP: 10 squares wide × 3 high — three stacked cells on the left, one
@@ -881,7 +897,7 @@ function measure(){
   cue.style.height=cueH+"px";
 
   M={vw,vh,small,headH,nScale,nx,ny,heroX,heroY,lh,RA,BA,U,headInset,wrapL,pad,
-     w2From:[0,lh], w2To:[r0.width+gap,0]};
+     sw0,sw1, w2From:[0,lh], w2To:[r0.width+gap,0]};
 
   headbar.style.height=headH+"px";
 }
@@ -921,7 +937,9 @@ function update(){
      bar is flush with the top of the viewport, so the header never travels —
      it just resolves into place as the paper clears it. */
   const paperT=clamp((110-rollY)/110);
-  const hOff=M.headInset;                 // 0
+  /* travels from inside the frame to the top of the bar, in step with the
+     paper leaving — so it is never crossing the frame line at rest */
+  const hOff=lerp(M.headInset,0,paperT);
 
   /* name: 2 lines → 1, docking top-left */
   const q=ease(seg(p,PHASE.nameFrom,PHASE.nameTo));
@@ -931,7 +949,7 @@ function update(){
     `translate(${lerp(M.w2From[0],M.w2To[0],q)}px,${lerp(M.w2From[1],M.w2To[1],q)}px)`;
   /* ink stays white: the name never leaves the blueprint */
   nameEl.style.setProperty("--ink","#ffffff");
-  nameEl.style.setProperty("--sw",lerp(2.5,1.4/M.nScale,q).toFixed(2)+"px");
+  nameEl.style.setProperty("--sw",lerp(M.sw0,M.sw1/M.nScale,q).toFixed(2)+"px");
   /* inverse of the name's current scale — keeps the hatch pitch constant on
      screen while the name shrinks ~5× into the header */
   nameEl.style.setProperty("--k",lerp(1,1/M.nScale,q).toFixed(3));
