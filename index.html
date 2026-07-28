@@ -417,6 +417,13 @@ a{color:inherit;text-decoration:none}
    exactly one square tall with its text centred inside it, so headings sit on
    the middle line of a grid row. */
 section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
+/* One square instead of two on a phone. Two squares of section padding plus a
+   square of .content padding is 275px of white before the first heading — fine
+   on a 1440px desktop, most of a screen on a 390px phone. */
+@media(max-width:820px){
+  .content{padding-top:55px}
+  section{padding:55px 0;scroll-margin-top:66px}
+}
 .sec-head{display:flex;align-items:center;height:55px;margin-bottom:55px}
 .sec-head h2{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,4vw,2.4rem);
   text-transform:uppercase;color:var(--navy)}
@@ -776,14 +783,18 @@ function measure(){
 
   /* title and cue sit three squares in from the content column; the DOCKED
      name still lands on wrapL so the header lines up with the cards */
-  const heroX=wrapL+(small?0:2*SQ), heroY=snapY(vh*0.26);
+  /* two cells in on a phone — sitting flush on the frame line looked accidental,
+     but a full square would push the name past the right border */
+  const heroX=wrapL+(small?2*U:2*SQ), heroY=snapY(vh*0.26);
   nameEl.style.left=heroX+"px"; nameEl.style.top=heroY+"px";
 
   /* The bar is its own object, full bleed, so its contents are set in by a
      short deliberate margin (3 cells) instead of tracking the content column —
      the name and the menu sit close to the screen edges. Both are centred in
      the blue, i.e. in the bar minus its 2px closing rule. */
-  const headH=small?44:55, RULE=2;
+  /* One full square everywhere. 44px was too tight on a phone: the name and the
+     menu filled it edge to edge with nothing above or below them. */
+  const headH=55, RULE=2;
   /* Clear of the sheet's frame, not level with it: fx lands the text exactly on
      the border line showing through below the bar, so step two cells inside it. */
   const pad=fx+(small?U:2*U);
@@ -825,17 +836,32 @@ function measure(){
      screen is "small" — an iPad at 768px has 715px of drawing width and every
      reason to keep the desktop arrangement. */
   const stack = innerW < 9*SQ;
-  let local, bw, bh;
+  let local, bw, bh, cueB, cueH;
   if(stack){
     const r=3*U, rR=4*U;                 // 33px rows; 44 for the two-line cell
-    bw=innerW; bh=r*3+rR;
+    /* Width comes from the type, not from the sheet: measure the longest line
+       with wrapping switched off, add the cell's padding, round up to whole
+       cells. So the block is exactly as wide as "MENG GENERAL ENGINEERING
+       (MECH)" needs and no wider, and since every cell is flush right it
+       settles into the bottom-right corner on its own. */
+    let need=0;
+    cells.forEach(el=>{
+      const inf=el.querySelector(".info"), ws=inf.style.whiteSpace;
+      el.style.width="auto"; inf.style.whiteSpace="nowrap";
+      need=Math.max(need,inf.scrollWidth);
+      inf.style.whiteSpace=ws;
+    });
+    bw=Math.min(innerW,Math.ceil((need+14)/U)*U);   // 14 = the cell's 7px padding
+    bh=r*3+rR;
     local={ L1:[0,0,bw,r], L2:[0,r,bw,r], L3:[0,r*2,bw,r], R:[0,r*3,bw,rR] };
+    cueB=fy; cueH=rR;                   // cue shares the bottom row's baseline
   }else{
     const bSq   = innerW>=13*SQ ? 10 : 8;
     const leftW = (bSq/2)*SQ, rightW=(bSq/2)*SQ, rowH=SQ;
     bw=leftW+rightW; bh=rowH*3;
     local={ L1:[0,0,leftW,rowH], L2:[0,rowH,leftW,rowH], L3:[0,rowH*2,leftW,rowH],
             R:[leftW,0,rightW,bh] };
+    cueB=fy+bh-2*SQ; cueH=SQ;           // cue on the block's middle row
   }
   cells.forEach((el,i)=>{
     const l=local[CELLS[i].slot];
@@ -846,12 +872,12 @@ function measure(){
   });
 
 
-  /* cue: desktop — the info block's middle row, to the left of it. Mobile —
-     the block is full width now, so the cue sits one cell ABOVE it instead of
-     colliding with it. Bottom-anchored for the same reason as the cells. */
+  /* cue: bottom-left, on the same row as the block's bottom cell — so the two
+     read as opposite ends of one line across the foot of the sheet. Shares the
+     name's left edge. Bottom-anchored for the same reason as the cells. */
   cue.style.left=heroX+"px"; cue.style.top="auto";
-  cue.style.bottom=(stack ? fy+bh+U : fy+bh-2*SQ)+"px";
-  cue.style.height=(stack?3*U:SQ)+"px";
+  cue.style.bottom=cueB+"px";
+  cue.style.height=cueH+"px";
 
   M={vw,vh,small,headH,nScale,nx,ny,heroX,heroY,lh,RA,BA,U,headInset,wrapL,pad,
      w2From:[0,lh], w2To:[r0.width+gap,0]};
@@ -951,9 +977,18 @@ function update(){
     const idle = coarse ? c!==grabbed : mouseX<0;
     if(idle || rollY<=py+10){ el.style.width=el.style.height="0px"; return; }
 
-    const raw=Math.hypot(mouseX-px,mouseY-py);
+    let dx=mouseX-px, dy=mouseY-py;
+    const raw=Math.hypot(dx,dy);
+    /* Cap the peel on touch, or you can drag the entire sheet off the screen.
+       tanh rather than a hard clamp: it tracks the finger 1:1 while the fold is
+       small and then eases asymptotically into the limit, so the corner feels
+       like it meets resistance instead of hitting a wall. */
+    if(coarse && raw>0){
+      const R=Math.min(M.vw,vh)*0.42, k=R*Math.tanh(raw/R)/raw;
+      dx*=k; dy*=k;
+    }
     const grab=coarse?1:clamp((330-raw)/170);   // desktop eases in, so nothing pops
-    let a=Math.abs(mouseX-px)*grab, b=Math.abs(mouseY-py)*grab;
+    let a=Math.abs(dx)*grab, b=Math.abs(dy)*grab;
     if(a<1&&b<1){ el.style.width=el.style.height="0px"; return; }
     /* stop a near-zero leg sending the other one to infinity */
     a=Math.max(a,b*0.22); b=Math.max(b,a*0.22);
@@ -981,6 +1016,9 @@ function update(){
    ========================================================================== */
 function lockGrid(){
   const SQ=5*GRID.unit;                       // round to whole squares
+  /* must match the section padding in CSS, or this would silently re-inflate
+     the mobile spacing back to the desktop value */
+  const PAD=document.documentElement.clientWidth<820?55:110;
   document.querySelectorAll(".plates,.skills").forEach(row=>{
     const kids=[...row.children];
     kids.forEach(k=>{k.style.height="auto"});
@@ -989,9 +1027,9 @@ function lockGrid(){
     kids.forEach(k=>{k.style.height=h+"px"});
   });
   document.querySelectorAll(".content section").forEach(s=>{
-    s.style.paddingBottom="110px";
+    s.style.paddingBottom=PAD+"px";
     const over=Math.round(s.getBoundingClientRect().height)%SQ;
-    s.style.paddingBottom=(110+(over?SQ-over:0))+"px";
+    s.style.paddingBottom=(PAD+(over?SQ-over:0))+"px";
   });
 }
 
