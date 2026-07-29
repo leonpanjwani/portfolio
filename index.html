@@ -8,9 +8,10 @@
 
   ON LOAD      the name is a 3D WIREFRAME EXPLODED ASSEMBLY: extruded letters
                cascade in along the explode axis (shown in isometric, with
-               dashed leader lines), two hex screws drive in, and the whole
-               plate turns to the front elevation. Falls back to the original
-               sketched-in 2D name if WebGL or three.js is unavailable.
+               dashed leader lines), the full-stop screw spins home, the
+               plate turns to the front elevation and slides up to rest while
+               the dimensions draw on. Falls back to the original sketched-in
+               2D name if WebGL or three.js is unavailable.
 
   ON SCROLL    first, a PINNED WALKTHROUGH: the page holds still while the
                name tours the drawing views (front → isometric → side → front,
@@ -327,8 +328,11 @@ a{color:inherit;text-decoration:none}
    same anchor, same wear — and both outlined in the accent so they read as one
    pair. Left holds the name, right holds the menu. Square corners, because
    every other edge on the sheet is square. */
-.island{position:absolute;overflow:hidden;background:var(--blue);opacity:0;
-  border:1px solid var(--tomato)}
+/* no boxes at all any more — the islands are invisible positioning frames;
+   the menu items carry their own hover highlight instead */
+.island{position:absolute;overflow:hidden;background:transparent;opacity:0;
+  border:0}
+.island .grid,.island .wear,.island .noise{display:none}
 /* The material layers are absolutely positioned and the nav is in flow, and
    positioned elements paint ABOVE in-flow content — so without these two rules
    the grid and wear sit on top of the menu and eat every click. They are
@@ -409,34 +413,16 @@ a{color:inherit;text-decoration:none}
   from{-webkit-mask-position:100% 0; mask-position:100% 0}
   to  {-webkit-mask-position:0% 0;   mask-position:0% 0}
 }
-/* ---- OUTLINE + DRAFTING HATCH ----
-   The letterform is a crisp stroke with no fill of its own; the "shading" is a
-   45° hatch — the way a section is filled on a drawing — clipped to the glyphs
-   with background-clip:text. Because the fill IS a background, revealing it is
-   just growing its width from 0 to 100%, which gives the left-to-right shading
-   pass for free and needs no second mask.
-
-   --sw and --k are both set per frame from JS. --sw holds the stroke's ON-SCREEN
-   weight constant as the name scales down into the header, and --k does the same
-   for the hatch: it is the inverse of the current scale, so the lines keep a
-   constant pitch on screen instead of compressing into a solid smear. */
+/* ---- OUTLINE + TRANSLUCENT FILL ----
+   The letterform is a crisp stroke with a low-alpha fill of the SAME ink —
+   the exact material of the 3D wireframe (edges + faint faces), so the drawn
+   name and the model read as one thing. --sw is set per frame from JS and
+   holds the stroke's on-screen weight constant as the name scales down into
+   the header; --ink and --fillC run white → tomato as it docks. */
 .ltr{position:relative;display:inline-block;color:transparent;
   -webkit-text-stroke:var(--sw,2.5px) var(--ink,#ffffff);
   paint-order:stroke fill;
-  background-image:repeating-linear-gradient(45deg,
-    rgba(255,255,255,.62) 0                              calc(var(--hw,1.1px) * var(--k,1)),
-    transparent           calc(var(--hw,1.1px) * var(--k,1)) calc(var(--hp,6px) * var(--k,1)));
-  background-repeat:no-repeat;
-  background-position:0 0;
-  background-size:0% 100%;
-  -webkit-background-clip:text; background-clip:text;
-  /* The glyph's own fill paints ON TOP of that background, so raising its alpha
-     buries the hatch under solid white. --fillA is driven by the docking
-     progress: hatched at hero size where the texture reads, solid block type in
-     the header where hatching at ~10px tall would only look like noise. */
-  -webkit-text-fill-color:rgba(255,255,255,var(--fillA,0));
-  transition:background-size .95s cubic-bezier(.25,.6,.3,1)}
-#name .word.shaded .ltr{background-size:100% 100%}
+  -webkit-text-fill-color:var(--fillC,rgba(255,255,255,.08))}
 
 /* same left edge, size and weight as the info-box text bottom-right */
 #cue{position:absolute;font-family:var(--display);font-weight:700;font-size:.78rem;
@@ -456,19 +442,20 @@ a{color:inherit;text-decoration:none}
 /* the menu is separate, and simply fades in as you scroll */
 #menu{font-family:var(--display);font-weight:700;font-size:.92rem;
   letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
-#menu a{color:var(--ink,#fff);transition:color .15s ease}
-#menu a:hover{color:var(--tomato)}
+#menu a{color:var(--tomato);transition:color .15s ease,background .15s ease}
+/* square-cornered translucent tomato highlight behind the hovered item */
+#menu a:hover{color:var(--blue);background:rgba(255,99,71,.12)}
 /* a row, three cells between items — a full square was most of what padded the
    island out when it was one long bar */
 #links{display:flex;align-items:center;gap:33px}
-#links a{display:block;height:33px;line-height:33px}
+#links a{display:block;height:33px;line-height:33px;padding:0 11px}
 /* ---- HAMBURGER ----
    Desktop never sees it: the four labels are always shown, in a row. On a phone
    there isn't room for them, so the island collapses to a 26px control and the
    same links drop out of it as a stack. */
 #burger{display:none;width:26px;height:21px;margin:16px 14px;padding:0;
   background:none;border:0;flex-direction:column;justify-content:space-between}
-#burger span{display:block;height:2px;width:100%;background:var(--ink,#fff);
+#burger span{display:block;height:2px;width:100%;background:var(--tomato);
   transition:transform .28s ease,opacity .2s ease}
 #menu.open #burger span:nth-child(1){transform:translateY(9px) rotate(45deg)}
 #menu.open #burger span:nth-child(2){opacity:0}
@@ -580,14 +567,26 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .reel-dots button[aria-current="true"]{background:var(--tomato);
   border-color:var(--tomato)}
 
+/* ---- TOMATO ACCENTS, below the Work section only ----
+   The accent that lives in the header and the cursor starts appearing in the
+   page furniture from Skills down: an 11px grid-cell chip on each section
+   heading, tomato skill headings and tick marks, tomato emphasis in About,
+   tomato arrows in Contact, and a tomato rule over the footer. */
+#skills .sec-head h2::before,#about .sec-head h2::before,
+#contact .sec-head h2::before{content:"";display:inline-block;width:11px;
+  height:11px;background:var(--tomato);margin-right:14px}
+
 /* identical geometry to .plates — three groups, three cards, same columns and
    gutters, so the row lines up with the work row and is centred by definition */
 .skills{display:grid;grid-template-columns:repeat(var(--cols,3),var(--cardW,330px));gap:55px}
 .skill{padding:22px;border:1px solid rgba(25,44,100,.18);background:var(--white)}
+.skill:hover{border-color:var(--tomato)}
 .skill h3{font-family:var(--display);font-weight:700;font-size:.95rem;margin-bottom:10px;
-  text-transform:uppercase;color:var(--navy)}
+  text-transform:uppercase;color:var(--tomato)}
 .skill ul{list-style:none}
 .skill li{font-size:.9rem;color:rgba(25,44,100,.78);padding:3px 0}
+.skill li::before{content:"";display:inline-block;width:7px;height:2px;
+  background:var(--tomato);margin-right:9px;vertical-align:middle}
 
 /* capped to two card columns + a gutter, so the text block's right edge lands
    on the same line as the second card above it */
@@ -596,7 +595,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   max-width:calc(var(--cardW,330px) * 2 + 55px)}
 .about-body{color:rgba(25,44,100,.80);margin-top:22px;font-size:1.04rem;
   max-width:calc(var(--cardW,330px) * 2 + 55px)}
-.about-body b{color:var(--black)}
+.about-body b{color:var(--tomato)}
 
 .contact h2.big{font-family:var(--display);font-weight:700;font-size:clamp(2.2rem,8vw,5rem);
   line-height:1;text-transform:uppercase;color:var(--navy)}
@@ -604,7 +603,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   font-family:var(--display);font-size:clamp(1.05rem,3vw,1.6rem);
   border-bottom:2px solid rgba(25,44,100,.2);padding-bottom:6px;transition:.2s}
 .email:hover{border-color:var(--tomato);color:var(--tomato)}
-.email span{color:var(--blue)}
+.email span{color:var(--tomato)}
 /* one square tall, one square of clearance above — sits on the grid like the
    boxes, and shares the text block's left edge */
 .btn{display:inline-flex;align-items:center;height:55px;padding:0 22px;margin-top:55px;
@@ -612,7 +611,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   border:1px solid var(--black);background:var(--white);transition:.2s}
 .btn:hover{background:var(--tomato);border-color:var(--tomato);color:#fff}
 
-footer{padding:22px 0;display:flex;
+footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
   justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--mono);
   font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(25,44,100,.72)}
 
@@ -901,7 +900,7 @@ const vhNow=()=>Math.max(document.documentElement.clientHeight, innerHeight||0);
 const seg=(p,a,b)=>clamp((p-a)/(b-a));
 const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
 const lerp=(a,b,t)=>a+(b-a)*t;
-const RGB={pale:[189,197,221],white:[255,255,255],navy:[25,44,100]};
+const RGB={pale:[189,197,221],white:[255,255,255],navy:[25,44,100],tomato:[255,99,71]};
 const mix=(c1,c2,t)=>`rgb(${Math.round(lerp(c1[0],c2[0],t))},${Math.round(lerp(c1[1],c2[1],t))},${Math.round(lerp(c1[2],c2[2],t))})`;
 
 /* grabbed: the corner currently held by a finger, or springing back from one.
@@ -925,8 +924,9 @@ const corners=["tl","tr","bl","br"].map(k=>{
    DOM name sits, and the two can crossfade.
 
    INTRO   shown in isometric: letters start exploded along the extrude axis
-           with dashed leader lines, cascade home, two hex screws drive in,
-           then the plate turns to the front elevation.
+           with dashed leader lines and cascade home — the full stop is a hex
+           screw that spins in — then the plate turns to the front elevation
+           and slides up to rest while the dimensions draw on.
 
    TOUR    the first TOUR.travel viewport-heights of scroll are a pinned
            walkthrough (nothing else on the sheet moves): front → isometric →
@@ -952,7 +952,7 @@ if(!reduce && window.THREE) try{
   const matDash=new THREE.LineDashedMaterial({color:0xbdc5dd,transparent:true,opacity:0,
     dashSize:8,gapSize:7});
   R3={renderer,scene,camera,pivot,inner,matEdge,matFace,matDash,
-      letters:[],screws:[],bin:[],ready:false};
+      letters:[],bin:[],ready:false};
   /* the DOM name waits, hidden, for the crossfade at the end of the tour */
   nameEl.style.opacity="0";
 }catch(e){ R3=null }
@@ -994,7 +994,7 @@ function build3D(){
     renderer.setSize(M.vw,M.vh,false);
 
     R3.bin.forEach(g=>g.dispose()); R3.bin=[];
-    inner.clear(); R3.letters=[]; R3.screws=[];
+    inner.clear(); R3.letters=[];
 
     const S=M.heroFS/FONT3D.upem,            // font units → px
           LS=M.heroFS*0.005,                 // same letter-spacing as the CSS
@@ -1009,16 +1009,38 @@ function build3D(){
       return geoCache[ch]={geo,edges};
     };
 
-    let blockW=0, i=0;
+    let blockW=0, i=0; const lineW=[];
     NAME.forEach((word,li)=>{
       let pen=M.heroX; const base=M.base0+li*M.lh;
       [...word].forEach((ch,ci)=>{
         const g=FONT3D.glyphs[ch]; if(!g) return;
         if(ci>0){ const k=FONT3D.kern[word[ci-1]+ch]; if(k) pen+=k*S; }
-        const {geo,edges}=geomFor(ch);
         const lg=new THREE.Group();
-        lg.add(new THREE.Mesh(geo,R3.matFace));
-        lg.add(new THREE.LineSegments(edges,R3.matEdge));
+        let spin=null;
+        if(ch==="."){
+          /* the full stop IS a screw — hex head + shaft sized to the
+             period's box, driven in with a spin during the intro. Its own
+             sub-group so the spin turns about the screw's axis, not the
+             letter's pen origin. (Font units; lg's scale handles the rest.) */
+          spin=new THREE.Group();
+          const Dfu=D/S, hr=88, hh=60, sr=48, sl=170;
+          const head=new THREE.CylinderGeometry(hr,hr,hh,6),
+                shaft=new THREE.CylinderGeometry(sr,sr,sl,12);
+          head.rotateX(Math.PI/2);  shaft.rotateX(Math.PI/2);
+          head.translate(0,0,Dfu/2+hh/2); shaft.translate(0,0,Dfu/2-sl/2);
+          [head,shaft].forEach(gg=>{
+            const e=new THREE.EdgesGeometry(gg,25);
+            R3.bin.push(gg,e);
+            spin.add(new THREE.Mesh(gg,R3.matFace));
+            spin.add(new THREE.LineSegments(e,R3.matEdge));
+          });
+          spin.position.set(119,75,0);         // the period's centre
+          lg.add(spin);
+        }else{
+          const {geo,edges}=geomFor(ch);
+          lg.add(new THREE.Mesh(geo,R3.matFace));
+          lg.add(new THREE.LineSegments(edges,R3.matEdge));
+        }
         lg.scale.setScalar(S);
         const exZ=Math.round(M.heroFS*(0.55+i*0.22));   // the exploded cascade
         lg.position.set(pen,-base,introDone?0:exZ);
@@ -1030,9 +1052,10 @@ function build3D(){
         R3.bin.push(dg);
         const dl=new THREE.Line(dg,R3.matDash); dl.computeLineDistances();
         inner.add(dl);
-        R3.letters.push({g:lg,exZ});
+        R3.letters.push({g:lg,exZ,spin});
         pen+=g.a*S+LS; i++;
       });
+      lineW.push(pen-LS-M.heroX);
       blockW=Math.max(blockW,pen-LS-M.heroX);
     });
 
@@ -1044,35 +1067,18 @@ function build3D(){
     pivot.position.set(cx,cy,0); inner.position.set(-cx,-cy,0);
     R3.cyRestW=cy; R3.cyCW=-M.cyC;
 
-    /* two hex screws pin the plate, left and right of centre */
-    const hr=1.2*M.U, hh=0.8*M.U, sr=0.55*M.U, sl=2.4*M.U;
-    [[M.heroX-3.5*M.U,cy],[Math.min(M.heroX+blockW+3.5*M.U,M.RA-2*M.U),cy]]
-    .forEach(pt=>{
-      const head=new THREE.CylinderGeometry(hr,hr,hh,6),
-            shaft=new THREE.CylinderGeometry(sr,sr,sl,12);
-      head.rotateX(Math.PI/2);  shaft.rotateX(Math.PI/2);
-      head.translate(0,0,D/2+hh/2); shaft.translate(0,0,D/2-sl/2);
-      const sg=new THREE.Group();
-      [head,shaft].forEach(g=>{
-        const e=new THREE.EdgesGeometry(g,25);
-        R3.bin.push(g,e);
-        sg.add(new THREE.Mesh(g,R3.matFace));
-        sg.add(new THREE.LineSegments(e,R3.matEdge));
-      });
-      sg.position.set(pt[0],pt[1],0);
-      sg.visible=introDone;
-      inner.add(sg); R3.screws.push(sg);
-    });
-
     /* ---- DIMENSIONS ----
-       Overall width under the block, overall height on its right — extension
-       lines with a 2px stand-off, filled arrowheads, figures in the drawing's
-       mono. Geometry is the REST position (where the dims are shown). The
-       height dim line runs 2 cells out; the screw sits at 3.5 cells with a
-       1.2-cell head, so the two never touch. */
-    const capT=M.base0-0.7*M.heroFS, baseB=M.base0+M.lh,
-          x0=M.heroX, x1=M.heroX+blockW, u=M.U;
-    const yD=baseB+2.5*u, xD=x1+2*u;
+       Four of them, like a real detail drawing: LEON's length above line 1,
+       the L's cap height on its left, overall width under the block, overall
+       height on its right. Extension lines with a 2px stand-off, filled
+       arrowheads, figures in the drawing's mono. Geometry is the REST
+       position — the only place the dims are shown. */
+    const capT=M.base0-0.7*M.heroFS, baseB=M.base0+M.lh, base1=M.base0,
+          x0=M.heroX, x1=M.heroX+blockW, w0=lineW[0], u=M.U;
+    const yD=baseB+2.5*u,           // overall width dim line, below
+          yU=capT-2.5*u,            // LEON dim line, above
+          xD=x1+2*u,                // overall height dim line, right
+          xL=x0-2*u;                // cap-height dim line, left
     const ah=(x,y,dx,dy)=>{           // arrowhead: tip at (x,y), axis (dx,dy)
       const nx=-dy, ny=dx;
       return `<path class="ah" d="M${x} ${y} L${x+dx*9+nx*3} ${y+dy*9+ny*3} `+
@@ -1080,13 +1086,26 @@ function build3D(){
     };
     dims.setAttribute("viewBox",`0 0 ${M.vw} ${M.vh}`);
     dims.innerHTML=
-      /* width: extension lines, dim line, arrows, figure */
+      /* overall width, below the block */
       `<line x1="${x0}" y1="${baseB+2}" x2="${x0}" y2="${baseB+3.5*u}"/>`+
       `<line x1="${x1}" y1="${baseB+2}" x2="${x1}" y2="${baseB+3.5*u}"/>`+
       `<line x1="${x0}" y1="${yD}" x2="${x1}" y2="${yD}"/>`+
       ah(x0,yD,1,0)+ah(x1,yD,-1,0)+
       `<text x="${(x0+x1)/2}" y="${yD-6}" text-anchor="middle">${Math.round(blockW)}</text>`+
-      /* height: same, rotated onto the right side */
+      /* LEON's length, above line 1 */
+      `<line x1="${x0}" y1="${capT-2}" x2="${x0}" y2="${capT-3.5*u}"/>`+
+      `<line x1="${x0+w0}" y1="${capT-2}" x2="${x0+w0}" y2="${capT-3.5*u}"/>`+
+      `<line x1="${x0}" y1="${yU}" x2="${x0+w0}" y2="${yU}"/>`+
+      ah(x0,yU,1,0)+ah(x0+w0,yU,-1,0)+
+      `<text x="${x0+w0/2}" y="${yU-6}" text-anchor="middle">${Math.round(w0)}</text>`+
+      /* the L's cap height, left of line 1 */
+      `<line x1="${x0-2}" y1="${capT}" x2="${x0-3*u}" y2="${capT}"/>`+
+      `<line x1="${x0-2}" y1="${base1}" x2="${x0-3*u}" y2="${base1}"/>`+
+      `<line x1="${xL}" y1="${capT}" x2="${xL}" y2="${base1}"/>`+
+      ah(xL,capT,0,1)+ah(xL,base1,0,-1)+
+      `<text x="${xL-6}" y="${(capT+base1)/2}" text-anchor="middle" `+
+      `transform="rotate(-90 ${xL-6} ${(capT+base1)/2})">${Math.round(base1-capT)}</text>`+
+      /* overall height, right of the block */
       `<line x1="${x1+2}" y1="${capT}" x2="${x1+3*u}" y2="${capT}"/>`+
       `<line x1="${x1+2}" y1="${baseB}" x2="${x1+3*u}" y2="${baseB}"/>`+
       `<line x1="${xD}" y1="${capT}" x2="${xD}" y2="${baseB}"/>`+
@@ -1107,7 +1126,7 @@ function build3D(){
 function renderGL(){ if(R3&&R3.ready) R3.renderer.render(R3.scene,R3.camera) }
 
 /* ---- intro timeline (ms): fade in → letters cascade home → leaders fade →
-   screws fly in and spin down → plate turns iso → front ---- */
+   full-stop screw spins home → plate turns iso → front → rises to rest ---- */
 let introStarted=false, introDone=false, introRAF=0, introFinishCb=null, introFired=false;
 const eOut=x=>1-Math.pow(1-x,3);
 function setIntro(t){
@@ -1116,23 +1135,20 @@ function setIntro(t){
   glCanvas.style.opacity=f;
   R3.matEdge.opacity=.95*f; R3.matFace.opacity=.07*f;
   R3.letters.forEach((L,j)=>{
-    L.g.position.z=lerp(L.exZ,0,eOut(clamp((t-250-j*60)/600)));
+    const k=eOut(clamp((t-250-j*60)/600));
+    L.g.position.z=lerp(L.exZ,0,k);
+    /* the full stop is a screw: it spins as it drives home with the cascade */
+    if(L.spin) L.spin.rotation.z=(1-k)*12.6;
   });
   R3.matDash.opacity=.5*f*(1-clamp((t-1250)/450));
-  R3.screws.forEach((s,j)=>{
-    const k=eOut(clamp((t-1500-j*200)/520));
-    s.visible=t>1500+j*200;
-    s.position.z=lerp(300,0,k);
-    s.rotation.z=(1-k)*12.6;                 // ~2 turns as it drives home
-  });
   /* the exploded assembly plays out centred in the frame; the plate turns to
      the front elevation, holds a beat, then slides up to its rest position
      while the dimensions are drawn on */
-  const rq=ease(clamp((t-2150)/700));
+  const rq=ease(clamp((t-1900)/700));
   R3.pivot.quaternion.copy(Q_ISO).slerp(Q_ID,rq);
-  const rise=ease(clamp((t-3050)/550));
+  const rise=ease(clamp((t-2750)/550));
   R3.pivot.position.y=lerp(R3.cyCW,R3.cyRestW,rise);
-  dims.style.opacity=clamp((t-3400)/450).toFixed(3);
+  dims.style.opacity=clamp((t-3050)/450).toFixed(3);
 }
 function finishIntro(){
   cancelAnimationFrame(introRAF); introStarted=true;
@@ -1146,7 +1162,7 @@ function start3DIntro(){
   (function step(now){
     if(introDone) return;
     const t=now-t0;
-    if(t>=3900){ finishIntro(); return; }
+    if(t>=3600){ finishIntro(); return; }
     setIntro(t); renderGL();
     introRAF=requestAnimationFrame(step);
   })(t0);
@@ -1214,12 +1230,10 @@ function setVlabel(t,on){
 /* ---- coordinate readout placement ----
    top-left inside the frame while the blueprint is up; bottom-left over the
    white page once the paper has cleared the top (swap logic in update()). */
-let coordPos="top", coordLock=false;
 function placeCoord(){
-  if(M.coordL===undefined) return;
-  coord.style.left=M.coordL+"px";
-  if(coordPos==="top"){ coord.style.top=M.coordT+"px"; coord.style.bottom="auto" }
-  else{ coord.style.top="auto"; coord.style.bottom=M.coordB+"px" }
+  if(!M.cB) return;
+  coord.style.left=M.cB.x+"px"; coord.style.top=M.cB.y+"px";
+  coord.style.bottom="auto";
 }
 
 function measure(){
@@ -1277,15 +1291,9 @@ function measure(){
     heroFS=Math.max(40,Math.floor(heroFS*TOUR.fit));
   }else heroFS=Math.min(vw*(small?0.135:0.115),165);       // unknown glyphs
   nameEl.style.fontSize=heroFS+"px";
-  /* Hatch pitch and stroke weight are proportions of the LETTER, not fixed
-     pixels. The name is 165px on a desktop and ~53px on a phone, so a fixed
-     6px pitch that reads as fine hatching on one is coarse stripes on the
-     other, and a fixed 2.5px stroke is three times heavier relative to the
-     glyph. Both now scale with the type, with floors so they stay renderable. */
-  const hp=Math.max(3,heroFS*0.038);          // hatch pitch
-  nameEl.style.setProperty("--hp",hp.toFixed(2)+"px");
-  nameEl.style.setProperty("--hw",Math.max(.6,hp*0.18).toFixed(2)+"px");
-  const sw0=Math.max(1.25,heroFS*0.0152);     // stroke at hero size
+  /* Hairline stroke — the wireframe's 1px feature edges are the reference
+     material, and the crossfade only disappears if the drawn name matches. */
+  const sw0=Math.max(1,heroFS*0.006);         // stroke at hero size
   const sw1=small?0.9:1.4;                    // stroke once docked, on screen
   nameEl.style.transform="none";
   words.forEach(w=>w.style.transform="none");
@@ -1316,32 +1324,45 @@ function measure(){
   doc.style.setProperty("--ipad",P+"px");
 
   /* ---- THE TWO ISLANDS ----
-     Both pinned to the frame's top corners. The RIGHT one is sized by its own
-     content — it's a real box with the nav in flow inside it, so the browser
-     does that sizing — and is measured first, because whatever it takes is
-     width the left island can't have. */
-  menubar.style.top=fy+"px"; menubar.style.right=fx+"px";
+     Both sit ONE CELL off the top of the screen once the paper is gone — the
+     white page has no frame line to respect. The RIGHT one is sized by its
+     own content — it's a real box with the nav in flow inside it, so the
+     browser does that sizing — and is measured first, because whatever it
+     takes is width the left island can't have. */
+  const headTop=U;
+  menubar.style.top=headTop+"px"; menubar.style.right=fx+"px";
   const mbW=menubar.getBoundingClientRect().width;
+
+  /* the coordinate readout: inside the frame beside the name while the
+     blueprint is up, then hard into the screen corner once the paper's gone.
+     The name's dock budgets a slot so it clears them in both berths. */
+  const cRect=coord.getBoundingClientRect();
+  const cw=coarse?0:Math.ceil(cRect.width)+U;
+  const coordX=U+2;                              // the corner berth
 
   const r1=words[1].getBoundingClientRect();
   const lockupW=r0.width+gap+r1.width;      // the one-line name at hero size
   let dockH=small?18:24;
-  /* The left island is sized to the docked name, so the name is scaled to
-     whatever is left after the menu island and a square of clearance. On a
-     phone that's the binding constraint; on a desktop it never bites. */
-  const avail=innerW-mbW-SQ-2*P;
+  /* The left island is sized to the coords + docked name, so the name is
+     scaled to whatever is left after the menu island and a square of
+     clearance. On a phone that's the binding constraint; on a desktop it
+     never bites. */
+  const avail=innerW-mbW-SQ-2*P-cw;
   let nScale=Math.min(dockH/lh,Math.max(0.10,avail/lockupW));
   dockH=lh*nScale;
   const nameW=lockupW*nScale;
 
-  headbar.style.left=fx+"px";  headbar.style.top=fy+"px";
+  /* the (invisible) island frames only the name; coords sit to its left */
+  /* two dock x-targets: beside the coords' blueprint berth while the paper
+     is up, then sliding left with them toward the corner as it clears */
+  const nx=fx+2*U+cw, nxA=coordX+cw, ny=Math.round((headH-dockH)/2);
+  headbar.style.left=(nx-P)+"px";  headbar.style.top=headTop+"px";
   headbar.style.width=Math.round(2*P+nameW)+"px";
   headbar.style.height=headH+"px";
-
-  const nx=fx+P, ny=Math.round((headH-dockH)/2);
-  /* The islands sit one frame inset down, so the name tucks to that same place
-     while the paper is still on and simply arrives — nothing travels. */
-  const headFrom=fy, headTo=fy;
+  /* stage one: the name docks INSIDE the frame, on the coord row, while the
+     paper is still up. As the roll passes, name, coords and box all ride up
+     together to the header line (see hOff and the coord slide in update). */
+  const headFrom=fy, headTo=headTop;
 
   /* ---- info block, flush into the frame's inner bottom-right corner ----
      DESKTOP: 10 squares wide × 3 high — three stacked cells on the left, one
@@ -1401,7 +1422,7 @@ function measure(){
   cue.style.bottom=cueB+"px";
   cue.style.height=cueH+"px";
 
-  M={vw,vh,small,headH,nScale,nx,ny,heroX,heroY,lh,RA,BA,U,wrapL,
+  M={vw,vh,small,headH,nScale,nx,nxA,ny,heroX,heroY,lh,RA,BA,U,wrapL,
      headFrom,headTo,sw0,sw1,heroFS,base0,
      /* the pinned walkthrough's scroll budget — zero when there's no 3D */
      W:R3?Math.round(vh*TOUR.travel):0,
@@ -1410,9 +1431,11 @@ function measure(){
      BEFORE the white page starts arriving — the sheet holds still under it */
   stage.style.height=(M.W+Math.round(vh*1.5))+"px";
 
-  /* Coordinate readout: both berths share the same left edge and inset; which
-     one is live is decided per frame in update(). */
-  M.coordL=fx+2*U; M.coordT=fy+U; M.coordB=fy+U;
+  /* Coordinate readout berths: white beside the name inside the frame on
+     the blueprint; page ink hard in the corner after. It slides between the
+     two on the same paperT the name's dock rides. */
+  M.cB={x:fx+2*U, y:fy+U};
+  M.cA={x:coordX, y:headTop+Math.round((headH-cRect.height)/2)};
   M.cyC=fy+innerH/2;                 // the tour pivot's centred position
   placeCoord();
 
@@ -1483,25 +1506,30 @@ function update(){
 
   /* name: 2 lines → 1, docking top-left */
   const q=ease(seg(p,P2(PHASE.nameFrom),P2(PHASE.nameTo)));
+  const nxNow=lerp(M.nx,M.nxA,paperT);   // dock x rides left with the coords
   nameEl.style.transform=
-    `translate(${lerp(0,M.nx-M.heroX,q)}px,${lerp(0,M.ny+hOff-M.heroY,q)}px) scale(${lerp(1,M.nScale,q)})`;
+    `translate(${lerp(0,nxNow-M.heroX,q)}px,${lerp(0,M.ny+hOff-M.heroY,q)}px) scale(${lerp(1,M.nScale,q)})`;
   words[1].style.transform=
     `translate(${lerp(M.w2From[0],M.w2To[0],q)}px,${lerp(M.w2From[1],M.w2To[1],q)}px)`;
-  /* ink stays white: the name never leaves the blueprint */
-  nameEl.style.setProperty("--ink","#ffffff");
-  nameEl.style.setProperty("--sw",lerp(M.sw0,M.sw1/M.nScale,q).toFixed(2)+"px");
-  /* inverse of the name's current scale — keeps the hatch pitch constant on
-     screen while the name shrinks ~5× into the header */
-  nameEl.style.setProperty("--k",lerp(1,1/M.nScale,q).toFixed(3));
-  /* squared, so it stays hatched through the early part of the dock and only
-     goes solid as it settles into the bar */
-  nameEl.style.setProperty("--fillA",(q*q).toFixed(3));
+  /* The ink follows the SURFACE, not the dock: white the whole time the name
+     is on the blueprint, tomato only once the paper has rolled past it. The
+     material never changes — translucent fill, and a stroke that keeps the
+     hero's RELATIVE weight as it scales down (with a floor so it stays
+     renderable at header size). */
+  const ig=Math.round(lerp(255,99,paperT)), ib=Math.round(lerp(255,71,paperT));
+  nameEl.style.setProperty("--ink",`rgb(255,${ig},${ib})`);
+  nameEl.style.setProperty("--fillC",`rgba(255,${ig},${ib},${lerp(.07,.14,q).toFixed(3)})`);
+  /* Interpolate the ON-SCREEN weight and divide by the current scale.
+     Lerping the local weight and the transform scale separately let their
+     product balloon mid-transition — the stroke went fat halfway through
+     the dock even though both endpoints were right. */
+  const swT=Math.max(1.3,M.sw0*M.nScale);
+  const kNow=lerp(1,M.nScale,q);
+  nameEl.style.setProperty("--sw",(lerp(M.sw0,swT,q)/kNow).toFixed(2)+"px");
 
-  menu.style.setProperty("--ink","#ffffff");
-
-  /* Both islands arrive together as the paper clears, dropping the last few
-     pixels into place so they land rather than simply materialising. */
-  const drop=`translateY(${lerp(-10,0,paperT).toFixed(1)}px)`;
+  /* Both islands ride up from the frame line with the name as the paper
+     clears, fading in on the way — box and contents arrive as one. */
+  const drop=`translateY(${lerp(M.headFrom-M.headTo,0,paperT).toFixed(1)}px)`;
   headbar.style.opacity=menubar.style.opacity=paperT;
   headbar.style.transform=menubar.style.transform=drop;
   menubar.style.pointerEvents=paperT>.6?"auto":"none";
@@ -1526,19 +1554,18 @@ function update(){
        in width as the digits change. */
     const pad4=v=>(v<0?"-":"")+String(Math.abs(Math.round(v))).padStart(4,"0");
     cxEl.textContent="X "+pad4(cx); cyEl.textContent="Y "+pad4(cy);
-    if(!coordLock) coord.classList.add("on");
+    coord.classList.add("on");
   }
   /* white over the paper, navy once the page has taken over — and the halo
      flips with it, dark behind white ink and pale behind navy */
   coord.style.setProperty("--ink",mix(RGB.white,RGB.navy,paperT));
   coord.style.setProperty("--halo",paperT<.5?"rgba(9,16,42,.55)":"rgba(255,255,255,.9)");
 
-  /* the readout changes corners with the surface: fade out, jump while
-     invisible, fade back in at the other berth */
-  const cWant=paperT>.5?"bottom":"top";
-  if(cWant!==coordPos&&!coordLock){
-    coordLock=true; coord.classList.remove("on");
-    setTimeout(()=>{ coordPos=cWant; placeCoord(); coordLock=false },280);
+  /* the readout slides from its blueprint berth to the screen corner as the
+     paper clears, on the same motion the name rides */
+  if(M.cB){
+    coord.style.left=Math.round(lerp(M.cB.x,M.cA.x,paperT))+"px";
+    coord.style.top =Math.round(lerp(M.cB.y,M.cA.y,paperT))+"px";
   }
 
   /* ---- 3D name: the pinned drawing-view walkthrough ----
