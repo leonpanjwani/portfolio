@@ -6,9 +6,16 @@
   TITLE PAGE   a blueprint drawing sheet: frame, ruler ticks, and an info block
                flush in the bottom-right corner, all on an 11px grid.
 
-  ON LOAD      the name is sketched in on two left-aligned lines.
+  ON LOAD      the name is a 3D WIREFRAME EXPLODED ASSEMBLY: extruded letters
+               cascade in along the explode axis (shown in isometric, with
+               dashed leader lines), two hex screws drive in, and the whole
+               plate turns to the front elevation. Falls back to the original
+               sketched-in 2D name if WebGL or three.js is unavailable.
 
-  ON SCROLL    the sheet ROLLS UP like a scroll, bottom to top. The roll rides
+  ON SCROLL    first, a PINNED WALKTHROUGH: the page holds still while the
+               name tours the drawing views (front → isometric → side → front,
+               labelled). Then the sheet ROLLS UP like a scroll, bottom to
+               top, exactly as before. The roll rides
                exactly on the top edge of the white page coming up underneath,
                so the paper leaving and the work section arriving are the same
                movement. Meanwhile the name docks top-left and the info block
@@ -56,6 +63,10 @@
   --maxw:1180px;
   --display:"Chakra Petch","Helvetica Neue",Arial,sans-serif;
   --mono:"Share Tech Mono",ui-monospace,Menlo,monospace;
+  /* Typewriter, kept for later. Nothing uses it right now, so Courier Prime is
+     NOT in the font link — add &family=Courier+Prime:wght@400;700 there before
+     switching anything to it, or it will fall back to Courier New. */
+  --type:"Courier Prime","Courier New",ui-monospace,monospace;
   --body:"Inter","Helvetica Neue",Arial,sans-serif;
 
   /* Ink-on-worn-paper: streaky turbulence used as a MASK, so the ink is mostly
@@ -106,7 +117,7 @@ a{color:inherit;text-decoration:none}
    ========================================================================== */
 #sheet{position:fixed;inset:0;z-index:0;pointer-events:none;background:var(--blue);
   will-change:clip-path}
-#sheet .grid,#headbar .grid{position:absolute;inset:0;
+#sheet .grid,.island .grid{position:absolute;inset:0;
   background-image:
     repeating-linear-gradient(90deg,
       rgba(189,197,221,.34) 0 1px, transparent 1px 11px,
@@ -130,17 +141,17 @@ a{color:inherit;text-decoration:none}
    (long streaky wisps + finer blotches) plus a few drawn scratches, screened
    over the blue so they lighten it like rubbed emulsion. Dial the opacity to
    taste, or delete this element and its div to go back to a clean sheet. */
-#sheet .wear,#headbar .wear{position:absolute;inset:0;opacity:.38;mix-blend-mode:screen;
+#sheet .wear,.island .wear{position:absolute;inset:0;opacity:.38;mix-blend-mode:screen;
   background-size:900px 650px;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='650'><filter id='s' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.003 0.07' numOctaves='4' seed='11' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.4 0 0 0 -0.66'/></filter><filter id='b' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.011' numOctaves='3' seed='3' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.1 0 0 0 -0.74'/></filter><rect width='900' height='650' filter='url(%23s)' opacity='.5'/><rect width='900' height='650' filter='url(%23b)' opacity='.35'/><g stroke='white' fill='none' stroke-linecap='round' opacity='.2'><path d='M60 120 C180 96 300 150 420 118' stroke-width='1.2'/><path d='M520 380 C610 350 700 402 842 366' stroke-width='1'/><path d='M120 520 C210 486 300 542 380 500' stroke-width='.9'/><path d='M700 90 C762 140 782 200 812 252' stroke-width='.8'/><path d='M250 300 C300 330 340 300 400 322' stroke-width='.7'/></g></svg>")}
-#sheet .noise,#headbar .noise{position:absolute;inset:0;opacity:.22;mix-blend-mode:overlay;
+#sheet .noise,.island .noise{position:absolute;inset:0;opacity:.22;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.55'/></svg>")}
 /* Two full-screen blended layers over a turbulence texture is the other big
    mobile cost. The fine grain is invisible on a small high-DPI screen anyway,
    so drop it there and ease off the wear. */
 @media(max-width:820px){
-  #sheet .wear,#headbar .wear{opacity:.24}
-  #sheet .noise,#headbar .noise{display:none}
+  #sheet .wear,.island .wear{opacity:.24}
+  #sheet .noise,.island .noise{display:none}
 }
 /* border drawn 2px INSIDE, so the element sits at (inset − 2) and its inner
    edge lands exactly on --fx / --fy */
@@ -310,19 +321,64 @@ a{color:inherit;text-decoration:none}
    4. FIXED LAYER — name + info cells (become the header)
    ========================================================================== */
 #layer{position:fixed;inset:0;z-index:50;pointer-events:none}
-/* ---- THE HEADER BAR ----
-   Made of the same stock as the sheet — same blue, same 11px grid on the same
-   anchor, same wear and noise — but it is its OWN object, not a surviving crop
-   of the drawing. So: no ruler ticks, no frame corner, full bleed edge to edge,
-   and one clean white rule closing it off at the bottom. It reads as a bar cut
-   from the same material rather than as a piece of paper that didn't roll. */
-#headbar{position:absolute;top:0;left:0;right:0;overflow:hidden;
-  background:var(--blue);opacity:0;
-  box-shadow:0 6px 20px rgba(9,16,42,.22)}
-/* the closing edge: same 2px white as the drawing frame, so the bar belongs to
-   the same drawing language even though it isn't part of the sheet */
-#headbar .rule{position:absolute;left:0;right:0;bottom:0;height:2px;
-  background:var(--white)}
+/* ---- THE TWO ISLANDS ----
+   The header is two separate objects pinned to the sheet's top corners, both
+   cut from the same stock as the drawing — same blue, same 11px grid on the
+   same anchor, same wear — and both outlined in the accent so they read as one
+   pair. Left holds the name, right holds the menu. Square corners, because
+   every other edge on the sheet is square. */
+.island{position:absolute;overflow:hidden;background:var(--blue);opacity:0;
+  border:1px solid var(--tomato)}
+/* The material layers are absolutely positioned and the nav is in flow, and
+   positioned elements paint ABOVE in-flow content — so without these two rules
+   the grid and wear sit on top of the menu and eat every click. They are
+   semi-transparent, so the links look perfectly fine while being unclickable. */
+.island .grid,.island .wear,.island .noise{pointer-events:none}
+#menu{position:relative;z-index:1}
+/* one grid row of links plus a cell of padding = the same 55px as the left
+   island, so the pair sit level */
+#menubar{padding:10px var(--ipad,22px)}
+@media(max-width:820px){
+  /* on a phone the right island is just the burger until it's opened */
+  #menubar{padding:0}
+}
+
+/* ---- CURSOR READOUT ----
+   Bottom-left, inside the frame — the coordinate display a CAD window would
+   have, kept out of the corners the fold uses. Pointer-driven, desktop only. */
+#coord{position:absolute;font-family:var(--mono);font-size:.78rem;
+  letter-spacing:.14em;display:flex;flex-direction:column;
+  justify-content:center;align-items:flex-start;gap:2px;line-height:1.15;
+  color:var(--ink,#fff);opacity:0;transition:opacity .4s ease;
+  white-space:nowrap;pointer-events:none;
+  /* it sits over both the ruler ticks and, later, the page grid — a faint
+     halo in the opposite ink keeps it legible on both without a box */
+  text-shadow:0 1px 3px var(--halo,rgba(9,16,42,.55))}
+#coord.on{opacity:1}
+@media(pointer:coarse){#coord{display:none}}
+
+/* ---- 3D WIREFRAME NAME ----
+   A full-viewport transparent WebGL canvas between the sheet (z0) and the
+   roll (z30). It only ever shows the name: extruded Chakra Petch letterforms
+   rendered as white feature edges — the same ink as everything else drawn on
+   the sheet. Opacity is driven per frame from JS (intro fade-in, then the
+   crossfade to the DOM name at the end of the view walkthrough). */
+#gl{position:fixed;inset:0;z-index:20;width:100%;height:100%;
+  pointer-events:none;opacity:0;will-change:opacity}
+/* the drawing-view annotation under the name — FRONT ELEVATION etc. */
+#vlabel{position:absolute;font-family:var(--mono);font-size:.78rem;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--white);opacity:0;
+  white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px rgba(9,16,42,.45)}
+/* dimension annotations — extension lines, arrows and figures, drawn on once
+   the assembly has settled and lifted OFF again the moment the view starts
+   to turn, the way a drawing is only dimensioned in true view */
+#dims{position:absolute;inset:0;width:100%;height:100%;opacity:0;
+  pointer-events:none}
+#dims line{stroke:var(--white);stroke-width:1;opacity:.85}
+#dims .ah{fill:var(--white);stroke:none;opacity:.85}
+#dims text{fill:var(--white);font-family:var(--mono);font-size:12px;
+  letter-spacing:.08em;opacity:.95}
+@media(prefers-reduced-motion:reduce){#gl,#vlabel,#dims{display:none}}
 
 #name{position:absolute;font-family:var(--display);font-weight:700;
   line-height:.86;letter-spacing:.005em;white-space:nowrap;
@@ -398,11 +454,34 @@ a{color:inherit;text-decoration:none}
 .cell.on{opacity:1}
 
 /* the menu is separate, and simply fades in as you scroll */
-#menu{position:absolute;display:flex;align-items:center;opacity:0;
-  pointer-events:none;font-family:var(--display);font-weight:700;font-size:.92rem;
+#menu{font-family:var(--display);font-weight:700;font-size:.92rem;
   letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
 #menu a{color:var(--ink,#fff);transition:color .15s ease}
 #menu a:hover{color:var(--tomato)}
+/* a row, three cells between items — a full square was most of what padded the
+   island out when it was one long bar */
+#links{display:flex;align-items:center;gap:33px}
+#links a{display:block;height:33px;line-height:33px}
+/* ---- HAMBURGER ----
+   Desktop never sees it: the four labels are always shown, in a row. On a phone
+   there isn't room for them, so the island collapses to a 26px control and the
+   same links drop out of it as a stack. */
+#burger{display:none;width:26px;height:21px;margin:16px 14px;padding:0;
+  background:none;border:0;flex-direction:column;justify-content:space-between}
+#burger span{display:block;height:2px;width:100%;background:var(--ink,#fff);
+  transition:transform .28s ease,opacity .2s ease}
+#menu.open #burger span:nth-child(1){transform:translateY(9px) rotate(45deg)}
+#menu.open #burger span:nth-child(2){opacity:0}
+#menu.open #burger span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+@media(max-width:820px){
+  #burger{display:flex}
+  /* the row becomes a stack, collapsed until the burger opens it — the island
+     itself grows, rather than a separate panel dropping below it */
+  #links{flex-direction:column;align-items:stretch;gap:0;
+    overflow:hidden;max-height:0;transition:max-height .28s ease}
+  #menu.open #links{max-height:200px}
+  #links a{text-align:right;padding:0 14px}
+}
 .cell .info{font-family:var(--display);font-weight:700;font-size:.78rem;
   letter-spacing:.04em;text-transform:uppercase;
   color:var(--ck,#fff);white-space:nowrap;line-height:1.5}
@@ -467,6 +546,39 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   color:var(--blue);border-bottom:1px solid rgba(25,44,100,.2);padding-bottom:3px;transition:.2s}
 .plate-links a:hover{color:var(--tomato);border-color:var(--tomato)}
 @media(max-width:520px){.beat{grid-template-columns:1fr;gap:2px}}
+
+/* ==========================================================================
+   CAROUSEL
+   One reel for the whole Work section. Images are rendered with
+   image-rendering:pixelated, so a deliberately SMALL source file is blown up
+   with nearest-neighbour and the blocks land on the same 11px grid as
+   everything else — the cursor included. Height is whole squares.
+   ========================================================================== */
+.reel{margin-top:55px;position:relative}
+.reel-win{position:relative;overflow:hidden;height:var(--reelH,330px);
+  border:1px solid rgba(25,44,100,.18);background:var(--paper)}
+.reel-track{display:flex;height:100%;
+  transition:transform .5s cubic-bezier(.22,.61,.36,1)}
+.reel-slide{flex:0 0 100%;position:relative;display:flex;
+  align-items:center;justify-content:center}
+.reel-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  image-rendering:pixelated}
+.reel-slide .ph{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  color:var(--blue);text-align:center;padding:16px}
+.reel-cap{position:absolute;left:0;right:0;bottom:0;padding:9px 14px;
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--white);background:rgba(25,44,100,.85)}
+.reel-nav{position:absolute;top:50%;margin-top:-22px;width:44px;height:44px;
+  border:1px solid var(--navy);background:var(--white);color:var(--navy);
+  font-family:var(--mono);font-size:1rem;line-height:1;padding:0;
+  display:flex;align-items:center;justify-content:center;transition:.2s}
+.reel-nav.prev{left:11px} .reel-nav.next{right:11px}
+.reel-nav:hover{background:var(--tomato);border-color:var(--tomato);color:#fff}
+.reel-dots{display:flex;gap:11px;margin-top:22px;justify-content:center}
+.reel-dots button{width:11px;height:11px;padding:0;background:none;
+  border:1px solid var(--navy);transition:.2s}
+.reel-dots button[aria-current="true"]{background:var(--tomato);
+  border-color:var(--tomato)}
 
 /* identical geometry to .plates — three groups, three cards, same columns and
    gutters, so the row lines up with the work row and is centred by definition */
@@ -540,16 +652,28 @@ footer{padding:22px 0;display:flex;
 
 <div id="roll"><div class="shade"></div><div class="tube"></div></div>
 
+<!-- the 3D name lives here; transparent, so the sheet shows through -->
+<canvas id="gl"></canvas>
+
 <div id="layer">
-  <div id="headbar">
+  <div id="headbar" class="island">
     <div class="grid"></div><div class="wear"></div><div class="noise"></div>
-    <div class="rule"></div>
+  </div>
+  <div id="menubar" class="island">
+    <div class="grid"></div><div class="wear"></div><div class="noise"></div>
+    <nav id="menu">
+      <button id="burger" type="button" aria-label="Menu" aria-expanded="false"
+              aria-controls="links"><span></span><span></span><span></span></button>
+      <div id="links">
+        <a href="#work">Work</a><a href="#skills">Skills</a>
+        <a href="#about">About</a><a href="#contact">Contact</a>
+      </div>
+    </nav>
   </div>
   <div id="name" aria-label="Leon Panjwani"></div>
-  <nav id="menu">
-    <a href="#work">Work</a><a href="#skills">Skills</a>
-    <a href="#about">About</a><a href="#contact">Contact</a>
-  </nav>
+  <div id="coord"><span id="cx">X ····</span><span id="cy">Y ····</span></div>
+  <div id="vlabel" class="printed"></div>
+  <svg id="dims" class="printed" aria-hidden="true"></svg>
 </div>
 
 <div id="stage"></div>
@@ -611,6 +735,8 @@ footer{padding:22px 0;display:flex;
         </article>
 
       </div>
+      <!-- one reel for the whole section; slides come from REEL in the script -->
+      <div class="reel rv" id="reel"></div>
     </div>
   </section>
 
@@ -662,6 +788,7 @@ footer{padding:22px 0;display:flex;
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* ==========================================================================
    EDIT ZONE
@@ -676,6 +803,18 @@ const CELLS = [
               nav:"Contact", href:"#contact"}
 ];
 
+/* Carousel slides. Export each source at roughly 1/11th of its display width —
+   the browser scales it back up with nearest-neighbour, so the blocks land on
+   the 11px grid. A missing file falls back to the placeholder frame. */
+const REEL = [
+  {src:"img/reel-01.jpg", cap:"AUV — fin drive assembly"},
+  {src:"img/reel-02.jpg", cap:"AUV — hull under test"},
+  {src:"img/reel-03.jpg", cap:"Inflatable helmet — bonded seam trial"},
+  {src:"img/reel-04.jpg", cap:"Inflatable helmet — packed volume"},
+  {src:"img/reel-05.jpg", cap:"Energy-from-Waste — process layout"},
+  {src:"img/reel-06.jpg", cap:"Workshop — machining the mounts"}
+];
+
 const GRID = { unit:11, inset:33, leftCells:24, rightCells:25, rowCells:4 };
 
 /* Fractions of the roll's travel. The info block no longer moves — it is
@@ -687,6 +826,38 @@ const PHASE = { nameFrom:0.01, nameTo:0.26, menuFrom:0.10, menuTo:0.38 };
    roll visibly fattens. */
 const ROLL = { minH:12, maxH:76 };
 
+/* ---- 3D NAME ----
+   travel: how much scroll the pinned view-walkthrough eats, in viewport
+   heights. depth: extrusion depth as a fraction of the hero font size.
+   seg: fractions of the walkthrough — [front→iso, dwell, iso→side, dwell,
+   side→front] boundaries. */
+const TOUR = { travel:1.6, depth:0.24, drop:-44, fit:0.88, seg:[0,.26,.34,.60,.68,1] };
+/* drop: where the name RESTS relative to the frame's centre, in px (negative
+   = above it). The intro assembles centred, turns front-on, then slides up to
+   this rest; scrolling slides it back down to the centre as it turns
+   isometric — the rotated views need the centre's symmetric clearance, which
+   is what keeps every view inside the border.
+   fit: shave applied to the solved hero size, so the front view stops short
+   of the frame and clears the info block. */
+
+/* Chakra Petch Bold, pre-extracted to raw outlines (font units, y-up) so the
+   3D letters are the same glyphs the CSS renders — no font parser, no extra
+   fetch at runtime. Every contour is straight lines: the font is octagonal,
+   which is exactly why the wireframe reads so cleanly. Regenerate with
+   opentype.js against ChakraPetch-Bold if the NAME ever needs more letters:
+   each glyph is {a: advance width, p: path commands}, kern is per-pair. */
+const FONT3D = {"upem":1000,"capH":700,"kern":{"PA":-75,"WA":-45},"glyphs":{
+"L":{"a":561,"p":[["M",65,0],["L",65,700],["L",201,700],["L",201,115],["L",551,115],["L",551,0],["Z"]]},
+"E":{"a":606,"p":[["M",65,0],["L",65,700],["L",571,700],["L",571,585],["L",201,585],["L",201,408],["L",542,408],["L",542,295],["L",201,295],["L",201,115],["L",571,115],["L",571,0],["Z"]]},
+"O":{"a":700,"p":[["M",170,0],["L",55,115],["L",55,585],["L",170,700],["L",530,700],["L",645,585],["L",645,115],["L",530,0],["Z"],["M",242,116],["L",458,116],["L",509,167],["L",509,533],["L",458,584],["L",242,584],["L",191,533],["L",191,167],["Z"]]},
+"N":{"a":697,"p":[["M",65,0],["L",65,700],["L",187,700],["L",499,225],["L",501,225],["L",501,700],["L",632,700],["L",632,0],["L",510,0],["L",198,474],["L",196,474],["L",196,0],["Z"]]},
+"P":{"a":646,"p":[["M",65,0],["L",65,700],["L",504,700],["L",611,592],["L",611,347],["L",503,238],["L",201,238],["L",201,0],["Z"],["M",201,352],["L",442,352],["L",477,387],["L",477,551],["L",442,586],["L",201,586],["Z"]]},
+"A":{"a":646,"p":[["M",5,0],["L",261,700],["L",385,700],["L",641,0],["L",503,0],["L",446,155],["L",200,155],["L",143,0],["Z"],["M",231,267],["L",416,267],["L",323,533],["L",321,533],["Z"]]},
+"J":{"a":580,"p":[["M",140,0],["L",20,121],["L",20,251],["L",152,251],["L",152,167],["L",203,116],["L",336,116],["L",384,163],["L",384,700],["L",520,700],["L",520,117],["L",403,0],["Z"]]},
+"W":{"a":879,"p":[["M",170,0],["L",25,700],["L",162,700],["L",247,206],["L",251,206],["L",390,700],["L",492,700],["L",628,206],["L",632,206],["L",717,700],["L",854,700],["L",709,0],["L",582,0],["L",443,492],["L",439,492],["L",297,0],["Z"]]},
+"I":{"a":276,"p":[["M",70,0],["L",70,700],["L",206,700],["L",206,0],["Z"]]},
+".":{"a":238,"p":[["M",83,0],["L",40,43],["L",40,107],["L",83,150],["L",156,150],["L",198,106],["L",198,44],["L",156,0],["Z"]]}}};
+
 /* ==========================================================================
    SETUP
    ========================================================================== */
@@ -694,7 +865,10 @@ const layer=document.getElementById("layer"), nameEl=document.getElementById("na
       sheet=document.getElementById("sheet"), headbar=document.getElementById("headbar"),
       cue=document.getElementById("cue"), content=document.getElementById("content"),
       roll=document.getElementById("roll"), tube=roll.querySelector(".tube"),
-      cursorEl=document.getElementById("cursor"), menu=document.getElementById("menu");
+      cursorEl=document.getElementById("cursor"), menu=document.getElementById("menu"),
+      burger=document.getElementById("burger"), coord=document.getElementById("coord"),
+      menubar=document.getElementById("menubar"),
+      cxEl=document.getElementById("cx"), cyEl=document.getElementById("cy");
 const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 /* A touch screen has no hover, so anything driven by pointer position needs a
    second way in. Checked once — a device doesn't change input type mid-visit. */
@@ -727,7 +901,7 @@ const vhNow=()=>Math.max(document.documentElement.clientHeight, innerHeight||0);
 const seg=(p,a,b)=>clamp((p-a)/(b-a));
 const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
 const lerp=(a,b,t)=>a+(b-a)*t;
-const RGB={pale:[206,216,247],white:[255,255,255],black:[51,51,51],navy:[0,32,130]};
+const RGB={pale:[189,197,221],white:[255,255,255],navy:[25,44,100]};
 const mix=(c1,c2,t)=>`rgb(${Math.round(lerp(c1[0],c2[0],t))},${Math.round(lerp(c1[1],c2[1],t))},${Math.round(lerp(c1[2],c2[2],t))})`;
 
 /* grabbed: the corner currently held by a finger, or springing back from one.
@@ -741,6 +915,312 @@ const corners=["tl","tr","bl","br"].map(k=>{
   return {el, hole:el.querySelector(".hole"), flap:el.querySelector(".flap"),
           x:k[1], y:k[0]};
 });
+
+/* ==========================================================================
+   3D NAME — exploded wireframe assembly + drawing-view walkthrough
+   --------------------------------------------------------------------------
+   The hero name is extruded 3D type rendered as white feature edges
+   (EdgesGeometry) with a whisper of face fill, on a transparent ortho canvas
+   mapped 1 world unit = 1 css px — so the front view lands EXACTLY where the
+   DOM name sits, and the two can crossfade.
+
+   INTRO   shown in isometric: letters start exploded along the extrude axis
+           with dashed leader lines, cascade home, two hex screws drive in,
+           then the plate turns to the front elevation.
+
+   TOUR    the first TOUR.travel viewport-heights of scroll are a pinned
+           walkthrough (nothing else on the sheet moves): front → isometric →
+           side → front, each labelled like a drawing view. At the end the 3D
+           name crossfades into the DOM name and the roll/dock takes over.
+
+   FALLBACK  no THREE / no WebGL / reduced motion → R3 stays null, the tour
+           budget M.W is 0, and the original 2D sketched intro runs instead.
+   ========================================================================== */
+const glCanvas=document.getElementById("gl"), vlabel=document.getElementById("vlabel"),
+      dims=document.getElementById("dims"), stage=document.getElementById("stage");
+let R3=null;
+if(!reduce && window.THREE) try{
+  const renderer=new THREE.WebGLRenderer({canvas:glCanvas,alpha:true,antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
+  const scene=new THREE.Scene();
+  const camera=new THREE.OrthographicCamera(0,1,0,-1,-6000,6000);
+  const pivot=new THREE.Group(), inner=new THREE.Group();
+  pivot.add(inner); scene.add(pivot);
+  const matEdge=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.95});
+  const matFace=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.07,
+    depthWrite:false,side:THREE.DoubleSide});
+  const matDash=new THREE.LineDashedMaterial({color:0xbdc5dd,transparent:true,opacity:0,
+    dashSize:8,gapSize:7});
+  R3={renderer,scene,camera,pivot,inner,matEdge,matFace,matDash,
+      letters:[],screws:[],bin:[],ready:false};
+  /* the DOM name waits, hidden, for the crossfade at the end of the tour */
+  nameEl.style.opacity="0";
+}catch(e){ R3=null }
+if(!R3) glCanvas.style.display="none";
+
+/* view orientations. Q_ISO ~ rotate Y −45° then tip X +35.26° (true iso);
+   Q_SIDE brings the right end of the name to face the camera. */
+const AXIS_X=R3&&new THREE.Vector3(1,0,0), AXIS_Y=R3&&new THREE.Vector3(0,1,0);
+const Q_ID  =R3&&new THREE.Quaternion();
+const Q_ISO =R3&&new THREE.Quaternion().setFromAxisAngle(AXIS_X,0.6155)
+                 .multiply(new THREE.Quaternion().setFromAxisAngle(AXIS_Y,-0.7854));
+const Q_SIDE=R3&&new THREE.Quaternion().setFromAxisAngle(AXIS_Y,-1.5708);
+const tmpQ  =R3&&new THREE.Quaternion();
+
+/* glyph outlines (font units) → THREE.Shapes. TTF winding: outer contours
+   clockwise, holes counter — toShapes(false)'s default convention. */
+const shapeCache={};
+function charShapes(ch){
+  if(shapeCache[ch]) return shapeCache[ch];
+  const sp=new THREE.ShapePath();
+  FONT3D.glyphs[ch].p.forEach(c=>{
+    if(c[0]==="M") sp.moveTo(c[1],c[2]);
+    else if(c[0]==="L") sp.lineTo(c[1],c[2]);
+    else if(c[0]==="Q") sp.quadraticCurveTo(c[1],c[2],c[3],c[4]);
+    else if(c[0]==="C") sp.bezierCurveTo(c[1],c[2],c[3],c[4],c[5],c[6]);
+  });
+  return shapeCache[ch]=sp.toShapes(false);
+}
+
+/* (Re)build the whole scene at the current layout. Called from measure(), so
+   a resize re-lays the 3D name out with the DOM one. World = css px, y up:
+   worldY = −cssY, and glyph outlines are already y-up — baselines just work. */
+function build3D(){
+  if(!R3) return;
+  try{
+    const {renderer,camera,pivot,inner}=R3;
+    camera.left=0; camera.right=M.vw; camera.top=0; camera.bottom=-M.vh;
+    camera.updateProjectionMatrix();
+    renderer.setSize(M.vw,M.vh,false);
+
+    R3.bin.forEach(g=>g.dispose()); R3.bin=[];
+    inner.clear(); R3.letters=[]; R3.screws=[];
+
+    const S=M.heroFS/FONT3D.upem,            // font units → px
+          LS=M.heroFS*0.005,                 // same letter-spacing as the CSS
+          D=Math.max(16,Math.round(M.heroFS*TOUR.depth));
+    const geoCache={};
+    const geomFor=ch=>{
+      if(geoCache[ch]) return geoCache[ch];
+      const geo=new THREE.ExtrudeGeometry(charShapes(ch),{depth:D/S,bevelEnabled:false});
+      geo.translate(0,0,-D/S/2);             // centre the slab in z
+      const edges=new THREE.EdgesGeometry(geo,8);
+      R3.bin.push(geo,edges);
+      return geoCache[ch]={geo,edges};
+    };
+
+    let blockW=0, i=0;
+    NAME.forEach((word,li)=>{
+      let pen=M.heroX; const base=M.base0+li*M.lh;
+      [...word].forEach((ch,ci)=>{
+        const g=FONT3D.glyphs[ch]; if(!g) return;
+        if(ci>0){ const k=FONT3D.kern[word[ci-1]+ch]; if(k) pen+=k*S; }
+        const {geo,edges}=geomFor(ch);
+        const lg=new THREE.Group();
+        lg.add(new THREE.Mesh(geo,R3.matFace));
+        lg.add(new THREE.LineSegments(edges,R3.matEdge));
+        lg.scale.setScalar(S);
+        const exZ=Math.round(M.heroFS*(0.55+i*0.22));   // the exploded cascade
+        lg.position.set(pen,-base,introDone?0:exZ);
+        inner.add(lg);
+        /* dashed leader through the letter's centre, along the explode axis */
+        const cxL=pen+g.a*S/2, cyL=-base+FONT3D.capH*S/2;
+        const dg=new THREE.BufferGeometry().setFromPoints(
+          [new THREE.Vector3(cxL,cyL,D/2),new THREE.Vector3(cxL,cyL,exZ)]);
+        R3.bin.push(dg);
+        const dl=new THREE.Line(dg,R3.matDash); dl.computeLineDistances();
+        inner.add(dl);
+        R3.letters.push({g:lg,exZ});
+        pen+=g.a*S+LS; i++;
+      });
+      blockW=Math.max(blockW,pen-LS-M.heroX);
+    });
+
+    /* every view turns about the middle of the name block — the exact centre
+       of the glyph box (caps top of line 1 to baseline of line 2). The block
+       rests TOUR.drop below the frame centre; while rotated, the pivot slides
+       up to the true centre (stored as cyCW), where EXT's fit guarantee holds. */
+    const cx=M.heroX+blockW/2, cy=-(M.base0+0.08*M.heroFS);
+    pivot.position.set(cx,cy,0); inner.position.set(-cx,-cy,0);
+    R3.cyRestW=cy; R3.cyCW=-M.cyC;
+
+    /* two hex screws pin the plate, left and right of centre */
+    const hr=1.2*M.U, hh=0.8*M.U, sr=0.55*M.U, sl=2.4*M.U;
+    [[M.heroX-3.5*M.U,cy],[Math.min(M.heroX+blockW+3.5*M.U,M.RA-2*M.U),cy]]
+    .forEach(pt=>{
+      const head=new THREE.CylinderGeometry(hr,hr,hh,6),
+            shaft=new THREE.CylinderGeometry(sr,sr,sl,12);
+      head.rotateX(Math.PI/2);  shaft.rotateX(Math.PI/2);
+      head.translate(0,0,D/2+hh/2); shaft.translate(0,0,D/2-sl/2);
+      const sg=new THREE.Group();
+      [head,shaft].forEach(g=>{
+        const e=new THREE.EdgesGeometry(g,25);
+        R3.bin.push(g,e);
+        sg.add(new THREE.Mesh(g,R3.matFace));
+        sg.add(new THREE.LineSegments(e,R3.matEdge));
+      });
+      sg.position.set(pt[0],pt[1],0);
+      sg.visible=introDone;
+      inner.add(sg); R3.screws.push(sg);
+    });
+
+    /* ---- DIMENSIONS ----
+       Overall width under the block, overall height on its right — extension
+       lines with a 2px stand-off, filled arrowheads, figures in the drawing's
+       mono. Geometry is the REST position (where the dims are shown). The
+       height dim line runs 2 cells out; the screw sits at 3.5 cells with a
+       1.2-cell head, so the two never touch. */
+    const capT=M.base0-0.7*M.heroFS, baseB=M.base0+M.lh,
+          x0=M.heroX, x1=M.heroX+blockW, u=M.U;
+    const yD=baseB+2.5*u, xD=x1+2*u;
+    const ah=(x,y,dx,dy)=>{           // arrowhead: tip at (x,y), axis (dx,dy)
+      const nx=-dy, ny=dx;
+      return `<path class="ah" d="M${x} ${y} L${x+dx*9+nx*3} ${y+dy*9+ny*3} `+
+             `L${x+dx*9-nx*3} ${y+dy*9-ny*3} Z"/>`;
+    };
+    dims.setAttribute("viewBox",`0 0 ${M.vw} ${M.vh}`);
+    dims.innerHTML=
+      /* width: extension lines, dim line, arrows, figure */
+      `<line x1="${x0}" y1="${baseB+2}" x2="${x0}" y2="${baseB+3.5*u}"/>`+
+      `<line x1="${x1}" y1="${baseB+2}" x2="${x1}" y2="${baseB+3.5*u}"/>`+
+      `<line x1="${x0}" y1="${yD}" x2="${x1}" y2="${yD}"/>`+
+      ah(x0,yD,1,0)+ah(x1,yD,-1,0)+
+      `<text x="${(x0+x1)/2}" y="${yD-6}" text-anchor="middle">${Math.round(blockW)}</text>`+
+      /* height: same, rotated onto the right side */
+      `<line x1="${x1+2}" y1="${capT}" x2="${x1+3*u}" y2="${capT}"/>`+
+      `<line x1="${x1+2}" y1="${baseB}" x2="${x1+3*u}" y2="${baseB}"/>`+
+      `<line x1="${xD}" y1="${capT}" x2="${xD}" y2="${baseB}"/>`+
+      ah(xD,capT,0,1)+ah(xD,baseB,0,-1)+
+      `<text x="${xD-6}" y="${(capT+baseB)/2}" text-anchor="middle" `+
+      `transform="rotate(-90 ${xD-6} ${(capT+baseB)/2})">${Math.round(baseB-capT)}</text>`;
+
+    pivot.quaternion.copy(introDone?Q_ID:Q_ISO);
+    R3.ready=true;
+    renderGL();
+  }catch(e){
+    /* anything goes wrong → tear the 3D down and fall back to the 2D name */
+    R3=null; glCanvas.style.display="none"; nameEl.style.opacity="1";
+    M.W=0; stage.style.height=Math.round(M.vh*1.5)+"px";
+  }
+}
+
+function renderGL(){ if(R3&&R3.ready) R3.renderer.render(R3.scene,R3.camera) }
+
+/* ---- intro timeline (ms): fade in → letters cascade home → leaders fade →
+   screws fly in and spin down → plate turns iso → front ---- */
+let introStarted=false, introDone=false, introRAF=0, introFinishCb=null, introFired=false;
+const eOut=x=>1-Math.pow(1-x,3);
+function setIntro(t){
+  if(!R3||!R3.ready) return;
+  const f=clamp(t/250);
+  glCanvas.style.opacity=f;
+  R3.matEdge.opacity=.95*f; R3.matFace.opacity=.07*f;
+  R3.letters.forEach((L,j)=>{
+    L.g.position.z=lerp(L.exZ,0,eOut(clamp((t-250-j*60)/600)));
+  });
+  R3.matDash.opacity=.5*f*(1-clamp((t-1250)/450));
+  R3.screws.forEach((s,j)=>{
+    const k=eOut(clamp((t-1500-j*200)/520));
+    s.visible=t>1500+j*200;
+    s.position.z=lerp(300,0,k);
+    s.rotation.z=(1-k)*12.6;                 // ~2 turns as it drives home
+  });
+  /* the exploded assembly plays out centred in the frame; the plate turns to
+     the front elevation, holds a beat, then slides up to its rest position
+     while the dimensions are drawn on */
+  const rq=ease(clamp((t-2150)/700));
+  R3.pivot.quaternion.copy(Q_ISO).slerp(Q_ID,rq);
+  const rise=ease(clamp((t-3050)/550));
+  R3.pivot.position.y=lerp(R3.cyCW,R3.cyRestW,rise);
+  dims.style.opacity=clamp((t-3400)/450).toFixed(3);
+}
+function finishIntro(){
+  cancelAnimationFrame(introRAF); introStarted=true;
+  if(!introDone){ introDone=true; setIntro(1e5); }
+  if(!introFired&&introFinishCb){ introFired=true; introFinishCb() }
+  update();
+}
+function start3DIntro(){
+  introStarted=true;
+  const t0=performance.now();
+  (function step(now){
+    if(introDone) return;
+    const t=now-t0;
+    if(t>=3900){ finishIntro(); return; }
+    setIntro(t); renderGL();
+    introRAF=requestAnimationFrame(step);
+  })(t0);
+}
+
+/* scroll fraction of the tour → view orientation */
+function tourQ(t){
+  const s=TOUR.seg;
+  if(t<=s[0]) return tmpQ.copy(Q_ID);
+  if(t< s[1]) return tmpQ.copy(Q_ID ).slerp(Q_ISO ,ease(seg(t,s[0],s[1])));
+  if(t< s[2]) return tmpQ.copy(Q_ISO);
+  if(t< s[3]) return tmpQ.copy(Q_ISO).slerp(Q_SIDE,ease(seg(t,s[2],s[3])));
+  if(t< s[4]) return tmpQ.copy(Q_SIDE);
+  return tmpQ.copy(Q_SIDE).slerp(Q_ID,ease(seg(t,s[4],s[5])));
+}
+
+/* ---- HERO SIZING DATA ----
+   UW: width of the longest NAME line in em (advances + kerning + the CSS
+   letter-spacing), straight from the embedded font — so the hero size can be
+   solved for the frame without measuring the DOM first. 0 if a glyph is
+   missing, which drops measure() back to the old fixed sizing. */
+const UW=(()=>{
+  let m=0;
+  for(const word of NAME){ let x=0;
+    for(let ci=0;ci<word.length;ci++){
+      const g=FONT3D.glyphs[word[ci]]; if(!g) return 0;
+      if(ci>0){ const k=FONT3D.kern[word[ci-1]+word[ci]]; if(k) x+=k; }
+      x+=g.a;
+    }
+    m=Math.max(m,x/FONT3D.upem+word.length*0.005);
+  }
+  return m;
+})();
+/* Worst-case projected half-extents of the name block across the WHOLE tour,
+   for a unit (1px) font size. A rotated box's projected half-extent is the
+   sum of its half-dims times the |components| of the rotated axes, and every
+   dim is linear in font size — so sampling the tour once at unit size gives
+   a single scale factor that guarantees no view ever crosses the frame. */
+const EXT=R3?(()=>{
+  const uH=1.56, uD=TOUR.depth,   // block height (2 lines) and depth, in em
+        vx=new THREE.Vector3(), vy=new THREE.Vector3(), vz=new THREE.Vector3();
+  let ex=0, ey=0;
+  for(let i=0;i<=24;i++){
+    const q=tourQ(i/24);
+    vx.set(1,0,0).applyQuaternion(q);
+    vy.set(0,1,0).applyQuaternion(q);
+    vz.set(0,0,1).applyQuaternion(q);
+    ex=Math.max(ex,(UW*Math.abs(vx.x)+uH*Math.abs(vy.x)+uD*Math.abs(vz.x))/2);
+    ey=Math.max(ey,(UW*Math.abs(vx.y)+uH*Math.abs(vy.y)+uD*Math.abs(vz.y))/2);
+  }
+  return {ex,ey};
+})():null;
+/* the view annotation: swaps text at each transition's midpoint and dips to
+   nothing while crossing it, like a drawing note being re-stamped */
+let vlast="";
+function setVlabel(t,on){
+  const txt=t<.13?"Front elevation":t<.47?"Isometric projection"
+           :t<.84?"Side elevation":"Front elevation";
+  if(txt!==vlast){ vlast=txt; vlabel.textContent=txt; }
+  let o=on;
+  [.13,.47,.84].forEach(m=>{ o=Math.min(o,seg(Math.abs(t-m),.02,.07)) });
+  vlabel.style.opacity=Math.max(0,o).toFixed(3);
+}
+
+/* ---- coordinate readout placement ----
+   top-left inside the frame while the blueprint is up; bottom-left over the
+   white page once the paper has cleared the top (swap logic in update()). */
+let coordPos="top", coordLock=false;
+function placeCoord(){
+  if(M.coordL===undefined) return;
+  coord.style.left=M.coordL+"px";
+  if(coordPos==="top"){ coord.style.top=M.coordT+"px"; coord.style.bottom="auto" }
+  else{ coord.style.top="auto"; coord.style.bottom=M.coordB+"px" }
+}
 
 function measure(){
   /* clientWidth/Height, never innerWidth/Height: the latter includes the
@@ -784,7 +1264,18 @@ function measure(){
   rs.setProperty("--skillW",skillW+"px");rs.setProperty("--sCols",sCols);
   rs.setProperty("--imgH",Math.max(SQ,Math.round(cardW*0.68/SQ)*SQ)+"px");
 
-  const heroFS=Math.min(vw*(small?0.135:0.115),165);
+  /* ---- HERO SIZE: fill the drawing area ----
+     Width: the long line runs from heroX to two cells short of the right
+     frame line. Height: sized against EXT, the worst-case projected extents
+     over the whole view walkthrough, so the name is as big as it can be
+     WITHOUT any tour view crossing the border. */
+  const heroX=wrapL+(small?2*U:2*SQ);
+  let heroFS;
+  if(UW>0){
+    heroFS=(fx+innerW-2*U-heroX)/UW;                       // front view fits
+    if(EXT) heroFS=Math.min(heroFS,(innerH/2-2*U)/EXT.ey); // every view fits
+    heroFS=Math.max(40,Math.floor(heroFS*TOUR.fit));
+  }else heroFS=Math.min(vw*(small?0.135:0.115),165);       // unknown glyphs
   nameEl.style.fontSize=heroFS+"px";
   /* Hatch pitch and stroke weight are proportions of the LETTER, not fixed
      pixels. The name is 165px on a desktop and ~53px on a phone, so a fixed
@@ -801,56 +1292,56 @@ function measure(){
   const r0=words[0].getBoundingClientRect();
   const lh=r0.height, gap=heroFS*0.30;
 
-  /* title and cue sit three squares in from the content column; the DOCKED
-     name still lands on wrapL so the header lines up with the cards */
-  /* two cells in on a phone — sitting flush on the frame line looked accidental,
-     but a full square would push the name past the right border */
-  const heroX=wrapL+(small?2*U:2*SQ);
-  /* snapY puts the LINE BOX on a square line, but the two-line lockup is ~91px
-     against the 110px of grid it covers, so it sat high in its own band. Drop it
-     by half the leftover, rounded to whole cells, and it centres in the squares
-     instead of hanging from the top of them. */
-  const blockH=2*lh, rows=Math.ceil(blockH/SQ)*SQ;
-  const heroDrop=small?Math.round((rows-blockH)/2/U)*U:0;
-  const heroY=snapY(vh*0.26)+heroDrop;
+  /* The block is centred in the frame, snapped to whole cells — the tour
+     spins the name about the sheet's middle, which is also what EXT assumed
+     when it sized it, so the two guarantees line up. (heroX was hoisted above
+     the size solve: the width fit needs the left margin first.) */
+  const heroY=fy+Math.round((innerH/2-lh+TOUR.drop)/U)*U;
   nameEl.style.left=heroX+"px"; nameEl.style.top=heroY+"px";
 
-  /* The bar is its own object, full bleed, so its contents are set in by a
-     short deliberate margin (3 cells) instead of tracking the content column —
-     the name and the menu sit close to the screen edges. Both are centred in
-     the blue, i.e. in the bar minus its 2px closing rule. */
-  /* One full square everywhere. 44px was too tight on a phone: the name and the
-     menu filled it edge to edge with nothing above or below them. */
-  const headH=55, RULE=2;
-  /* Clear of the sheet's frame, not level with it: fx lands the text exactly on
-     the border line showing through below the bar, so step two cells inside it. */
-  const pad=fx+(small?U:2*U);
+  /* The first line's text BASELINE, read off the live layout: an empty
+     inline-block's bottom edge sits on the baseline of the line it's in, so
+     its rect.top IS the baseline y. It must go INSIDE the .ltr span — .word
+     is a flex container, and flex items align to the box, not the text
+     baseline (probing there returns the box top, which planted the 3D name
+     ~0.77em too high). The 3D letters are planted on this measurement, which
+     is what makes the front view land pixel-for-pixel on the DOM name. */
+  const probe=document.createElement("span");
+  probe.style.cssText="display:inline-block;width:0;height:0";
+  words[0].querySelector(".ltr").appendChild(probe);
+  const base0=probe.getBoundingClientRect().top;
+  probe.remove();
 
-  /* The menu is measured FIRST, because the docked name has to fit in whatever
-     room it leaves. On a phone the two were overlapping: a fixed 18px dock
-     height made the name ~180px wide, the menu needs ~190px, and there are only
-     ~310px between the margins. Rather than guess at font metrics, scale the
-     name to the space that actually remains. */
-  menu.style.right=pad+"px";
-  menu.style.height=(headH-RULE)+"px";
-  menu.style.gap=(small?U:SQ)+"px";
-  const menuW=menu.getBoundingClientRect().width;
+  const headH=55, P=2*U;                    // P = padding inside an island
+  doc.style.setProperty("--ipad",P+"px");
+
+  /* ---- THE TWO ISLANDS ----
+     Both pinned to the frame's top corners. The RIGHT one is sized by its own
+     content — it's a real box with the nav in flow inside it, so the browser
+     does that sizing — and is measured first, because whatever it takes is
+     width the left island can't have. */
+  menubar.style.top=fy+"px"; menubar.style.right=fx+"px";
+  const mbW=menubar.getBoundingClientRect().width;
 
   const r1=words[1].getBoundingClientRect();
   const lockupW=r0.width+gap+r1.width;      // the one-line name at hero size
   let dockH=small?18:24;
-  let nScale=dockH/lh;
-  if(small){
-    const avail=vw-2*pad-menuW-2*U;         // two cells of breathing room
-    nScale=Math.min(nScale,Math.max(0.10,avail/lockupW));
-    dockH=lh*nScale;                        // so it still centres in the bar
-  }
-  const nx=pad, ny=Math.round((headH-RULE-dockH)/2);
-  /* While the paper is still across the top, the bar is invisible (it fades in
-     with paperT) and the name/menu are sitting on the SHEET — so at y=0 they
-     land on top of its ruler ticks and cut through the frame's top border. They
-     tuck one frame inset down until the paper clears, then rise into the bar. */
-  const headInset=fy;
+  /* The left island is sized to the docked name, so the name is scaled to
+     whatever is left after the menu island and a square of clearance. On a
+     phone that's the binding constraint; on a desktop it never bites. */
+  const avail=innerW-mbW-SQ-2*P;
+  let nScale=Math.min(dockH/lh,Math.max(0.10,avail/lockupW));
+  dockH=lh*nScale;
+  const nameW=lockupW*nScale;
+
+  headbar.style.left=fx+"px";  headbar.style.top=fy+"px";
+  headbar.style.width=Math.round(2*P+nameW)+"px";
+  headbar.style.height=headH+"px";
+
+  const nx=fx+P, ny=Math.round((headH-dockH)/2);
+  /* The islands sit one frame inset down, so the name tucks to that same place
+     while the paper is still on and simply arrives — nothing travels. */
+  const headFrom=fy, headTo=fy;
 
   /* ---- info block, flush into the frame's inner bottom-right corner ----
      DESKTOP: 10 squares wide × 3 high — three stacked cells on the left, one
@@ -910,10 +1401,30 @@ function measure(){
   cue.style.bottom=cueB+"px";
   cue.style.height=cueH+"px";
 
-  M={vw,vh,small,headH,nScale,nx,ny,heroX,heroY,lh,RA,BA,U,headInset,wrapL,pad,
-     sw0,sw1, w2From:[0,lh], w2To:[r0.width+gap,0]};
+  M={vw,vh,small,headH,nScale,nx,ny,heroX,heroY,lh,RA,BA,U,wrapL,
+     headFrom,headTo,sw0,sw1,heroFS,base0,
+     /* the pinned walkthrough's scroll budget — zero when there's no 3D */
+     W:R3?Math.round(vh*TOUR.travel):0,
+     w2From:[0,lh], w2To:[r0.width+gap,0]};
+  /* the stage grows by the tour budget, so the walkthrough consumes scroll
+     BEFORE the white page starts arriving — the sheet holds still under it */
+  stage.style.height=(M.W+Math.round(vh*1.5))+"px";
 
-  headbar.style.height=headH+"px";
+  /* Coordinate readout: both berths share the same left edge and inset; which
+     one is live is decided per frame in update(). */
+  M.coordL=fx+2*U; M.coordT=fy+U; M.coordB=fy+U;
+  M.cyC=fy+innerH/2;                 // the tour pivot's centred position
+  placeCoord();
+
+  /* drawing-view annotation, under the name block and its dimension lines */
+  vlabel.style.left=heroX+"px";
+  vlabel.style.top=(heroY+2*lh+6*U)+"px";
+
+  /* the carousel gets a whole number of squares, like every other box */
+  doc.style.setProperty("--reelH",
+    Math.max(3*SQ,Math.round(wrapW*(small?0.62:0.34)/SQ)*SQ)+"px");
+
+  build3D();
 }
 
 /* ==========================================================================
@@ -935,6 +1446,11 @@ function update(){
   const rollY=content.getBoundingClientRect().top;
   const travel=content.offsetTop||1;            // scroll distance for a full roll
   const p=clamp(1-rollY/travel);                 // 0 = untouched sheet, 1 = rolled away
+
+  /* The first M.W px of that travel are the view walkthrough. Remap the
+     roll's phase fractions past it, so the name only starts docking once the
+     tour is over. pW=0 (no 3D) reduces every phase to its original value. */
+  const pW=(M.W||0)/travel, P2=f=>pW+f*(1-pW);
 
   /* Clip in PERCENT of the sheet's own box rather than in measured pixels. 100%
      is the element's true height by definition, so the cut cannot drift from
@@ -961,12 +1477,12 @@ function update(){
      bar is flush with the top of the viewport, so the header never travels —
      it just resolves into place as the paper clears it. */
   const paperT=clamp((110-rollY)/110);
-  /* travels from inside the frame to the top of the bar, in step with the
-     paper leaving — so it is never crossing the frame line at rest */
-  const hOff=lerp(M.headInset,0,paperT);
+  /* travels from inside the frame to wherever the header ends up, in step with
+     the paper leaving — so it is never crossing the frame line at rest */
+  const hOff=lerp(M.headFrom,M.headTo,paperT);
 
   /* name: 2 lines → 1, docking top-left */
-  const q=ease(seg(p,PHASE.nameFrom,PHASE.nameTo));
+  const q=ease(seg(p,P2(PHASE.nameFrom),P2(PHASE.nameTo)));
   nameEl.style.transform=
     `translate(${lerp(0,M.nx-M.heroX,q)}px,${lerp(0,M.ny+hOff-M.heroY,q)}px) scale(${lerp(1,M.nScale,q)})`;
   words[1].style.transform=
@@ -981,16 +1497,14 @@ function update(){
      goes solid as it settles into the bar */
   nameEl.style.setProperty("--fillA",(q*q).toFixed(3));
 
-  /* the menu simply fades in as you scroll; the info block never moves */
-  const mq=ease(seg(p,PHASE.menuFrom,PHASE.menuTo));
-  menu.style.opacity=mq;
-  menu.style.top=hOff+"px";
-  menu.style.pointerEvents=mq>.6?"auto":"none";
   menu.style.setProperty("--ink","#ffffff");
 
-  /* Same blue and same grid as the sheet it fades in over, so the only thing
-     that actually appears is the closing rule at its bottom edge. */
-  headbar.style.opacity=paperT;
+  /* Both islands arrive together as the paper clears, dropping the last few
+     pixels into place so they land rather than simply materialising. */
+  const drop=`translateY(${lerp(-10,0,paperT).toFixed(1)}px)`;
+  headbar.style.opacity=menubar.style.opacity=paperT;
+  headbar.style.transform=menubar.style.transform=drop;
+  menubar.style.pointerEvents=paperT>.6?"auto":"none";
 
   /* ---- grid cursor ----
      Snap to the cell the pointer is inside, measured back from the grid's
@@ -1007,6 +1521,48 @@ function update(){
                      : rollY+Math.floor((mouseY-rollY)/U)*U;
     /* +1px centres the 9px tile inside its 11px cell */
     cursorEl.style.transform=`translate(${cx+1}px,${cy+1}px)`;
+    /* Readout shows the SNAPPED cell, not the raw pointer, so the numbers agree
+       with where the cross actually is. Zero-padded so the line doesn't jitter
+       in width as the digits change. */
+    const pad4=v=>(v<0?"-":"")+String(Math.abs(Math.round(v))).padStart(4,"0");
+    cxEl.textContent="X "+pad4(cx); cyEl.textContent="Y "+pad4(cy);
+    if(!coordLock) coord.classList.add("on");
+  }
+  /* white over the paper, navy once the page has taken over — and the halo
+     flips with it, dark behind white ink and pale behind navy */
+  coord.style.setProperty("--ink",mix(RGB.white,RGB.navy,paperT));
+  coord.style.setProperty("--halo",paperT<.5?"rgba(9,16,42,.55)":"rgba(255,255,255,.9)");
+
+  /* the readout changes corners with the surface: fade out, jump while
+     invisible, fade back in at the other berth */
+  const cWant=paperT>.5?"bottom":"top";
+  if(cWant!==coordPos&&!coordLock){
+    coordLock=true; coord.classList.remove("on");
+    setTimeout(()=>{ coordPos=cWant; placeCoord(); coordLock=false },280);
+  }
+
+  /* ---- 3D name: the pinned drawing-view walkthrough ----
+     t sweeps 0→1 across the tour's scroll budget; past it the wireframe has
+     fully crossfaded into the DOM name and the roll/dock owns the scroll. */
+  if(R3&&R3.ready){
+    const t=pW>0?clamp(p/pW):1;
+    if(introStarted&&!introDone&&p>0.03) finishIntro();
+    if(introDone){
+      R3.pivot.quaternion.copy(tourQ(t));
+      /* the rested name sits low; rotated views need the frame's centre, so
+         the pivot glides up as the tour starts and settles back before the
+         crossfade (env is 0 again by t=.94, where the DOM name takes over) */
+      const env=ease(seg(t,0,.2))*(1-ease(seg(t,.78,.94)));
+      R3.pivot.position.y=lerp(R3.cyRestW,R3.cyCW,env);
+      const xf=seg(t,.94,1);
+      glCanvas.style.opacity=(1-xf).toFixed(3);
+      nameEl.style.opacity=xf.toFixed(3);
+      setVlabel(t,1-seg(t,.9,.97));
+      /* dims only exist in the dimensioned (rest, front) view: they lift off
+         the moment the tour starts turning and return on the way back up */
+      dims.style.opacity=(1-seg(t,0,.08)).toFixed(3);
+      if(xf<1) renderGL();
+    }
   }
 
   /* ---- corner curl: the corner is PINCHED AND CARRIED to the pointer ----
@@ -1102,6 +1658,82 @@ addEventListener("mousemove",e=>{
   mouseX=e.clientX; mouseY=e.clientY;
   onScroll();                              // rAF-throttled, so this is cheap
 },{passive:true});
+/* ==========================================================================
+   CAROUSEL
+   ========================================================================== */
+(function buildReel(){
+  const reel=document.getElementById("reel");
+  if(!reel||!REEL.length) return;
+  const win=document.createElement("div");   win.className="reel-win";
+  const track=document.createElement("div"); track.className="reel-track";
+  REEL.forEach(s=>{
+    const fig=document.createElement("figure"); fig.className="reel-slide";
+    /* placeholder first, image over it — if the file is missing the image
+       removes itself and the frame underneath shows through, exactly as the
+       project plates already behave */
+    fig.innerHTML=`<div class="ph">[ ADD ${s.src} ]</div>`+
+      `<img src="${s.src}" alt="${s.cap}" loading="lazy" onerror="this.remove()">`+
+      `<figcaption class="reel-cap">${s.cap}</figcaption>`;
+    track.appendChild(fig);
+  });
+  win.appendChild(track);
+  const prev=document.createElement("button"); prev.className="reel-nav prev";
+  prev.type="button"; prev.setAttribute("aria-label","Previous image"); prev.textContent="←";
+  const next=document.createElement("button"); next.className="reel-nav next";
+  next.type="button"; next.setAttribute("aria-label","Next image"); next.textContent="→";
+  win.appendChild(prev); win.appendChild(next);
+  const dotWrap=document.createElement("div"); dotWrap.className="reel-dots";
+  const dots=REEL.map((s,k)=>{
+    const b=document.createElement("button"); b.type="button";
+    b.setAttribute("aria-label","Image "+(k+1));
+    b.addEventListener("click",()=>go(k));
+    dotWrap.appendChild(b); return b;
+  });
+  reel.appendChild(win); reel.appendChild(dotWrap);
+
+  let i=0;
+  function go(n){
+    i=(n+REEL.length)%REEL.length;
+    track.style.transform=`translateX(${-i*100}%)`;
+    dots.forEach((d,k)=>d.setAttribute("aria-current",k===i?"true":"false"));
+  }
+  prev.addEventListener("click",()=>go(i-1));
+  next.addEventListener("click",()=>go(i+1));
+  /* arrow keys, but only while the reel is the thing being used */
+  win.tabIndex=0;
+  win.addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft"){e.preventDefault();go(i-1)}
+    if(e.key==="ArrowRight"){e.preventDefault();go(i+1)}
+  });
+  /* swipe — horizontal only, so a vertical drag still scrolls the page */
+  let sx=0,sy=0;
+  win.addEventListener("touchstart",e=>{
+    sx=e.touches[0].clientX; sy=e.touches[0].clientY;
+  },{passive:true});
+  win.addEventListener("touchend",e=>{
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>44 && Math.abs(dx)>Math.abs(dy)) go(dx<0?i+1:i-1);
+  },{passive:true});
+  go(0);
+})();
+
+/* ==========================================================================
+   MENU — collapsed on mobile
+   ========================================================================== */
+function setMenu(open){
+  menu.classList.toggle("open",open);
+  burger.setAttribute("aria-expanded",open?"true":"false");
+}
+burger.addEventListener("click",e=>{
+  e.stopPropagation();                       // don't trip the close-on-outside
+  setMenu(!menu.classList.contains("open"));
+});
+/* close on choosing something, on tapping away, and on Escape */
+menu.querySelectorAll("#links a").forEach(a=>
+  a.addEventListener("click",()=>setMenu(false)));
+addEventListener("click",e=>{ if(!menubar.contains(e.target)) setMenu(false) });
+addEventListener("keydown",e=>{ if(e.key==="Escape") setMenu(false) });
+
 /* hide the grid cursor when the pointer leaves the window */
 addEventListener("mouseleave",()=>{cursorEl.style.opacity=0},{passive:true});
 addEventListener("mouseenter",()=>{cursorEl.style.opacity=1},{passive:true});
@@ -1131,6 +1763,9 @@ function cornerNear(x,y){
 
 addEventListener("touchstart",e=>{
   if(!coarse||reduce) return;
+  /* The burger sits about 90px from the top-right corner, well inside the grab
+     radius — without this, opening the menu would also start peeling the page. */
+  if(menubar.contains(e.target)) return;
   const t=e.touches[0], c=cornerNear(t.clientX,t.clientY);
   if(!c) return;
   cancelAnimationFrame(springRAF);
@@ -1171,7 +1806,20 @@ function intro(){
     words.forEach(w=>w.classList.add("drawn","inked","shaded"));
     cells.forEach(c=>c.classList.add("on")); cue.classList.add("on"); update(); return;
   }
-  /* one continuous left→right stroke per line, the second following the first */
+  if(R3&&R3.ready){
+    /* 3D mode: the name is born as an exploded wireframe assembly. The DOM
+       name skips its draw animation and waits, fully inked, for the
+       crossfade at the end of the view walkthrough. */
+    words.forEach(w=>w.classList.add("drawn","inked","shaded"));
+    introFinishCb=()=>{
+      cells.forEach((c,i)=>setTimeout(()=>c.classList.add("on"),140+i*80));
+      setTimeout(()=>{cue.classList.add("on");update()},120);
+    };
+    if(scrollY>4) finishIntro(); else start3DIntro();
+    return;
+  }
+  /* 2D fallback: one continuous left→right stroke per line, the second
+     following the first */
   words.forEach((w,i)=>setTimeout(()=>{
     w.classList.add("drawn");
     /* mask off once the line is fully drawn, so nothing stays clipped */
