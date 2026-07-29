@@ -374,7 +374,11 @@ a{color:inherit;text-decoration:none}
   background-position:0 0;
   background-size:0% 100%;
   -webkit-background-clip:text; background-clip:text;
-  -webkit-text-fill-color:transparent;
+  /* The glyph's own fill paints ON TOP of that background, so raising its alpha
+     buries the hatch under solid white. --fillA is driven by the docking
+     progress: hatched at hero size where the texture reads, solid block type in
+     the header where hatching at ~10px tall would only look like noise. */
+  -webkit-text-fill-color:rgba(255,255,255,var(--fillA,0));
   transition:background-size .95s cubic-bezier(.25,.6,.3,1)}
 #name .word.shaded .ltr{background-size:100% 100%}
 
@@ -409,6 +413,7 @@ a{color:inherit;text-decoration:none}
   .cell{padding:0 7px}
   /* the block is a full-width single column on mobile, so there's room to read */
   .cell .info{font-size:.62rem;white-space:normal;line-height:1.32;letter-spacing:.02em}
+  #cue{font-size:.56rem;letter-spacing:.16em}
   #menu{font-size:.62rem;letter-spacing:.05em}
 }
 
@@ -717,6 +722,8 @@ const cells=CELLS.map(c=>{
    MATHS
    ========================================================================== */
 const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+/* The live height of the fixed layers. See update() for why it's the max. */
+const vhNow=()=>Math.max(document.documentElement.clientHeight, innerHeight||0);
 const seg=(p,a,b)=>clamp((p-a)/(b-a));
 const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -798,7 +805,14 @@ function measure(){
      name still lands on wrapL so the header lines up with the cards */
   /* two cells in on a phone — sitting flush on the frame line looked accidental,
      but a full square would push the name past the right border */
-  const heroX=wrapL+(small?2*U:2*SQ), heroY=snapY(vh*0.26);
+  const heroX=wrapL+(small?2*U:2*SQ);
+  /* snapY puts the LINE BOX on a square line, but the two-line lockup is ~91px
+     against the 110px of grid it covers, so it sat high in its own band. Drop it
+     by half the leftover, rounded to whole cells, and it centres in the squares
+     instead of hanging from the top of them. */
+  const blockH=2*lh, rows=Math.ceil(blockH/SQ)*SQ;
+  const heroDrop=small?Math.round((rows-blockH)/2/U)*U:0;
+  const heroY=snapY(vh*0.26)+heroDrop;
   nameEl.style.left=heroX+"px"; nameEl.style.top=heroY+"px";
 
   /* The bar is its own object, full bleed, so its contents are set in by a
@@ -910,7 +924,12 @@ function update(){
      on mobile the viewport grows by ~60px the moment the URL bar slides away —
      a stale height made the clip too shallow, which is exactly the bug where
      blueprint stayed visible below the roll. */
-  const vh=document.documentElement.clientHeight;
+  /* iOS reports two different heights while the toolbars are sliding:
+     clientHeight is the LAYOUT viewport and lags behind, innerHeight is the
+     visual one and is the larger of the two. A fixed inset:0 element fills the
+     larger — so the max is what actually matches the sheet on screen. Taking
+     the smaller is what made the roll appear late and leave a gap above it. */
+  const vh=vhNow();
   /* The roll rides the top edge of the white page, so "paper leaving" and
      "page arriving" are literally the same number. */
   const rollY=content.getBoundingClientRect().top;
@@ -919,13 +938,18 @@ function update(){
 
   /* Clip in PERCENT of the sheet's own box rather than in measured pixels. 100%
      is the element's true height by definition, so the cut cannot drift from
-     the roll no matter what the viewport does underneath it. */
-  const rc=Math.max(0,Math.min(rollY,vh));
-  sheet.style.clipPath=`inset(0 0 calc(100% - ${rc.toFixed(1)}px) 0)`;
+     the roll no matter what the viewport does underneath it — but only if no
+     measured height gets mixed back in. Clamping rollY to a JS-read height did
+     exactly that, and cut the sheet short of the roll. max() does the clamping
+     in CSS instead, against the same 100% that defines the cut. */
+  sheet.style.clipPath=
+    `inset(0 0 max(0px, calc(100% - ${Math.max(0,rollY).toFixed(1)}px)) 0)`;
 
   /* place the roll; the tube thickens as more paper winds onto it */
   const tubeH=lerp(ROLL.minH,ROLL.maxH,p);
-  const onScreen=rollY>-(tubeH+80) && rollY<vh+80;
+  /* generous margin: the two viewport heights disagree by up to a toolbar's
+     worth mid-scroll, and being late here is what hid the roll entirely */
+  const onScreen=rollY>-(tubeH+120) && rollY<vh+160;
   roll.style.opacity=onScreen?1:0;
   if(onScreen){
     roll.style.transform=`translateY(${rollY}px)`;
@@ -953,6 +977,9 @@ function update(){
   /* inverse of the name's current scale — keeps the hatch pitch constant on
      screen while the name shrinks ~5× into the header */
   nameEl.style.setProperty("--k",lerp(1,1/M.nScale,q).toFixed(3));
+  /* squared, so it stays hatched through the early part of the dock and only
+     goes solid as it settles into the bar */
+  nameEl.style.setProperty("--fillA",(q*q).toFixed(3));
 
   /* the menu simply fades in as you scroll; the info block never moves */
   const mq=ease(seg(p,PHASE.menuFrom,PHASE.menuTo));
@@ -1092,7 +1119,7 @@ let springRAF=0;
 const GRAB_R=132;                    // ~13mm, a comfortable thumb target
 
 function cornerNear(x,y){
-  const vh=document.documentElement.clientHeight;
+  const vh=vhNow();
   const rollY=content.getBoundingClientRect().top;
   for(const c of corners){
     const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:vh;
@@ -1121,7 +1148,7 @@ addEventListener("touchmove",e=>{
 /* spring back: ease-out, so it drops away quickly and settles, like paper */
 function letGo(){
   if(!grabbed) return;
-  const c=grabbed, vh=document.documentElement.clientHeight;
+  const c=grabbed, vh=vhNow();
   const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:vh;
   const x0=mouseX, y0=mouseY, t0=performance.now(), D=340;
   (function step(now){
