@@ -108,6 +108,15 @@
   -webkit-mask-repeat:repeat;     mask-repeat:repeat}
 
 *{box-sizing:border-box;margin:0;padding:0}
+/* ---- NO SCROLL ANCHORING ----
+   The pinned sections are sized in JS and the document grows by thousands of
+   pixels after load. Browsers respond by silently adjusting scrollTop to keep
+   what you're looking at still — but on this page EVERYTHING is driven by
+   scroll position, so each adjustment moves the paper, the roll and the
+   drawing on it. During the opening animation that reads as the whole sheet
+   shuddering back and forth, and it only settles once a real scroll ends the
+   animation. Anchoring has nothing to hold here: turn it off. */
+html,body{overflow-anchor:none}
 html{scroll-behavior:smooth}
 body{font-family:var(--body);background:var(--white);color:var(--black);
   line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;text-wrap:pretty}
@@ -625,9 +634,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   mix-blend-mode:multiply;opacity:.16}
 /* the index tab, standing on the folder's top edge and stepped across the
    stack so every folder's tab is its own — as on a real set of files */
-.doss-tab{position:absolute;z-index:2;height:var(--tabH);
+/* +1px of height so the tab OVERLAPS the folder's own top border and hides the
+   segment of it that would otherwise draw a line straight under the label —
+   the tab and the stock have to read as one piece of paper. */
+.doss-tab{position:absolute;z-index:2;height:calc(var(--tabH) + 1px);
   top:calc(var(--i,0) * var(--fanY));
-  left:calc(33px + var(--i,0) * 192px);width:181px;
+  left:calc(55px + var(--i,0) * 148px);width:137px;
   display:flex;align-items:center;padding:0 16px;
   background:var(--folder);border:1px solid rgba(25,44,100,.28);border-bottom:0;
   border-radius:4px 11px 0 0;
@@ -666,7 +678,8 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      shows a cascade of top edges and tabs rather than one flush sheet */
   /* rounded all round: the top corners read at rest, the bottom ones while the
      folder is still on its way up and its lower edge is on the screen */
-  .doss-face{position:absolute;left:0;right:0;bottom:0;
+  /* inset a couple of cells, so both side edges of the folder are visible */
+  .doss-face{position:absolute;left:22px;right:22px;bottom:0;
     top:calc(var(--tabH) + var(--i,0) * var(--fanY));
     border-radius:14px;
     box-shadow:0 -14px 34px rgba(9,16,42,.16)}
@@ -716,16 +729,10 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    and the strip walks sideways, the lattice is locked to the pin instead of
    sliding upward behind it. --galBgY is set in measure() to the pin's own
    offset modulo the tile, which puts its grid in phase with the page's. */
-.gal-pin{display:flex;flex-direction:column;justify-content:center;gap:33px;
+.gal-pin{display:flex;flex-direction:column;justify-content:center;
   overflow:hidden;background-color:var(--white);
   background-image:var(--page-grid);background-size:55px 55px,55px 55px;
   background-position:var(--wrapL,55px) var(--galBgY,0px)}
-.gal-head{display:flex;align-items:baseline;gap:22px;flex-wrap:wrap;
-  padding-left:var(--wrapL,55px)}
-.gal-title{font-family:var(--display);font-weight:700;
-  font-size:clamp(1.6rem,4vw,2.4rem);text-transform:uppercase;color:var(--navy)}
-.gal-sub{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
-  text-transform:uppercase;color:rgba(25,44,100,.55)}
 .gal-track{display:flex;align-items:flex-end;gap:55px;
   padding:0 var(--wrapL,55px);will-change:transform}
 /* each print is a whole number of squares wide — w comes from REEL */
@@ -740,8 +747,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .gal-item figcaption{margin-top:11px;font-family:var(--mono);font-size:.68rem;
   letter-spacing:.1em;text-transform:uppercase;color:rgba(25,44,100,.62)}
 @media(min-width:821px){
-  .gal-pin{position:sticky;top:var(--headZ);
-    height:calc(100vh - var(--headZ));height:calc(100svh - var(--headZ))}
+  /* Full height and stuck at the very TOP, with the header zone held clear by
+     padding rather than by the pin starting lower down. The pin carries the
+     locked grid, so it has to reach behind the menu bar too — otherwise that
+     band shows the page's own grid scrolling past while the strip is pinned. */
+  .gal-pin{position:sticky;top:0;padding-top:var(--headZ);
+    height:100vh;height:100svh}
 }
 @media(max-width:820px){
   /* no pin on a phone — the strip is just a native horizontal scroller */
@@ -757,17 +768,80 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    skill headings and tick marks, tomato arrows in Contact, and a tomato rule
    over the footer. Not on Work — its plates carry the blueprint's blue
    instead, so the accent reads as punctuation rather than a theme. */
-/* identical geometry to .plates — three groups, three cards, same columns and
-   gutters, so the row lines up with the work row and is centred by definition */
-.skills{display:grid;grid-template-columns:repeat(var(--cols,3),var(--cardW,330px));gap:55px}
-.skill{padding:22px;border:1px solid rgba(25,44,100,.18);background:var(--white)}
-.skill:hover{border-color:var(--tomato)}
-.skill h3{font-family:var(--display);font-weight:700;font-size:.95rem;margin-bottom:10px;
-  text-transform:uppercase;color:var(--tomato)}
-.skill ul{list-style:none}
-.skill li{font-size:.9rem;color:rgba(25,44,100,.78);padding:3px 0}
-.skill li::before{content:"";display:inline-block;width:7px;height:2px;
-  background:var(--tomato);margin-right:9px;vertical-align:middle}
+/* ---- THE DIAGNOSTIC WINDOW ----
+   Skills reported as a test run. Navy stock, pale type, PASS in the accent —
+   the same five colours as everything else, arranged as a console. Hidden
+   lines keep their space (opacity, not display), so the window is a fixed
+   box that fills rather than a list that grows and shoves the page around. */
+/* Deliberately narrower than the column: the dot leader between a check and
+   its verdict is the gap, and across a full-width box the PASS ends up an
+   inch away from the thing it refers to. */
+/* A DEFINITE width, not a max: as a flex item the box would otherwise be
+   sized by its content, so it grew every time a longer line finished typing —
+   the window kept resizing under the text. It is wide enough for the longest
+   check from the first frame. */
+.term{width:min(100%,690px);background:var(--navy);
+  border:1px solid rgba(9,16,42,.55);
+  border-radius:6px;overflow:hidden;font-family:var(--mono);font-size:1rem;
+  line-height:1.85;color:var(--pale)}
+.term-bar{display:flex;align-items:center;justify-content:space-between;
+  height:33px;padding:0 14px;background:rgba(255,255,255,.06);
+  border-bottom:1px solid rgba(255,255,255,.10);
+  font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(255,255,255,.55)}
+.term-dots i{display:inline-block;width:7px;height:7px;margin-left:7px;
+  background:rgba(255,255,255,.22)}
+.term-dots i:last-child{background:rgba(255,99,71,.5)}
+.term-body{padding:22px 22px 16px}
+/* Lines are always in the DOM and always take their space — the window is a
+   fixed box that fills, not a list that grows and shoves the page about. What
+   changes is how much of each line's text has been TYPED. */
+.tl{display:flex;align-items:baseline;white-space:nowrap;min-height:1.95em}
+.tl .lead,.tl .pass{opacity:0;transition:opacity .12s ease}
+.tl.on .lead{opacity:1}
+.tl .pass.lit{opacity:1}
+.tl.cmd{color:var(--white)}
+.tl.sys{color:rgba(189,197,221,.6)}
+.tl.grp{color:var(--tomato);margin-top:11px}
+.tl.ok{color:var(--white);margin-top:11px;letter-spacing:.1em}
+.tl .lead{flex:1;min-width:22px;margin:0 10px;
+  border-bottom:1px dotted rgba(189,197,221,.32)}
+.tl .pass{color:var(--tomato);letter-spacing:.12em}
+/* the caret rides whichever line is mid-type */
+.tl.typing .tx::after{content:"";display:inline-block;width:8px;height:14px;
+  margin-left:2px;vertical-align:-2px;background:var(--tomato);
+  animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+/* the warning strip: this is a dialog you have to clear, not a panel */
+.term-warn{display:flex;align-items:center;gap:11px;padding:11px 22px;
+  background:rgba(255,99,71,.12);border-bottom:1px solid rgba(255,99,71,.35);
+  color:var(--tomato);font-size:.8rem;letter-spacing:.06em}
+.term-warn svg{flex:0 0 auto;width:16px;height:14px;fill:none;
+  stroke:currentColor;stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round}
+/* ---- the check, over the loose files ----
+   Second sticky inside the gallery's stack: the strip stays pinned behind
+   while this comes up over it, dims it, and holds the page until the run has
+   finished. JS drives the pop-in and the typing from the same scroll. */
+.term-pin{position:relative;display:flex;align-items:center;justify-content:center}
+@media(min-width:821px){
+  .term-pin{position:sticky;top:0;padding-top:var(--headZ);
+    height:100vh;height:100svh}
+  /* no scrim over the strip — the shadow alone is what lifts the dialog off
+     the page it has interrupted */
+  .term{position:relative;z-index:1;transform:scale(.94);opacity:0;
+    box-shadow:0 4px 12px rgba(9,16,42,.22),
+               0 18px 40px rgba(9,16,42,.30),
+               0 44px 90px rgba(9,16,42,.34);
+    will-change:transform,opacity}
+}
+@media(max-width:820px){.term-pin{padding:55px 0}}
+@media(prefers-reduced-motion:reduce){
+  .tl.typing .tx::after{animation:none}
+}
+@media(max-width:520px){
+  .term{font-size:.78rem}
+  .tl .lead{margin:0 6px}
+}
 
 .about-big{font-family:var(--display);font-weight:600;font-size:clamp(1.3rem,3vw,2rem);
   line-height:1.32;color:var(--navy);text-wrap:balance}
@@ -975,7 +1049,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
       <div class="doss-pin">
 
         <article class="doss" style="--i:0">
-          <div class="doss-tab">Plate 01</div>
+          <div class="doss-tab">Uni</div>
           <div class="doss-face">
             <div class="doss-in">
               <div class="doss-img">
@@ -995,7 +1069,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
         </article>
 
         <article class="doss" style="--i:1">
-          <div class="doss-tab">Plate 02</div>
+          <div class="doss-tab">Personal</div>
           <div class="doss-face">
             <div class="doss-in">
               <div class="doss-img">
@@ -1015,7 +1089,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
         </article>
 
         <article class="doss" style="--i:2">
-          <div class="doss-tab">Plate 03</div>
+          <div class="doss-tab">Uni</div>
           <div class="doss-face">
             <div class="doss-in">
               <div class="doss-img">
@@ -1029,6 +1103,26 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
                 <div class="beat"><div class="k">Approach</div><div class="v">Engineered the mechanical and process flow across waste sorting, incineration and energy recovery, then tested the design against financial and feasibility&nbsp;analysis.</div></div>
                 <div class="beat"><div class="k">Outcome</div><div class="v">Delivered as a formal tender proposal and defended in&nbsp;presentation.</div></div>
                 <div class="plate-links"><a href="#">Tender PDF ↗</a></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="doss" style="--i:3">
+          <div class="doss-tab">Personal</div>
+          <div class="doss-face">
+            <div class="doss-in">
+              <div class="doss-img">
+                <img src="img/site.jpg" alt="This website" onerror="this.remove()" />
+                <div class="ph">[ ADD img/site.jpg ]</div>
+              </div>
+              <div class="doss-txt">
+                <h3>This website — a drawing you can&nbsp;scroll</h3>
+                <div class="tags">INDEPENDENT · WEBGL · NO BUILD&nbsp;STEP</div>
+                <div class="beat"><div class="k">Problem</div><div class="v">A portfolio that shows how I think about design, rather than one that just lists what I have&nbsp;made.</div></div>
+                <div class="beat"><div class="k">Approach</div><div class="v">Built from scratch as a single hand-written file — no framework and no build step. The title page is a drawing sheet on an 11px grid; the name is real extruded 3D type whose size is solved so no view can cross the&nbsp;frame.</div></div>
+                <div class="beat"><div class="k">Outcome</div><div class="v">The site you are reading, deployed straight from&nbsp;GitHub.</div></div>
+                <div class="plate-links"><a href="https://github.com/leonpanjwani" target="_blank" rel="noopener">Source ↗</a></div>
               </div>
             </div>
           </div>
@@ -1049,28 +1143,37 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
     <h2 class="sr">Loose files</h2>
     <div class="gal-stack" id="galStack">
       <div class="gal-pin">
-        <div class="gal-head">
-          <span class="gal-title">Loose&nbsp;files</span>
-          <span class="gal-sub">Odds and ends that didn't need a folder</span>
-        </div>
         <div class="gal-track" id="galTrack"></div>
+      </div>
+      <!-- ---- THE CHECK ----
+           Once the strip has run out, this comes up OVER it — the loose files
+           stay pinned behind — as a system dialog you have to clear before the
+           page will let you go on. Second sticky in the same stack, so the two
+           share one scroll and the gallery cannot slide away underneath. -->
+      <div class="term-pin" id="skills">
+        <h2 class="sr">Skills</h2>
+        <div class="term" id="term">
+          <div class="term-bar">
+            <span>diagnostics — skills.suite</span>
+            <span class="term-dots"><i></i><i></i><i></i></span>
+          </div>
+          <div class="term-warn">
+            <svg viewBox="0 0 16 14" aria-hidden="true">
+              <path d="M8 1 L15.2 13 H0.8 Z"/><path d="M8 5.4 V9.2"/><path d="M8 10.8 V11.4"/>
+            </svg>
+            Skills check required before proceeding
+          </div>
+          <div class="term-body" id="termBody"></div>
+        </div>
       </div>
     </div>
   </section>
 
-  <section id="skills">
-    <div class="wrap">
-      <div class="sec-head rv"><h2>Skills &amp;&nbsp;tools</h2></div>
-      <div class="skills rv">
-        <div class="skill"><h3>Software &amp; CAD</h3>
-          <ul><li>Fusion 360</li><li>MATLAB</li><li>ANSYS</li></ul></div>
-        <div class="skill"><h3>Practical &amp; workshop</h3>
-          <ul><li>3D printing</li><li>Soldering</li><li>Machining</li></ul></div>
-        <div class="skill"><h3>Engineering methods</h3>
-          <ul><li>Thermal &amp; fluid modelling</li><li>Prototyping</li><li>Technical pitching &amp; documentation</li></ul></div>
-      </div>
-    </div>
-  </section>
+  <!-- ---- SKILLS AS A TEST RUN ----
+       The suite runs as you scroll: one line per notch, each check reporting
+       PASS. Lines are built from SKILLS in the script and revealed by scroll
+       position, so scrolling back un-runs them. They hold their space while
+       hidden, so the window never changes height. -->
 
   <!-- ---- THE CLOSE ----
        The two halves of the sign-off arrive from opposite sides as the section
@@ -1079,7 +1182,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
        this page reverses. Driven in update(); .rv would fight it. -->
   <section id="contact" class="contact">
     <div class="wrap">
-      <div class="sec-head"><h2>Contact</h2></div>
+      <h2 class="sr">Contact</h2>
       <p class="fin">
         <span class="slide-l">Let's build</span>
         <span class="slide-r">something.</span>
@@ -1128,6 +1231,15 @@ const REEL = [
   {src:"img/reel-06.jpg", cap:"Workshop — machining the mounts",     w:10}
 ];
 
+/* The skills suite. Each group prints a header, each item a check that reports
+   PASS as the scroll reaches it. */
+const SKILLS = [
+  {group:"Software & CAD",       items:["Fusion 360","MATLAB","ANSYS"]},
+  {group:"Practical & workshop", items:["3D printing","Soldering","Machining"]},
+  {group:"Engineering methods",  items:["Thermal & fluid modelling","Prototyping",
+                                        "Technical pitching & documentation"]}
+];
+
 const GRID = { unit:11, inset:33, leftCells:24, rightCells:25, rowCells:4 };
 
 /* HEADER GEOMETRY, in cells.
@@ -1150,7 +1262,16 @@ const ROLL = { minH:12, maxH:76, fade:55 };
    step is the whole point — it means the next folder is already on its way up
    before the one beneath it has finished covering the screen. rise: the swing
    angle in degrees, alternating side to side about the hinge below the page. */
-const DOSS = { hold:0.3, step:0.62, dur:0.8, rise:7 };
+const DOSS = { hold:0.3, step:0.62, dur:0.8, rest:0.35, rise:7 };
+/* rest: a beat of scroll after the LAST folder has landed, before the stack
+   lets go — otherwise the final project is snatched away the instant it
+   arrives. */
+
+/* The diagnostic run. travel: viewport-heights of scroll the pinned terminal
+   takes to type itself out. batch: how many checks are typed AT ONCE — one at
+   a time reads better but makes nine of them interminable. dwell: the pause
+   before each batch reports, in character-times. */
+const TERM = { travel:2.9, batch:3, dwell:34, pop:0.09 };
 /* hold: viewport-heights of scroll AFTER the landing before the first folder
    moves. Without it the folders answer the very first scroll and you can be
    past About before you have read it. */
@@ -1199,6 +1320,12 @@ const FONT3D = {"upem":1000,"capH":700,"kern":{"PA":-75,"WA":-45},"glyphs":{
 /* ==========================================================================
    SETUP
    ========================================================================== */
+/* The page must open ON THE DRAWING. Browsers restore the previous scroll
+   position on reload, which lands you part-way down with the opening
+   animation already skipped (intro() finishes it immediately when the page
+   isn't at the top) — which is exactly the "the intro doesn't play, it just
+   flashes" you get while iterating on the file. */
+if("scrollRestoration" in history) history.scrollRestoration="manual";
 const layer=document.getElementById("layer"), nameEl=document.getElementById("name"),
       sheet=document.getElementById("sheet"), headbar=document.getElementById("headbar"),
       content=document.getElementById("content"),
@@ -1478,6 +1605,11 @@ function build3D(){
     pivot.quaternion.copy(introDone?Q_ID:Q_ISO);
     R3.ready=true;
     lastT=-1;                          // force the next update() to re-render
+    /* A rebuild mid-intro would otherwise drop the animation back to frame
+       zero — and one is almost guaranteed on load, because the page grows as
+       the sections are padded and the scrollbar's arrival fires a resize.
+       Re-apply the intro's current time so the rebuild is invisible. */
+    if(introStarted&&!introDone) setIntro(performance.now()-introT0);
     renderGL();
   }catch(e){
     /* anything goes wrong → tear the 3D down and fall back to the 2D name */
@@ -1491,6 +1623,10 @@ function renderGL(){ if(R3&&R3.ready) R3.renderer.render(R3.scene,R3.camera) }
 /* ---- intro timeline (ms): fade in → letters cascade home → leaders fade →
    full-stop screw spins home → plate turns iso → front → rises to rest ---- */
 let introStarted=false, introDone=false, introRAF=0, introFinishCb=null, introFired=false;
+let introT0=0;    // when the intro started, so a rebuild can rejoin it mid-flight
+let lastM3="";    // the layout signature the 3D scene was last built against
+let pendingM3=false;   // a rebuild deferred because the intro was mid-flight
+let menuA=0;      // 1 once the opening animation has finished
 /* The last tour fraction actually rendered. update() runs on mousemove too (the
    corner peel and the cursor need it), and re-rendering an unchanged WebGL
    scene on every pointer event is pure waste — so the GL draw is gated on this
@@ -1519,14 +1655,29 @@ function setIntro(t){
   dims.style.opacity=clamp((t-3050)/450).toFixed(3);
 }
 function finishIntro(){
-  cancelAnimationFrame(introRAF); introStarted=true;
+  cancelAnimationFrame(introRAF); introStarted=true; menuA=1;
+  SKIP.forEach(t=>removeEventListener(t,skipIntro));
   if(!introDone){ introDone=true; setIntro(1e5); }
   if(!introFired&&introFinishCb){ introFired=true; introFinishCb() }
+  /* take any layout change that arrived during the animation */
+  if(pendingM3){ pendingM3=false; measure(); lockGrid() }
   update();
 }
+/* A real gesture — not a scroll position — is what skips the animation. The
+   browser adjusts scrollTop on its own while the page settles, and treating
+   that as intent is what let a layout twitch cut the intro off. */
+const SKIP=["wheel","touchstart","keydown","pointerdown"];
+function skipIntro(){
+  SKIP.forEach(t=>removeEventListener(t,skipIntro));
+  if(introStarted&&!introDone) finishIntro();
+}
 function start3DIntro(){
+  /* one loop only: two would drive setIntro from two different clocks on
+     alternate frames, and the assembly would shake between them */
+  if(introStarted||introDone) return;
   introStarted=true;
-  const t0=performance.now();
+  SKIP.forEach(t=>addEventListener(t,skipIntro,{passive:true,once:true}));
+  const t0=introT0=performance.now();
   (function step(now){
     if(introDone) return;
     const t=now-t0;
@@ -1817,6 +1968,7 @@ function measure(){
   vlabel.style.left=heroX+"px";
   vlabel.style.top=(heroY+2*lh+6*U)+"px";
 
+
   /* ---- THE LOOSE-FILES STRIP ----
      Print height is whole squares, sized to what's left of the pin once the
      heading row and the captions have taken theirs. The scroll budget is the
@@ -1824,22 +1976,37 @@ function measure(){
      lets go — measured AFTER the height is set, since that changes the widths'
      line box and therefore scrollWidth. */
   doc.style.setProperty("--galH",
-    Math.max(3*SQ,Math.floor((vh-M.headZ-4*SQ)/SQ)*SQ)+"px");
-  galOn = !!galTrack && !small && !reduce;
+    Math.max(3*SQ,Math.floor((vh-M.headZ-3*SQ)/SQ)*SQ)+"px");
+  /* ---- THE STRIP AND THE CHECK SHARE ONE STACK ----
+     Both are sticky inside #galStack, so the loose files stay pinned while the
+     diagnostic dialog comes up over them. The stack is long enough for the
+     strip's own overflow AND the check's typing; the dialog's flow position is
+     nudged with a margin so it engages exactly as the strip runs out. */
+  termOn = galOn = !!galTrack && !small && !reduce;
   if(galStack){
     if(galOn){
+      /* both pins are a FULL screen tall now (the header zone is held clear
+         with padding), so the sticky arithmetic uses vh, not vh−headZ */
+      const pinH=vh;
       const pinW=galStack.getBoundingClientRect().width;
       M.galOver=Math.max(0,galTrack.scrollWidth-pinW);
+      M.termS=TERM.travel;
       galStack.style.height=
-        Math.round(vh-M.headZ+M.galOver)+"px";
+        Math.round(pinH+M.galOver+TERM.travel*vh)+"px";
+      if(termPin) termPin.style.marginTop=Math.round(M.galOver-pinH)+"px";
       /* phase the pin's own grid to the page's: offsetTop is the pin's LAYOUT
          position (sticky doesn't move it), so this holds however far it is
          currently stuck. */
       const pin=galTrack.parentNode;
       if(pin) pin.style.setProperty("--galBgY",
         (-(galStack.offsetTop%SQ))+"px");
+      termP=-1;                       // re-type against the new budget
     }else{
-      M.galOver=0; galStack.style.height=""; galTrack.style.transform="";
+      M.galOver=0; M.termS=0;
+      galStack.style.height=""; galTrack.style.transform="";
+      if(termPin) termPin.style.marginTop="";
+      if(termEl){ termEl.style.transform=""; termEl.style.opacity="" }
+      termRender(1);
     }
   }
 
@@ -1854,7 +2021,7 @@ function measure(){
          is the pin itself; the rest is the hold plus the rise schedule — get
          this wrong and the folders finish before, or after, the stack lets go */
       dossStack.style.height=
-        Math.round(vh*(1+DOSS.hold+M.dossS))-M.headZ+"px";
+        Math.round(vh*(1+DOSS.hold+M.dossS+DOSS.rest))-M.headZ+"px";
     }else{
       M.dossS=0; dossStack.style.height="";
       dossEls.forEach(el=>{el.style.transform=""});
@@ -1873,7 +2040,22 @@ function measure(){
                                    Math.floor((vh-4*SQ)/SQ)));
   doc.style.setProperty("--faceW",faceSq*SQ+"px");
 
-  build3D();
+  /* Rebuild the 3D only when something it actually depends on has moved. A
+     resize fires for every scrollbar that appears and every mobile toolbar
+     that slides, and each rebuild disposes and re-extrudes every glyph — mid
+     opening-animation that is both the jank and the risk of a visible reset. */
+  const m3=[vw,vh,heroFS,heroX,heroY,Math.round(base0)].join(",");
+  /* NEVER rebuild while the opening animation is running. A rebuild disposes
+     and re-extrudes every glyph and re-seeds their exploded positions; if
+     anything makes the layout twitch — a scrollbar arriving, a font settling,
+     a pinned section resizing — the assembly is dragged back and forth
+     between two states for as long as it lasts. The layout the intro started
+     against is fine for its three seconds; measure() runs again the moment it
+     finishes (see finishIntro). */
+  if(m3!==lastM3){
+    if(introStarted&&!introDone) pendingM3=true;
+    else{ lastM3=m3; build3D() }
+  }
 }
 
 /* ==========================================================================
@@ -2009,12 +2191,15 @@ function update(){
      stays until the paper takes it. */
   if(R3&&R3.ready){
     const t=pW>0?clamp(p/pW):1;
-    if(introStarted&&!introDone&&p>0.03) finishIntro();
+    /* NOTE: the intro is never cancelled from here. Scroll POSITION is not
+       evidence that the reader did anything — the browser moves it by itself
+       while the page settles — so the animation is ended by an actual gesture
+       instead (see the listeners under start3DIntro). */
     if(introDone){
       R3.pivot.quaternion.copy(tourQ(t));
       /* the rested name sits low; rotated views need the frame's symmetric
-         clearance, so the pivot glides up to the centre as the tour starts and
-         settles back down before the dimensions return */
+         clearance, so the pivot glides up to the centre as the tour starts
+         and settles back down before the dimensions return */
       const env=ease(seg(t,0,.2))*(1-ease(seg(t,.74,.90)));
       R3.pivot.position.y=lerp(R3.cyRestW,R3.cyCW,env);
       const z=tourZoom(t);
@@ -2022,7 +2207,7 @@ function update(){
       setVlabel(t,1);
       /* Dimensions belong to the true view only: they lift off the moment the
          name starts turning and are drawn back on once it has settled square
-         again — which is also the last beat before the roll. */
+         again — the last beat before the roll. */
       dims.style.opacity=
         Math.min(1,(1-seg(t,0,.06))+seg(t,.90,.99)).toFixed(3);
       if(t!==lastT){ lastT=t; renderGL() }
@@ -2051,13 +2236,29 @@ function update(){
     });
   }
 
-  /* ---- LOOSE FILES: the strip walks sideways ----
-     The pin is stuck, so this scroll doesn't move the page — it moves the
-     prints. 1:1 with the wheel: the strip travels exactly the distance the
-     page would have. */
-  if(galOn&&M.galOver){
-    const p=clamp((M.headZ-galStack.getBoundingClientRect().top)/M.galOver);
-    galTrack.style.transform=`translateX(${(-p*M.galOver).toFixed(1)}px)`;
+  /* ---- LOOSE FILES, THEN THE CHECK ----
+     One stack, one scroll, one rect read. First the strip walks sideways 1:1
+     with the wheel while the page holds still; when it runs out, the
+     diagnostic dialog pops up OVER the still-pinned strip and the same scroll
+     types the run out. */
+  if(galOn&&M.galOver!==undefined){
+    const y=-galStack.getBoundingClientRect().top;
+    if(M.galOver){
+      const p=clamp(y/M.galOver);
+      galTrack.style.transform=`translateX(${(-p*M.galOver).toFixed(1)}px)`;
+    }
+    if(M.termS){
+      const pt=clamp((y-M.galOver)/(M.termS*vh));
+      /* the dialog lands first, then it types — TERM.pop is the fraction of
+         the run spent arriving */
+      const pop=ease(clamp(pt/TERM.pop));
+      if(termEl){
+        termEl.style.opacity=pop.toFixed(3);
+        termEl.style.transform=`scale(${lerp(.94,1,pop).toFixed(4)})`;
+      }
+      const q=seg(pt,TERM.pop,1);
+      if(q!==termP){ termP=q; termRender(q) }
+    }
   }
 
   /* ---- THE CLOSE: two halves meeting in the middle ----
@@ -2146,7 +2347,7 @@ function lockGrid(){
      to whole squares would only add dead scroll, and their heights are already
      solved against the viewport. */
   document.querySelectorAll(
-    ".content section:not(#about):not(#work):not(#gallery)").forEach(s=>{
+    ".content section:not(#about):not(#work):not(#gallery):not(#skills)").forEach(s=>{
     s.style.paddingBottom=PAD+"px";
     const over=Math.round(s.getBoundingClientRect().height)%SQ;
     s.style.paddingBottom=(PAD+(over?SQ-over:0))+"px";
@@ -2165,6 +2366,11 @@ addEventListener("resize",()=>{
      a WIDTH change can actually alter the layout, so ignore height-only events
      on touch devices. On desktop every resize still counts. */
   if(coarse && innerWidth===lastW) return;
+  /* Hold everything while the opening animation plays. Sizing the pinned
+     sections changes the document height, which can bring a scrollbar in and
+     fire another resize — a loop that re-measures for as long as it lasts,
+     and drags the animation with it. */
+  if(introStarted&&!introDone){ pendingM3=true; return }
   lastW=innerWidth;
   measure(); update();
   clearTimeout(rsz); rsz=setTimeout(lockGrid,120);   // re-lock after reflow
@@ -2173,6 +2379,82 @@ addEventListener("mousemove",e=>{
   mouseX=e.clientX; mouseY=e.clientY;
   onScroll();                              // rAF-throttled, so this is cheap
 },{passive:true});
+/* ==========================================================================
+   SKILLS — the diagnostic run
+   Built once, revealed by scroll. Only the COUNT is recomputed per frame, and
+   classes are touched only when it changes — writing to fifteen elements every
+   scroll frame for no reason is exactly the sort of thing that makes a page
+   feel heavy.
+   ========================================================================== */
+const termBody=document.getElementById("termBody"),
+      termPin=document.getElementById("skills"),
+      termEl=document.getElementById("term");
+let termOps=[], termCost=0, termOn=false, termP=-1;
+
+/* The run is a list of ops in CHARACTER units, so scroll maps onto typing at
+   a constant rate whatever the words are:
+     type   — one or more lines typing AT ONCE (the batch), cost = the longest
+     dwell  — the pause while the rig "thinks", before it reports
+     pass   — the verdict lands on every line in the batch together
+   Typing a batch of TERM.batch at a time is what stops nine checks eating
+   half the page. */
+(function buildTerm(){
+  if(!termBody) return;
+  const nAll=SKILLS.reduce((a,g)=>a+g.items.length,0);
+  const row=cls=>{
+    const el=document.createElement("div");
+    el.className="tl "+cls; termBody.appendChild(el); return el;
+  };
+  const typed=(cls,text)=>{
+    const el=row(cls), tx=document.createElement("span");
+    tx.className="tx"; el.appendChild(tx);
+    termOps.push({k:"type",els:[tx],texts:[text],cost:text.length});
+  };
+  typed("cmd","$ ./diagnostics --suite skills");
+  typed("sys","initialising test rig …");
+  SKILLS.forEach(g=>{
+    typed("grp","["+g.group.toUpperCase()+"]");
+    for(let i=0;i<g.items.length;i+=TERM.batch){
+      const chunk=g.items.slice(i,i+TERM.batch), els=[], passes=[];
+      chunk.forEach(it=>{
+        const el=row("test"), tx=document.createElement("span"),
+              lead=document.createElement("span"), ps=document.createElement("span");
+        tx.className="tx"; lead.className="lead";
+        ps.className="pass"; ps.textContent="PASS";
+        el.append(tx,lead,ps); els.push(tx); passes.push(ps);
+      });
+      termOps.push({k:"type",els,texts:chunk,
+                    cost:Math.max(...chunk.map(s=>s.length))});
+      termOps.push({k:"dwell",cost:TERM.dwell});
+      termOps.push({k:"pass",els:passes,cost:3});
+    }
+  });
+  typed("ok",`${nAll}/${nAll} CHECKS PASSED — READY`);
+  let at=0;
+  termOps.forEach(o=>{ o.at=at; at+=o.cost });
+  termCost=at;
+})();
+
+/* p (0→1 across the pin) → how much of the run has been typed */
+function termRender(p){
+  const cur=p*termCost;
+  for(const o of termOps){
+    const local=cur-o.at;
+    if(o.k==="type"){
+      const n=clamp(Math.floor(local),0,o.cost);
+      o.els.forEach((el,i)=>{
+        const t=o.texts[i].slice(0,Math.min(o.texts[i].length,n));
+        if(el.textContent!==t) el.textContent=t;
+        const line=el.parentNode;
+        line.classList.toggle("on",n>0);
+        line.classList.toggle("typing",n>0&&local<o.cost);
+      });
+    }else if(o.k==="pass"){
+      o.els.forEach(el=>el.classList.toggle("lit",local>=0));
+    }
+  }
+}
+
 /* ==========================================================================
    LOOSE FILES — build the strip
    Placeholder first, image over it: if the file is missing the image removes
@@ -2222,6 +2504,11 @@ function navY(id){
   /* one folder's rise in: folder 01 up, the next just starting behind it */
   if(id==="work"&&dossOn)
     return dossStack.getBoundingClientRect().top+scrollY+vh*DOSS.dur;
+  /* the check isn't where its markup is — it engages once the strip has run
+     out, so land just past that, with the dialog on screen */
+  if(id==="skills"&&galOn)
+    return galStack.getBoundingClientRect().top+scrollY
+           +M.galOver+vh*TERM.pop*TERM.travel;
   const el=document.getElementById(id);
   return el?el.getBoundingClientRect().top+scrollY-110:0;
 }
@@ -2332,8 +2619,20 @@ const FACE = {
      at rest the canvas is exactly the static grid it always was. */
   let tiles=[], W=0, H=0, ox,oy,vx,vy, animRAF=0, live=false;
 
+  /* Nothing is touched until the portrait is near the screen. The downsample,
+     key, sharpen and tile passes are the most expensive thing on the page, and
+     running them at load put a stutter right through the opening animation —
+     while About is a screen and a half below the fold anyway. */
+  let near=false;
+  if("IntersectionObserver" in window){
+    const pio=new IntersectionObserver(es=>{
+      if(es.some(e=>e.isIntersecting)){ pio.disconnect(); near=true; draw() }
+    },{rootMargin:"300px 0px"});
+    pio.observe(cv);
+  }else near=true;
+
   function draw(){
-    if(!ready) return;
+    if(!ready||!near) return;
     const U=GRID.unit, r=cv.getBoundingClientRect();
     W=Math.round(r.width); H=Math.round(r.height);
     if(W<U||H<U) return;
@@ -2576,6 +2875,19 @@ addEventListener("touchcancel",letGo,{passive:true});
    INTRO
    ========================================================================== */
 function intro(){
+  /* Belt and braces with scrollRestoration above — but never fight a real
+     deep link, which is a deliberate request for somewhere else.
+     INSTANT, not smooth: html has scroll-behavior:smooth, which turns this
+     into an animation that is still running three lines later — so scrollY
+     was still non-zero at the check below, the intro was skipped, and the
+     page lurched through the pinned sections on its way back up. That is the
+     "it just glitches back and forth". Inline style beats the sheet. */
+  if(!location.hash && scrollY>4){
+    const doc=document.documentElement, sb=doc.style.scrollBehavior;
+    doc.style.scrollBehavior="auto";
+    scrollTo(0,0);
+    doc.style.scrollBehavior=sb;
+  }
   measure(); update(); lockGrid();
   if(reduce){
     words.forEach(w=>w.classList.add("drawn","inked","shaded"));
