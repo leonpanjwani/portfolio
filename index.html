@@ -419,7 +419,7 @@ a{color:inherit;text-decoration:none}
   font-family:var(--display);font-weight:700;font-size:1.5rem;
   letter-spacing:.005em;text-transform:uppercase;white-space:nowrap;
   color:transparent;
-  -webkit-text-stroke:var(--bsw,1.4px) var(--bink,#ffffff);
+  -webkit-text-stroke:var(--bsw,1.05px) var(--bink,#ffffff);
   paint-order:stroke fill;
   /* NOT transitioned. A transition on -webkit-text-fill-color wedges the
      property: update() rewrites --bfill on every scroll frame, and the
@@ -432,7 +432,7 @@ a{color:inherit;text-decoration:none}
 #brand:hover{-webkit-text-fill-color:var(--bfillH,rgba(255,99,71,.34))}
 @media(max-width:820px){
   #headbar{padding:10px 14px}
-  #brand{font-size:.95rem;--bsw:0.9px}
+  #brand{font-size:.95rem;--bsw:0.75px}
 }
 
 /* ---- CURSOR READOUT ----
@@ -644,20 +644,24 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   background:var(--folder);border:1px solid rgba(25,44,100,.28);border-bottom:0;
   border-radius:4px 11px 0 0;
   font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--blue)}
+  text-transform:uppercase;color:var(--tomato)}
 .doss-in{position:relative;z-index:1;flex:1;min-height:0;display:grid;gap:55px;
   padding:33px;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
 .doss.wide .doss-in{grid-template-columns:1fr}
 .doss-img{position:relative;min-height:220px;overflow:hidden;background:#e9ebf3;
   border:1px solid rgba(25,44,100,.18);
   display:flex;align-items:center;justify-content:center}
-.doss-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.doss-img img,.doss-img video{position:absolute;inset:0;
+  width:100%;height:100%;object-fit:cover}
 .doss-img .ph{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
   color:var(--blue);text-align:center;padding:16px}
 .doss-txt{display:flex;flex-direction:column;justify-content:center;min-width:0}
-.doss h3{font-family:var(--display);font-weight:700;
-  font-size:clamp(1.4rem,2.4vw,2.1rem);line-height:1.12;margin-bottom:11px;
-  color:var(--navy);text-wrap:balance}
+/* Project headings are prose, not signage — Inter, like the copy under them.
+   The drawing face (Chakra Petch) is kept for the sheet, the section headings
+   and the header wordmark. */
+.doss h3{font-family:var(--body);font-weight:700;
+  font-size:clamp(1.3rem,2.2vw,1.9rem);line-height:1.16;margin-bottom:11px;
+  letter-spacing:-.01em;color:var(--tomato);text-wrap:balance}
 .doss .tags{font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;
   color:var(--navy);margin-bottom:14px}
 
@@ -681,9 +685,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   /* inset a couple of cells, so both side edges of the folder are visible */
   .doss-face{position:absolute;left:22px;right:22px;bottom:0;
     top:calc(var(--tabH) + var(--i,0) * var(--fanY));
-    border-radius:14px;
-    box-shadow:0 -14px 34px rgba(9,16,42,.16)}
-  .doss-tab{box-shadow:0 -8px 18px rgba(9,16,42,.10)}
+    border-radius:14px}
   /* About holds still underneath while the folders come up over it — and it
      carries the page grid ITSELF, painted on opaque white, so the lattice is
      locked to the panel instead of sliding through behind it. */
@@ -768,85 +770,38 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    skill headings and tick marks, tomato arrows in Contact, and a tomato rule
    over the footer. Not on Work — its plates carry the blueprint's blue
    instead, so the accent reads as punctuation rather than a theme. */
-/* ---- THE DIAGNOSTIC WINDOW ----
-   Skills reported as a test run. Navy stock, pale type, PASS in the accent —
-   the same five colours as everything else, arranged as a console. Hidden
-   lines keep their space (opacity, not display), so the window is a fixed
-   box that fills rather than a list that grows and shoves the page around. */
-/* Deliberately narrower than the column: the dot leader between a check and
-   its verdict is the gap, and across a full-width box the PASS ends up an
-   inch away from the thing it refers to. */
-/* A DEFINITE width, not a max: as a flex item the box would otherwise be
-   sized by its content, so it grew every time a longer line finished typing —
-   the window kept resizing under the text. It is wide enough for the longest
-   check from the first frame. */
-.term{width:min(100%,690px);background:var(--navy);
-  border:1px solid rgba(9,16,42,.55);
-  border-radius:6px;overflow:hidden;font-family:var(--mono);font-size:1rem;
-  line-height:1.85;color:var(--pale)}
-.term-bar{display:flex;align-items:center;justify-content:space-between;
-  height:33px;padding:0 14px;background:rgba(255,255,255,.06);
-  border-bottom:1px solid rgba(255,255,255,.10);
-  font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;
-  color:rgba(255,255,255,.55)}
-.term-dots i{display:inline-block;width:7px;height:7px;margin-left:7px;
-  background:rgba(255,255,255,.22)}
-.term-dots i:last-child{background:rgba(255,99,71,.5)}
-.term-body{padding:22px 22px 16px}
-/* Lines are always in the DOM and always take their space — the window is a
-   fixed box that fills, not a list that grows and shoves the page about. What
-   changes is how much of each line's text has been TYPED. */
-.tl{display:flex;align-items:baseline;white-space:nowrap;min-height:1.95em}
-.tl .lead,.tl .pass{opacity:0;transition:opacity .12s ease}
-.tl.on .lead{opacity:1}
-.tl .pass.lit{opacity:1}
-.tl.cmd{color:var(--white)}
-.tl.sys{color:rgba(189,197,221,.6)}
-.tl.grp{color:var(--tomato);margin-top:11px}
-.tl.ok{color:var(--white);margin-top:11px;letter-spacing:.1em}
-.tl .lead{flex:1;min-width:22px;margin:0 10px;
-  border-bottom:1px dotted rgba(189,197,221,.32)}
-.tl .pass{color:var(--tomato);letter-spacing:.12em}
-/* the caret rides whichever line is mid-type */
-.tl.typing .tx::after{content:"";display:inline-block;width:8px;height:14px;
-  margin-left:2px;vertical-align:-2px;background:var(--tomato);
-  animation:blink 1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
-/* the warning strip: this is a dialog you have to clear, not a panel */
-.term-warn{display:flex;align-items:center;gap:11px;padding:11px 22px;
-  background:rgba(255,99,71,.12);border-bottom:1px solid rgba(255,99,71,.35);
-  color:var(--tomato);font-size:.8rem;letter-spacing:.06em}
-.term-warn svg{flex:0 0 auto;width:16px;height:14px;fill:none;
-  stroke:currentColor;stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round}
-/* ---- the check, over the loose files ----
-   Second sticky inside the gallery's stack: the strip stays pinned behind
-   while this comes up over it, dims it, and holds the page until the run has
-   finished. JS drives the pop-in and the typing from the same scroll. */
-.term-pin{position:relative;display:flex;align-items:center;justify-content:center}
-@media(min-width:821px){
-  .term-pin{position:sticky;top:0;padding-top:var(--headZ);
-    height:100vh;height:100svh}
-  /* no scrim over the strip — the shadow alone is what lifts the dialog off
-     the page it has interrupted */
-  .term{position:relative;z-index:1;transform:scale(.94);opacity:0;
-    box-shadow:0 4px 12px rgba(9,16,42,.22),
-               0 18px 40px rgba(9,16,42,.30),
-               0 44px 90px rgba(9,16,42,.34);
-    will-change:transform,opacity}
-}
-@media(max-width:820px){.term-pin{padding:55px 0}}
-@media(prefers-reduced-motion:reduce){
-  .tl.typing .tx::after{animation:none}
-}
+/* ---- SKILLS ----
+   Three groups of checks, one card each, on the same columns and gutters as
+   the work grid so the row lines up with it and is centred by definition. */
+.skills{display:grid;grid-template-columns:repeat(var(--cols,3),var(--cardW,330px));gap:55px}
+.skill{padding:22px;border:1px solid rgba(25,44,100,.18);background:var(--white);
+  transition:border-color .2s}
+.skill:hover{border-color:var(--tomato)}
+.skill h3{font-family:var(--body);font-weight:700;font-size:.95rem;
+  margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--tomato)}
+.skill ul{list-style:none}
+.skill li{font-size:.9rem;color:rgba(25,44,100,.78);padding:3px 0}
+.skill li::before{content:"";display:inline-block;width:7px;height:2px;
+  background:var(--tomato);margin-right:9px;vertical-align:middle}
 @media(max-width:520px){
-  .term{font-size:.78rem}
-  .tl .lead{margin:0 6px}
 }
 
-.about-big{font-family:var(--display);font-weight:600;font-size:clamp(1.3rem,3vw,2rem);
-  line-height:1.32;color:var(--navy);text-wrap:balance}
-.about-body{color:rgba(25,44,100,.80);margin-top:22px;font-size:1.04rem}
-.about-body b{color:var(--tomato)}
+/* One block, one size — About is a short introduction now, not a section with
+   a lead line and supporting copy, so nothing here is subordinate to anything
+   else and the type should not pretend otherwise. */
+.about-big{font-family:var(--body);font-weight:600;font-size:clamp(1.5rem,2.9vw,2.3rem);
+  line-height:1.34;letter-spacing:-.015em;color:var(--navy);text-wrap:pretty}
+.about-big b{font-weight:600;color:var(--tomato)}
+/* the greeting is bigger but stays IN the sentence — an inline span, sized in
+   em so it tracks the clamp above rather than needing its own */
+.about-big .hey{font-size:1.4em;font-weight:700;letter-spacing:-.025em}
+.about-copy p+p{margin-top:.85em}
+/* The copy is set to the SAME width as the portrait and pushed to the right of
+   its column, so the two blocks read as a matched pair with the gutter between
+   them rather than as a picture with a paragraph trailing off the page. */
+.about-copy{max-width:var(--faceW,495px);margin-left:auto}
+@media(max-width:760px){.about-copy{max-width:none;margin-left:0}}
 
 /* ==========================================================================
    ABOUT — PORTRAIT ON THE GRID
@@ -860,9 +815,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    ========================================================================== */
 .about-grid{display:grid;grid-template-columns:var(--faceW,495px) 1fr;
   gap:55px;align-items:center}
-/* the heading lives INSIDE the copy column, directly over the text, so the
-   pair centre against the portrait as one block */
-.about-copy .sec-head{margin-bottom:22px}
+/* (About has no visible heading — the copy introduces itself) */
 /* one column below the same width the work grid collapses at, so the whole
    page steps down together rather than section by section */
 @media(max-width:760px){.about-grid{grid-template-columns:1fr;gap:33px}}
@@ -889,7 +842,6 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .portrait figcaption{margin-top:22px;font-family:var(--mono);font-size:.68rem;
   letter-spacing:.14em;text-transform:uppercase;color:rgba(25,44,100,.55)}
 
-.about-copy .about-big{margin-bottom:22px}
 
 /* ---- THE CLOSE ----
    Two halves of one line, one arriving from each side. They are laid out on
@@ -917,11 +869,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .email:hover{border-color:var(--tomato);color:var(--tomato)}
 .email span{color:var(--tomato)}
 /* one square tall, one square of clearance above — sits on the grid like the
-   boxes, and shares the text block's left edge */
+   boxes. In Contact it is a third row in the centred stack, so it centres too. */
 .btn{display:inline-flex;align-items:center;height:55px;padding:0 22px;margin-top:55px;
   font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
   border:1px solid var(--black);background:var(--white);transition:.2s}
 .btn:hover{background:var(--tomato);border-color:var(--tomato);color:#fff}
+.fin-details .btn{margin-top:33px}
 
 footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
   justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--mono);
@@ -1017,18 +970,13 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
           <figcaption>FIG. 01 — L.&nbsp;PANJWANI</figcaption>
         </figure>
         <div class="about-copy">
-          <div class="sec-head"><h2>About</h2></div>
-          <p class="about-big">I like the breadth of general engineering — CAD one week, a thermal model the&nbsp;next.</p>
-          <p class="about-body">Third-year <b>MEng General Engineering</b> student at the University of Sheffield,
-            specialising in mechanical and on track for <b>First-Class Honours</b> (76% second-year average;
-            Thermal &amp; Fluids 87%, Materials 81%, Electromechanical 79%). My work runs from Energy-from-Waste
-            facilities to biomimetic AUVs, and I take independent projects as far as physical prototypes.</p>
-          <p class="about-body">Two team-challenge <b>Distinctions</b>: <b>Engineering You're Hired</b> (2026), where I
-            led the team that designed and pitched a self-sufficient life-support solution for Mars mission
-            expansion — voted most effective solution and presentation — and the <b>Global Engineering
-            Challenge</b> (2025) for a sustainable rural transport scheme in South Africa. Looking for a
-            summer 2027 internship where I can contribute to real&nbsp;hardware.</p>
-          <a class="btn" href="cv.pdf" download>Download CV</a>
+          <h2 class="sr">About</h2>
+          <p class="about-big"><span class="hey">Hey, I'm Leon.</span> I'm a third-year
+            <b>General Engineering</b> undergraduate studying at the <b>University of
+            Sheffield</b>.</p>
+          <p class="about-big">Outside of term time I'm at home in London, or hopefully on holiday.
+            I love food, travelling, designing, and then building things (especially when my
+            design&nbsp;works).</p>
         </div>
       </div>
     </div>
@@ -1052,9 +1000,15 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
           <div class="doss-tab">Uni</div>
           <div class="doss-face">
             <div class="doss-in">
+              <!-- the clip IS the evidence: the fin drive under way. Muted and
+                   playsinline so it can autoplay on a phone; the poster is a
+                   frame of the same clip, so anything that blocks autoplay
+                   still shows the vehicle rather than an empty box. -->
               <div class="doss-img">
-                <img src="img/auv.jpg" alt="Biomimetic AUV" onerror="this.remove()" />
-                <div class="ph">[ PLATE 01 — ADD img/auv.jpg ]</div>
+                <video src="img/auv.mp4" poster="img/auv.jpg" autoplay muted loop
+                       playsinline preload="metadata"
+                       aria-label="The biomimetic AUV under way in the test tank"></video>
+                <div class="ph">[ PLATE 01 — ADD img/auv.mp4 ]</div>
               </div>
               <div class="doss-txt">
                 <h3>Biomimetic AUV — design &amp;&nbsp;build</h3>
@@ -1145,35 +1099,23 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
       <div class="gal-pin">
         <div class="gal-track" id="galTrack"></div>
       </div>
-      <!-- ---- THE CHECK ----
-           Once the strip has run out, this comes up OVER it — the loose files
-           stay pinned behind — as a system dialog you have to clear before the
-           page will let you go on. Second sticky in the same stack, so the two
-           share one scroll and the gallery cannot slide away underneath. -->
-      <div class="term-pin" id="skills">
-        <h2 class="sr">Skills</h2>
-        <div class="term" id="term">
-          <div class="term-bar">
-            <span>diagnostics — skills.suite</span>
-            <span class="term-dots"><i></i><i></i><i></i></span>
-          </div>
-          <div class="term-warn">
-            <svg viewBox="0 0 16 14" aria-hidden="true">
-              <path d="M8 1 L15.2 13 H0.8 Z"/><path d="M8 5.4 V9.2"/><path d="M8 10.8 V11.4"/>
-            </svg>
-            Skills check required before proceeding
-          </div>
-          <div class="term-body" id="termBody"></div>
-        </div>
+    </div>
+  </section>
+
+  <section id="skills">
+    <div class="wrap">
+      <div class="sec-head rv"><h2>Skills &amp;&nbsp;tools</h2></div>
+      <div class="skills rv">
+        <div class="skill"><h3>Software &amp; CAD</h3>
+          <ul><li>Fusion 360</li><li>MATLAB</li><li>ANSYS</li></ul></div>
+        <div class="skill"><h3>Practical &amp; workshop</h3>
+          <ul><li>3D printing</li><li>Soldering</li><li>Machining</li></ul></div>
+        <div class="skill"><h3>Engineering methods</h3>
+          <ul><li>Thermal &amp; fluid modelling</li><li>Prototyping</li><li>Technical pitching &amp; documentation</li></ul></div>
       </div>
     </div>
   </section>
 
-  <!-- ---- SKILLS AS A TEST RUN ----
-       The suite runs as you scroll: one line per notch, each check reporting
-       PASS. Lines are built from SKILLS in the script and revealed by scroll
-       position, so scrolling back un-runs them. They hold their space while
-       hidden, so the window never changes height. -->
 
   <!-- ---- THE CLOSE ----
        The two halves of the sign-off arrive from opposite sides as the section
@@ -1190,6 +1132,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
       <div class="fin-details">
         <a class="email slide-l" href="mailto:hello@leonpanjwani.com"><span>→</span> hello@leonpanjwani.com</a>
         <a class="email slide-r" href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener"><span>→</span> linkedin.com/in/leonpanjwani</a>
+        <a class="btn slide-l" href="cv.pdf" download>Download CV</a>
       </div>
     </div>
   </section>
@@ -1231,15 +1174,6 @@ const REEL = [
   {src:"img/reel-06.jpg", cap:"Workshop — machining the mounts",     w:10}
 ];
 
-/* The skills suite. Each group prints a header, each item a check that reports
-   PASS as the scroll reaches it. */
-const SKILLS = [
-  {group:"Software & CAD",       items:["Fusion 360","MATLAB","ANSYS"]},
-  {group:"Practical & workshop", items:["3D printing","Soldering","Machining"]},
-  {group:"Engineering methods",  items:["Thermal & fluid modelling","Prototyping",
-                                        "Technical pitching & documentation"]}
-];
-
 const GRID = { unit:11, inset:33, leftCells:24, rightCells:25, rowCells:4 };
 
 /* HEADER GEOMETRY, in cells.
@@ -1266,12 +1200,6 @@ const DOSS = { hold:0.3, step:0.62, dur:0.8, rest:0.35, rise:7 };
 /* rest: a beat of scroll after the LAST folder has landed, before the stack
    lets go — otherwise the final project is snatched away the instant it
    arrives. */
-
-/* The diagnostic run. travel: viewport-heights of scroll the pinned terminal
-   takes to type itself out. batch: how many checks are typed AT ONCE — one at
-   a time reads better but makes nine of them interminable. dwell: the pause
-   before each batch reports, in character-times. */
-const TERM = { travel:2.9, batch:3, dwell:34, pop:0.09 };
 /* hold: viewport-heights of scroll AFTER the landing before the first folder
    moves. Without it the folders answer the very first scroll and you can be
    past About before you have read it. */
@@ -1338,6 +1266,12 @@ const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 /* A touch screen has no hover, so anything driven by pointer position needs a
    second way in. Checked once — a device doesn't change input type mid-visit. */
 const coarse=matchMedia("(pointer: coarse)").matches;
+
+/* Reduced motion has to reach the video too — CSS can stop a transition but
+   not a playing clip. The poster frame stays, so the plate still reads. */
+if(reduce) document.querySelectorAll("video[autoplay]").forEach(v=>{
+  v.removeAttribute("autoplay"); v.removeAttribute("loop"); v.pause();
+});
 
 /* Each line is ONE text run, not a span per letter. Per-letter spans each
    carry their own stroke, so where two boxes meet the strokes stack and leave
@@ -1977,36 +1911,26 @@ function measure(){
      line box and therefore scrollWidth. */
   doc.style.setProperty("--galH",
     Math.max(3*SQ,Math.floor((vh-M.headZ-3*SQ)/SQ)*SQ)+"px");
-  /* ---- THE STRIP AND THE CHECK SHARE ONE STACK ----
-     Both are sticky inside #galStack, so the loose files stay pinned while the
-     diagnostic dialog comes up over them. The stack is long enough for the
-     strip's own overflow AND the check's typing; the dialog's flow position is
-     nudged with a margin so it engages exactly as the strip runs out. */
-  termOn = galOn = !!galTrack && !small && !reduce;
+  /* ---- THE STRIP'S SCROLL BUDGET ----
+     The pin is a full screen tall (the header zone is held clear with padding,
+     so the pin's locked grid reaches behind the menu bar), and the budget is
+     the track's own horizontal overflow — so the last print lands flush as the
+     pin lets go, with no dead scroll at either end. */
+  galOn = !!galTrack && !small && !reduce;
   if(galStack){
     if(galOn){
-      /* both pins are a FULL screen tall now (the header zone is held clear
-         with padding), so the sticky arithmetic uses vh, not vh−headZ */
-      const pinH=vh;
       const pinW=galStack.getBoundingClientRect().width;
       M.galOver=Math.max(0,galTrack.scrollWidth-pinW);
-      M.termS=TERM.travel;
-      galStack.style.height=
-        Math.round(pinH+M.galOver+TERM.travel*vh)+"px";
-      if(termPin) termPin.style.marginTop=Math.round(M.galOver-pinH)+"px";
+      galStack.style.height=Math.round(vh+M.galOver)+"px";
       /* phase the pin's own grid to the page's: offsetTop is the pin's LAYOUT
          position (sticky doesn't move it), so this holds however far it is
          currently stuck. */
       const pin=galTrack.parentNode;
       if(pin) pin.style.setProperty("--galBgY",
         (-(galStack.offsetTop%SQ))+"px");
-      termP=-1;                       // re-type against the new budget
     }else{
-      M.galOver=0; M.termS=0;
+      M.galOver=0;
       galStack.style.height=""; galTrack.style.transform="";
-      if(termPin) termPin.style.marginTop="";
-      if(termEl){ termEl.style.transform=""; termEl.style.opacity="" }
-      termRender(1);
     }
   }
 
@@ -2236,29 +2160,12 @@ function update(){
     });
   }
 
-  /* ---- LOOSE FILES, THEN THE CHECK ----
-     One stack, one scroll, one rect read. First the strip walks sideways 1:1
-     with the wheel while the page holds still; when it runs out, the
-     diagnostic dialog pops up OVER the still-pinned strip and the same scroll
-     types the run out. */
-  if(galOn&&M.galOver!==undefined){
-    const y=-galStack.getBoundingClientRect().top;
-    if(M.galOver){
-      const p=clamp(y/M.galOver);
-      galTrack.style.transform=`translateX(${(-p*M.galOver).toFixed(1)}px)`;
-    }
-    if(M.termS){
-      const pt=clamp((y-M.galOver)/(M.termS*vh));
-      /* the dialog lands first, then it types — TERM.pop is the fraction of
-         the run spent arriving */
-      const pop=ease(clamp(pt/TERM.pop));
-      if(termEl){
-        termEl.style.opacity=pop.toFixed(3);
-        termEl.style.transform=`scale(${lerp(.94,1,pop).toFixed(4)})`;
-      }
-      const q=seg(pt,TERM.pop,1);
-      if(q!==termP){ termP=q; termRender(q) }
-    }
+  /* ---- LOOSE FILES: the strip walks sideways ----
+     The pin is stuck, so this scroll doesn't move the page — it moves the
+     prints, 1:1 with the wheel. */
+  if(galOn&&M.galOver){
+    const p=clamp(-galStack.getBoundingClientRect().top/M.galOver);
+    galTrack.style.transform=`translateX(${(-p*M.galOver).toFixed(1)}px)`;
   }
 
   /* ---- THE CLOSE: two halves meeting in the middle ----
@@ -2347,7 +2254,7 @@ function lockGrid(){
      to whole squares would only add dead scroll, and their heights are already
      solved against the viewport. */
   document.querySelectorAll(
-    ".content section:not(#about):not(#work):not(#gallery):not(#skills)").forEach(s=>{
+    ".content section:not(#about):not(#work):not(#gallery)").forEach(s=>{
     s.style.paddingBottom=PAD+"px";
     const over=Math.round(s.getBoundingClientRect().height)%SQ;
     s.style.paddingBottom=(PAD+(over?SQ-over:0))+"px";
@@ -2379,82 +2286,6 @@ addEventListener("mousemove",e=>{
   mouseX=e.clientX; mouseY=e.clientY;
   onScroll();                              // rAF-throttled, so this is cheap
 },{passive:true});
-/* ==========================================================================
-   SKILLS — the diagnostic run
-   Built once, revealed by scroll. Only the COUNT is recomputed per frame, and
-   classes are touched only when it changes — writing to fifteen elements every
-   scroll frame for no reason is exactly the sort of thing that makes a page
-   feel heavy.
-   ========================================================================== */
-const termBody=document.getElementById("termBody"),
-      termPin=document.getElementById("skills"),
-      termEl=document.getElementById("term");
-let termOps=[], termCost=0, termOn=false, termP=-1;
-
-/* The run is a list of ops in CHARACTER units, so scroll maps onto typing at
-   a constant rate whatever the words are:
-     type   — one or more lines typing AT ONCE (the batch), cost = the longest
-     dwell  — the pause while the rig "thinks", before it reports
-     pass   — the verdict lands on every line in the batch together
-   Typing a batch of TERM.batch at a time is what stops nine checks eating
-   half the page. */
-(function buildTerm(){
-  if(!termBody) return;
-  const nAll=SKILLS.reduce((a,g)=>a+g.items.length,0);
-  const row=cls=>{
-    const el=document.createElement("div");
-    el.className="tl "+cls; termBody.appendChild(el); return el;
-  };
-  const typed=(cls,text)=>{
-    const el=row(cls), tx=document.createElement("span");
-    tx.className="tx"; el.appendChild(tx);
-    termOps.push({k:"type",els:[tx],texts:[text],cost:text.length});
-  };
-  typed("cmd","$ ./diagnostics --suite skills");
-  typed("sys","initialising test rig …");
-  SKILLS.forEach(g=>{
-    typed("grp","["+g.group.toUpperCase()+"]");
-    for(let i=0;i<g.items.length;i+=TERM.batch){
-      const chunk=g.items.slice(i,i+TERM.batch), els=[], passes=[];
-      chunk.forEach(it=>{
-        const el=row("test"), tx=document.createElement("span"),
-              lead=document.createElement("span"), ps=document.createElement("span");
-        tx.className="tx"; lead.className="lead";
-        ps.className="pass"; ps.textContent="PASS";
-        el.append(tx,lead,ps); els.push(tx); passes.push(ps);
-      });
-      termOps.push({k:"type",els,texts:chunk,
-                    cost:Math.max(...chunk.map(s=>s.length))});
-      termOps.push({k:"dwell",cost:TERM.dwell});
-      termOps.push({k:"pass",els:passes,cost:3});
-    }
-  });
-  typed("ok",`${nAll}/${nAll} CHECKS PASSED — READY`);
-  let at=0;
-  termOps.forEach(o=>{ o.at=at; at+=o.cost });
-  termCost=at;
-})();
-
-/* p (0→1 across the pin) → how much of the run has been typed */
-function termRender(p){
-  const cur=p*termCost;
-  for(const o of termOps){
-    const local=cur-o.at;
-    if(o.k==="type"){
-      const n=clamp(Math.floor(local),0,o.cost);
-      o.els.forEach((el,i)=>{
-        const t=o.texts[i].slice(0,Math.min(o.texts[i].length,n));
-        if(el.textContent!==t) el.textContent=t;
-        const line=el.parentNode;
-        line.classList.toggle("on",n>0);
-        line.classList.toggle("typing",n>0&&local<o.cost);
-      });
-    }else if(o.k==="pass"){
-      o.els.forEach(el=>el.classList.toggle("lit",local>=0));
-    }
-  }
-}
-
 /* ==========================================================================
    LOOSE FILES — build the strip
    Placeholder first, image over it: if the file is missing the image removes
@@ -2501,14 +2332,12 @@ function navY(id){
   /* the landing — the scroll where the roll has just finished fading, which
      is exactly where About fills the screen. Same constant, one source. */
   if(id==="about") return (content.offsetTop||0)+ROLL.fade;
-  /* one folder's rise in: folder 01 up, the next just starting behind it */
+  /* The scroll at which folder 01 has finished rising — its own duration PLUS
+     the hold before the schedule starts, which is what this was missing: it
+     was landing part-way up the first folder's arc. */
   if(id==="work"&&dossOn)
-    return dossStack.getBoundingClientRect().top+scrollY+vh*DOSS.dur;
-  /* the check isn't where its markup is — it engages once the strip has run
-     out, so land just past that, with the dialog on screen */
-  if(id==="skills"&&galOn)
-    return galStack.getBoundingClientRect().top+scrollY
-           +M.galOver+vh*TERM.pop*TERM.travel;
+    return dossStack.getBoundingClientRect().top+scrollY
+           +vh*(DOSS.hold+DOSS.dur);
   const el=document.getElementById(id);
   return el?el.getBoundingClientRect().top+scrollY-110:0;
 }
