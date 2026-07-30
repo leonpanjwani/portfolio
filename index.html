@@ -126,7 +126,13 @@ a{color:inherit;text-decoration:none}
 /* Only hide the real pointer where there IS one. On a touch screen there is no
    pointer to replace, and hiding it breaks nothing visible but does break
    hybrid devices (iPad + trackpad), so gate it on a fine pointer. */
-@media (pointer:fine){*{cursor:none}}
+/* Gated on .cursor-live, which JS adds once it actually KNOWS where the
+   pointer is. A browser will not tell you that until the first pointer event —
+   there is no API for it, by design — so hiding the system arrow at load left
+   the page with no cursor at all until the first twitch, and ours parked in
+   the top-left corner. Now the system arrow stays until the instant we can
+   replace it in the right place. */
+@media (pointer:fine){html.cursor-live *{cursor:none}}
 @media (pointer:coarse){#cursor{display:none}}
 /* Each tile is 9px but the spacing stays at the 11px grid pitch, leaving a 2px
    gap between tiles — so it reads as five separate cells, not one solid cross. */
@@ -658,9 +664,11 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
     transform-origin:50% 130%;will-change:transform}
   /* each folder sits one fan-step lower than the one behind it, so the stack
      shows a cascade of top edges and tabs rather than one flush sheet */
+  /* rounded all round: the top corners read at rest, the bottom ones while the
+     folder is still on its way up and its lower edge is on the screen */
   .doss-face{position:absolute;left:0;right:0;bottom:0;
     top:calc(var(--tabH) + var(--i,0) * var(--fanY));
-    border-left:0;border-right:0;border-bottom:0;
+    border-radius:14px;
     box-shadow:0 -14px 34px rgba(9,16,42,.16)}
   .doss-tab{box-shadow:0 -8px 18px rgba(9,16,42,.10)}
   /* About holds still underneath while the folders come up over it — and it
@@ -693,41 +701,55 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 @media(max-width:520px){.beat{grid-template-columns:1fr;gap:2px}}
 
 /* ==========================================================================
-   CAROUSEL
-   One reel for the whole Work section. Images are rendered with
-   image-rendering:pixelated, so a deliberately SMALL source file is blown up
-   with nearest-neighbour and the blocks land on the same 11px grid as
-   everything else — the cursor included. Height is whole squares.
+   LOOSE FILES — A SIDEWAYS STRIP
+   Not a carousel: the page is pinned and the whole strip of prints travels
+   left as you scroll down, so the wheel walks along the shelf. The track's
+   horizontal overflow is mapped onto the pin's scroll budget in measure(), so
+   the last print lands flush as the pin lets go — no dead scroll at either
+   end. Images use image-rendering:pixelated, so a deliberately SMALL source is
+   blown up with nearest-neighbour and its blocks land on the same 11px grid as
+   everything else, the cursor included.
    ========================================================================== */
-.reel{margin-top:55px;position:relative}
-.reel-win{position:relative;overflow:hidden;height:var(--reelH,330px);
-  border:1px solid rgba(25,44,100,.18);background:var(--paper)}
-/* inside a folder the reel fills the page instead of taking a fixed height */
-.doss .reel{margin:0;height:100%;display:flex;flex-direction:column;min-height:0}
-.doss .reel-win{flex:1;height:auto;min-height:0}
-.doss .reel-dots{margin-top:11px}
-.reel-track{display:flex;height:100%;
-  transition:transform .5s cubic-bezier(.22,.61,.36,1)}
-.reel-slide{flex:0 0 100%;position:relative;display:flex;
-  align-items:center;justify-content:center}
-.reel-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  image-rendering:pixelated}
-.reel-slide .ph{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+#gallery{padding:0}
+.gal-stack{position:relative}
+/* The pin carries the page grid ITSELF, on opaque white — so while it is stuck
+   and the strip walks sideways, the lattice is locked to the pin instead of
+   sliding upward behind it. --galBgY is set in measure() to the pin's own
+   offset modulo the tile, which puts its grid in phase with the page's. */
+.gal-pin{display:flex;flex-direction:column;justify-content:center;gap:33px;
+  overflow:hidden;background-color:var(--white);
+  background-image:var(--page-grid);background-size:55px 55px,55px 55px;
+  background-position:var(--wrapL,55px) var(--galBgY,0px)}
+.gal-head{display:flex;align-items:baseline;gap:22px;flex-wrap:wrap;
+  padding-left:var(--wrapL,55px)}
+.gal-title{font-family:var(--display);font-weight:700;
+  font-size:clamp(1.6rem,4vw,2.4rem);text-transform:uppercase;color:var(--navy)}
+.gal-sub{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:rgba(25,44,100,.55)}
+.gal-track{display:flex;align-items:flex-end;gap:55px;
+  padding:0 var(--wrapL,55px);will-change:transform}
+/* each print is a whole number of squares wide — w comes from REEL */
+.gal-item{flex:0 0 auto;width:var(--w,385px);margin:0}
+.gal-win{position:relative;height:var(--galH,330px);overflow:hidden;
+  border:1px solid rgba(25,44,100,.18);background:var(--paper);
+  display:flex;align-items:center;justify-content:center}
+.gal-win img{position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;image-rendering:pixelated}
+.gal-win .ph{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
   color:var(--blue);text-align:center;padding:16px}
-.reel-cap{position:absolute;left:0;right:0;bottom:0;padding:9px 14px;
-  font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--white);background:rgba(25,44,100,.85)}
-.reel-nav{position:absolute;top:50%;margin-top:-22px;width:44px;height:44px;
-  border:1px solid var(--navy);background:var(--white);color:var(--navy);
-  font-family:var(--mono);font-size:1rem;line-height:1;padding:0;
-  display:flex;align-items:center;justify-content:center;transition:.2s}
-.reel-nav.prev{left:11px} .reel-nav.next{right:11px}
-.reel-nav:hover{background:var(--tomato);border-color:var(--tomato);color:#fff}
-.reel-dots{display:flex;gap:11px;margin-top:22px;justify-content:center}
-.reel-dots button{width:11px;height:11px;padding:0;background:none;
-  border:1px solid var(--navy);transition:.2s}
-.reel-dots button[aria-current="true"]{background:var(--tomato);
-  border-color:var(--tomato)}
+.gal-item figcaption{margin-top:11px;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase;color:rgba(25,44,100,.62)}
+@media(min-width:821px){
+  .gal-pin{position:sticky;top:var(--headZ);
+    height:calc(100vh - var(--headZ));height:calc(100svh - var(--headZ))}
+}
+@media(max-width:820px){
+  /* no pin on a phone — the strip is just a native horizontal scroller */
+  #gallery{padding:55px 0}
+  .gal-track{overflow-x:auto;scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;padding-bottom:11px;gap:33px}
+  .gal-item{scroll-snap-align:center}
+}
 
 /* ---- TOMATO ACCENTS ----
    The accent that lives in the header and the cursor carries down into the
@@ -735,10 +757,6 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    skill headings and tick marks, tomato arrows in Contact, and a tomato rule
    over the footer. Not on Work — its plates carry the blueprint's blue
    instead, so the accent reads as punctuation rather than a theme. */
-#skills .sec-head h2::before,
-#contact .sec-head h2::before{content:"";display:inline-block;width:11px;
-  height:11px;background:var(--tomato);margin-right:14px}
-
 /* identical geometry to .plates — three groups, three cards, same columns and
    gutters, so the row lines up with the work row and is centred by definition */
 .skills{display:grid;grid-template-columns:repeat(var(--cols,3),var(--cardW,330px));gap:55px}
@@ -799,8 +817,26 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 
 .about-copy .about-big{margin-bottom:22px}
 
-.contact h2.big{font-family:var(--display);font-weight:700;font-size:clamp(2.2rem,8vw,5rem);
-  line-height:1;text-transform:uppercase;color:var(--navy)}
+/* ---- THE CLOSE ----
+   Two halves of one line, one arriving from each side. They are laid out on
+   OPPOSITE edges of the column as well as entering from opposite sides, so the
+   split reads even once everything has landed. --sx is written per frame by
+   update(): a signed fraction of the element's own width, so it stays right at
+   any type size. */
+/* Both halves come to REST IN THE CENTRE and travel there from opposite
+   sides — so the offset is in vw, not a fraction of each element's own width:
+   they have to start off the screen entirely, whatever length the words are. */
+.fin{display:flex;flex-direction:column;align-items:center;
+  margin-bottom:55px;text-align:center}
+.fin span{font-family:var(--display);font-weight:700;
+  font-size:clamp(2.2rem,8vw,5rem);line-height:1;text-transform:uppercase;
+  color:var(--navy)}
+.fin-details{display:flex;flex-direction:column;align-items:center}
+.slide-l,.slide-r{transform:translateX(var(--sx,0vw));opacity:var(--so,1);
+  will-change:transform}
+@media(prefers-reduced-motion:reduce){
+  .slide-l,.slide-r{transform:none!important;opacity:1!important}
+}
 .email{display:flex;width:fit-content;align-items:center;gap:12px;margin-top:22px;
   font-family:var(--display);font-size:clamp(1.05rem,3vw,1.6rem);
   border-bottom:2px solid rgba(25,44,100,.2);padding-bottom:6px;transition:.2s}
@@ -830,7 +866,8 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
 
 <body>
 
-<div id="cursor"></div>
+<!-- starts hidden: it has no meaningful position until the pointer moves -->
+<div id="cursor" class="gone"></div>
 
 <div id="sheet">
   <div class="grid"></div><div class="wear"></div><div class="noise"></div>
@@ -997,21 +1034,29 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
           </div>
         </article>
 
-        <!-- the last folder is the photographs: slides come from REEL -->
-        <article class="doss wide" style="--i:3">
-          <div class="doss-tab">Fig. 04 — Photos</div>
-          <div class="doss-face">
-            <div class="doss-in">
-              <div class="reel" id="reel"></div>
-            </div>
-          </div>
-        </article>
-
       </div>
     </div>
   </section>
 
   </div><!-- /.stage2 -->
+
+  <!-- ---- LOOSE FILES ----
+       The odds and ends that don't warrant a folder of their own. The page
+       holds still and the STRIP travels: the pin is stuck below the header and
+       the track's horizontal overflow is mapped onto scroll, so scrolling down
+       walks sideways through the prints. Items come from REEL. -->
+  <section id="gallery">
+    <h2 class="sr">Loose files</h2>
+    <div class="gal-stack" id="galStack">
+      <div class="gal-pin">
+        <div class="gal-head">
+          <span class="gal-title">Loose&nbsp;files</span>
+          <span class="gal-sub">Odds and ends that didn't need a folder</span>
+        </div>
+        <div class="gal-track" id="galTrack"></div>
+      </div>
+    </div>
+  </section>
 
   <section id="skills">
     <div class="wrap">
@@ -1027,12 +1072,22 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
     </div>
   </section>
 
+  <!-- ---- THE CLOSE ----
+       The two halves of the sign-off arrive from opposite sides as the section
+       comes up, and the details follow them in. Scroll-LINKED, not a one-shot
+       reveal: scrolling back sends them out again, the way everything else on
+       this page reverses. Driven in update(); .rv would fight it. -->
   <section id="contact" class="contact">
     <div class="wrap">
-      <div class="sec-head rv"><h2>Contact</h2></div>
-      <h2 class="big rv">Let's build<br>something.</h2>
-      <a class="email rv" href="mailto:hello@leonpanjwani.com"><span>→</span> hello@leonpanjwani.com</a>
-      <a class="email rv" href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener"><span>→</span> linkedin.com/in/leonpanjwani</a>
+      <div class="sec-head"><h2>Contact</h2></div>
+      <p class="fin">
+        <span class="slide-l">Let's build</span>
+        <span class="slide-r">something.</span>
+      </p>
+      <div class="fin-details">
+        <a class="email slide-l" href="mailto:hello@leonpanjwani.com"><span>→</span> hello@leonpanjwani.com</a>
+        <a class="email slide-r" href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener"><span>→</span> linkedin.com/in/leonpanjwani</a>
+      </div>
     </div>
   </section>
 
@@ -1059,16 +1114,18 @@ const CELLS = [
               nav:"Contact", href:"#contact"}
 ];
 
-/* Carousel slides. Export each source at roughly 1/11th of its display width —
-   the browser scales it back up with nearest-neighbour, so the blocks land on
-   the 11px grid. A missing file falls back to the placeholder frame. */
+/* The LOOSE FILES strip — the extras that don't warrant a folder. Export each
+   source at roughly 1/11th of its display width: the browser scales it back up
+   with nearest-neighbour, so the blocks land on the 11px grid. A missing file
+   falls back to the placeholder frame. w is the print's width in SQUARES (55px
+   each) — vary it and the strip reads as loose prints rather than a filmstrip. */
 const REEL = [
-  {src:"img/reel-01.jpg", cap:"AUV — fin drive assembly"},
-  {src:"img/reel-02.jpg", cap:"AUV — hull under test"},
-  {src:"img/reel-03.jpg", cap:"Inflatable helmet — bonded seam trial"},
-  {src:"img/reel-04.jpg", cap:"Inflatable helmet — packed volume"},
-  {src:"img/reel-05.jpg", cap:"Energy-from-Waste — process layout"},
-  {src:"img/reel-06.jpg", cap:"Workshop — machining the mounts"}
+  {src:"img/reel-01.jpg", cap:"AUV — fin drive assembly",            w:11},
+  {src:"img/reel-02.jpg", cap:"AUV — hull under test",               w:10},
+  {src:"img/reel-03.jpg", cap:"Helmet — bonded seam trial",          w:12},
+  {src:"img/reel-04.jpg", cap:"Helmet — packed volume",              w:9},
+  {src:"img/reel-05.jpg", cap:"Energy-from-Waste — process layout",  w:12},
+  {src:"img/reel-06.jpg", cap:"Workshop — machining the mounts",     w:10}
 ];
 
 const GRID = { unit:11, inset:33, leftCells:24, rightCells:25, rowCells:4 };
@@ -1189,6 +1246,9 @@ const mix=(c1,c2,t)=>`rgb(${Math.round(lerp(c1[0],c2[0],t))},${Math.round(lerp(c
    Declared here because update() reads it and runs before the touch handlers
    further down are reached. */
 let M={}, mouseX=-1, mouseY=-1, grabbed=null;
+/* false until the first pointer event has given the grid cursor a real
+   position — see the reveal in update() and the .cursor-live gate in the CSS */
+let cursorLive=false;
 
 /* the four peelable sheet corners */
 const corners=["tl","tr","bl","br"].map(k=>{
@@ -1201,6 +1261,13 @@ const corners=["tl","tr","bl","br"].map(k=>{
 const dossStack=document.getElementById("dossStack"),
       dossEls=[...document.querySelectorAll("#work .doss")];
 let dossOn=false;         // desktop + motion: the pinned, scroll-driven stack
+
+/* the loose-files strip, and the two halves of the closing line */
+const galStack=document.getElementById("galStack"),
+      galTrack=document.getElementById("galTrack"),
+      contactEl=document.getElementById("contact"),
+      slideEls=[...document.querySelectorAll(".slide-l,.slide-r")];
+let galOn=false;
 
 /* ==========================================================================
    3D NAME — exploded wireframe assembly + drawing-view walkthrough
@@ -1750,9 +1817,31 @@ function measure(){
   vlabel.style.left=heroX+"px";
   vlabel.style.top=(heroY+2*lh+6*U)+"px";
 
-  /* the carousel gets a whole number of squares, like every other box */
-  doc.style.setProperty("--reelH",
-    Math.max(3*SQ,Math.round(wrapW*(small?0.62:0.34)/SQ)*SQ)+"px");
+  /* ---- THE LOOSE-FILES STRIP ----
+     Print height is whole squares, sized to what's left of the pin once the
+     heading row and the captions have taken theirs. The scroll budget is the
+     track's own horizontal overflow, so the strip arrives exactly as the pin
+     lets go — measured AFTER the height is set, since that changes the widths'
+     line box and therefore scrollWidth. */
+  doc.style.setProperty("--galH",
+    Math.max(3*SQ,Math.floor((vh-M.headZ-4*SQ)/SQ)*SQ)+"px");
+  galOn = !!galTrack && !small && !reduce;
+  if(galStack){
+    if(galOn){
+      const pinW=galStack.getBoundingClientRect().width;
+      M.galOver=Math.max(0,galTrack.scrollWidth-pinW);
+      galStack.style.height=
+        Math.round(vh-M.headZ+M.galOver)+"px";
+      /* phase the pin's own grid to the page's: offsetTop is the pin's LAYOUT
+         position (sticky doesn't move it), so this holds however far it is
+         currently stuck. */
+      const pin=galTrack.parentNode;
+      if(pin) pin.style.setProperty("--galBgY",
+        (-(galStack.offsetTop%SQ))+"px");
+    }else{
+      M.galOver=0; galStack.style.height=""; galTrack.style.transform="";
+    }
+  }
 
   /* ---- THE DOSSIER STACK'S SCROLL BUDGET ----
      One screen for the pin to stick to, plus the rise schedule. Off on a
@@ -1891,6 +1980,14 @@ function update(){
     const pad4=v=>(v<0?"-":"")+String(Math.abs(Math.round(v))).padStart(4,"0");
     cxEl.textContent="X "+pad4(cx); cyEl.textContent="Y "+pad4(cy);
     coord.classList.add("on");
+    /* Reveal only now, in the same frame the transform above was written —
+       flipping it on from the pointer handler instead would show one frame of
+       the tile still sitting at the origin. */
+    if(!cursorLive){
+      cursorLive=true;
+      document.documentElement.classList.add("cursor-live");
+      cursorEl.classList.remove("gone");
+    }
   }
   /* white over the paper, navy once the page has taken over — and the halo
      flips with it, dark behind white ink and pale behind navy */
@@ -1951,6 +2048,29 @@ function update(){
       const sgn=i%2?-1:1;
       el.style.transform=`translateY(${((1-k)*100).toFixed(2)}%) `+
                          `rotate(${(sgn*(1-k)*DOSS.rise).toFixed(2)}deg)`;
+    });
+  }
+
+  /* ---- LOOSE FILES: the strip walks sideways ----
+     The pin is stuck, so this scroll doesn't move the page — it moves the
+     prints. 1:1 with the wheel: the strip travels exactly the distance the
+     page would have. */
+  if(galOn&&M.galOver){
+    const p=clamp((M.headZ-galStack.getBoundingClientRect().top)/M.galOver);
+    galTrack.style.transform=`translateX(${(-p*M.galOver).toFixed(1)}px)`;
+  }
+
+  /* ---- THE CLOSE: two halves meeting in the middle ----
+     Scroll-linked, so it plays backwards on the way up. The offset is in vw so
+     each half genuinely starts off the side of the screen and travels all the
+     way in to the centre, whatever the words measure. */
+  if(!reduce&&slideEls.length){
+    const q=ease(clamp((vh-contactEl.getBoundingClientRect().top)/(vh*0.66)));
+    const off=((1-q)*62).toFixed(1);
+    slideEls.forEach(el=>{
+      el.style.setProperty("--sx",
+        (el.classList.contains("slide-l")?"-":"")+off+"vw");
+      el.style.setProperty("--so",q.toFixed(3));
     });
   }
 
@@ -2022,9 +2142,11 @@ function lockGrid(){
     const h=Math.ceil(tall/SQ)*SQ;
     kids.forEach(k=>{k.style.height=h+"px"});
   });
-  /* About and Work are pinned, viewport-sized panels — padding them to whole
-     squares would only add dead scroll, and About's height IS the screen. */
-  document.querySelectorAll(".content section:not(#about):not(#work)").forEach(s=>{
+  /* About, Work and the strip are pinned, viewport-sized panels — padding them
+     to whole squares would only add dead scroll, and their heights are already
+     solved against the viewport. */
+  document.querySelectorAll(
+    ".content section:not(#about):not(#work):not(#gallery)").forEach(s=>{
     s.style.paddingBottom=PAD+"px";
     const over=Math.round(s.getBoundingClientRect().height)%SQ;
     s.style.paddingBottom=(PAD+(over?SQ-over:0))+"px";
@@ -2052,62 +2174,23 @@ addEventListener("mousemove",e=>{
   onScroll();                              // rAF-throttled, so this is cheap
 },{passive:true});
 /* ==========================================================================
-   CAROUSEL
+   LOOSE FILES — build the strip
+   Placeholder first, image over it: if the file is missing the image removes
+   itself and the frame underneath shows through, exactly as the folders do.
+   Built before measure() ever runs, so the track's scrollWidth is real by the
+   time the scroll budget is solved from it.
    ========================================================================== */
-(function buildReel(){
-  const reel=document.getElementById("reel");
-  if(!reel||!REEL.length) return;
-  const win=document.createElement("div");   win.className="reel-win";
-  const track=document.createElement("div"); track.className="reel-track";
-  REEL.forEach(s=>{
-    const fig=document.createElement("figure"); fig.className="reel-slide";
-    /* placeholder first, image over it — if the file is missing the image
-       removes itself and the frame underneath shows through, exactly as the
-       project plates already behave */
-    fig.innerHTML=`<div class="ph">[ ADD ${s.src} ]</div>`+
-      `<img src="${s.src}" alt="${s.cap}" loading="lazy" onerror="this.remove()">`+
-      `<figcaption class="reel-cap">${s.cap}</figcaption>`;
-    track.appendChild(fig);
+(function buildGallery(){
+  if(!galTrack||!REEL.length) return;
+  REEL.forEach((s,i)=>{
+    const fig=document.createElement("figure"); fig.className="gal-item";
+    fig.style.setProperty("--w",(s.w||6)*55+"px");
+    fig.innerHTML=
+      `<div class="gal-win"><div class="ph">[ ADD ${s.src} ]</div>`+
+      `<img src="${s.src}" alt="${s.cap}" loading="lazy" onerror="this.remove()"></div>`+
+      `<figcaption>${String(i+1).padStart(2,"0")} — ${s.cap}</figcaption>`;
+    galTrack.appendChild(fig);
   });
-  win.appendChild(track);
-  const prev=document.createElement("button"); prev.className="reel-nav prev";
-  prev.type="button"; prev.setAttribute("aria-label","Previous image"); prev.textContent="←";
-  const next=document.createElement("button"); next.className="reel-nav next";
-  next.type="button"; next.setAttribute("aria-label","Next image"); next.textContent="→";
-  win.appendChild(prev); win.appendChild(next);
-  const dotWrap=document.createElement("div"); dotWrap.className="reel-dots";
-  const dots=REEL.map((s,k)=>{
-    const b=document.createElement("button"); b.type="button";
-    b.setAttribute("aria-label","Image "+(k+1));
-    b.addEventListener("click",()=>go(k));
-    dotWrap.appendChild(b); return b;
-  });
-  reel.appendChild(win); reel.appendChild(dotWrap);
-
-  let i=0;
-  function go(n){
-    i=(n+REEL.length)%REEL.length;
-    track.style.transform=`translateX(${-i*100}%)`;
-    dots.forEach((d,k)=>d.setAttribute("aria-current",k===i?"true":"false"));
-  }
-  prev.addEventListener("click",()=>go(i-1));
-  next.addEventListener("click",()=>go(i+1));
-  /* arrow keys, but only while the reel is the thing being used */
-  win.tabIndex=0;
-  win.addEventListener("keydown",e=>{
-    if(e.key==="ArrowLeft"){e.preventDefault();go(i-1)}
-    if(e.key==="ArrowRight"){e.preventDefault();go(i+1)}
-  });
-  /* swipe — horizontal only, so a vertical drag still scrolls the page */
-  let sx=0,sy=0;
-  win.addEventListener("touchstart",e=>{
-    sx=e.touches[0].clientX; sy=e.touches[0].clientY;
-  },{passive:true});
-  win.addEventListener("touchend",e=>{
-    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
-    if(Math.abs(dx)>44 && Math.abs(dx)>Math.abs(dy)) go(dx<0?i+1:i-1);
-  },{passive:true});
-  go(0);
 })();
 
 /* ==========================================================================
@@ -2157,7 +2240,11 @@ addEventListener("keydown",e=>{ if(e.key==="Escape") setMenu(false) });
 /* hide the grid cursor when the pointer leaves the window. A class, not an
    inline opacity, so nothing else writing styles can fight it. */
 addEventListener("mouseleave",()=>cursorEl.classList.add("gone"),{passive:true});
-addEventListener("mouseenter",()=>cursorEl.classList.remove("gone"),{passive:true});
+/* only if we have a position to come back to — coming in from a corner before
+   any movement would otherwise flash the tile wherever it last sat */
+addEventListener("mouseenter",()=>{
+  if(cursorLive) cursorEl.classList.remove("gone");
+},{passive:true});
 
 /* the header wordmark goes home rather than leaving a bare "#" in the URL */
 document.getElementById("brand").addEventListener("click",e=>{
