@@ -54,7 +54,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&family=Martian+Mono:wght@400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
 <style>
 /* ==========================================================================
@@ -105,6 +105,10 @@
   --maxw:1180px;
   --display:"Chakra Petch","Helvetica Neue",Arial,sans-serif;
   --mono:"Share Tech Mono",ui-monospace,Menlo,monospace;
+  /* the folders' own face: the tab labels and the project titles. Martian Mono
+     is wide and slab-ish, so it wants tighter tracking and a smaller size than
+     the same words set in Inter. */
+  --file:"Martian Mono",ui-monospace,Menlo,monospace;
   /* Typewriter, kept for later. Nothing uses it right now, so Courier Prime is
      NOT in the font link — add &family=Courier+Prime:wght@400;700 there before
      switching anything to it, or it will fall back to Courier New. */
@@ -654,7 +658,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   --rule:rgba(255,255,255,.26)}
 .doss:nth-child(4){--stock:var(--folder-grey)}
 .doss-face{background:var(--stock);border:0;
-  display:flex;flex-direction:column;overflow:hidden}
+  display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
 /* ---- ONE SHEET OF PAPER ----
    Grain plus a coarser mottle, so the card reads as stock with a surface
    rather than a flat fill. The tab carries the SAME wash, and both offset
@@ -667,7 +671,26 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   background-size:180px 180px,540px 540px;
   mix-blend-mode:multiply;opacity:.34}
 .doss-face::before{background-position:var(--ovX) calc(-1 * var(--tabH))}
-.doss-tab::before{background-position:var(--bx,0px) 0}
+/* border-radius:inherit, because the tab can no longer clip with overflow —
+   its fillets have to hang outside it (below) */
+.doss-tab::before{background-position:var(--bx,0px) 0;border-radius:inherit}
+
+/* ---- THE FILLETS ----
+   Where the tab meets the sheet the corner is not square: the card sweeps out
+   into the folder on a curve, the way a cut tab actually does. That corner is
+   CONCAVE, which border-radius cannot describe — so it is a strip hanging off
+   both sides of the tab's foot carrying a quarter-disc of stock in each end,
+   the arc centred outside the corner so the paper curves away from it. */
+.doss-tab::after{content:"";position:absolute;bottom:0;height:var(--fil);
+  left:calc(-1 * var(--fil));right:calc(-1 * var(--fil));
+  pointer-events:none;
+  background:
+    radial-gradient(circle at top left,
+      transparent calc(var(--fil) - 0.5px), var(--stock) var(--fil))
+      left top/var(--fil) var(--fil) no-repeat,
+    radial-gradient(circle at top right,
+      transparent calc(var(--fil) - 0.5px), var(--stock) var(--fil))
+      right top/var(--fil) var(--fil) no-repeat}
 /* the index tab, standing on the folder's top edge and stepped across the
    stack so every folder's tab is its own — as on a real set of files */
 /* +1px of height so the tab OVERLAPS the folder's own top border and hides the
@@ -680,12 +703,22 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    if the script never runs. */
 .doss-tab{position:absolute;z-index:2;height:calc(var(--tabH) + 1px);top:0;
   left:calc(55px + var(--i,0) * 212px);
+  --fil:15px;                                  /* the fillet into the sheet */
   display:flex;align-items:center;justify-content:center;padding:0 18px;
-  white-space:nowrap;overflow:hidden;
-  background:var(--stock);border:0;border-radius:11px 11px 0 0;
-  font-family:var(--body);font-weight:600;font-size:.98rem;letter-spacing:.05em;
+  white-space:nowrap;
+  background:var(--stock);border:0;border-radius:15px 15px 0 0;
+  font-family:var(--file);font-weight:600;font-size:.82rem;letter-spacing:0;
   text-transform:uppercase;color:var(--tomato)}
-.doss-in{position:relative;z-index:1;flex:1;min-height:0;display:grid;gap:55px;
+/* ---- EVERY FOLDER PRESENTS THE SAME ----
+   The faces are identical boxes, but the cascade sets each one lower than the
+   last, so a folder further down the stack would lose that much of its content
+   off the bottom of the screen — the first file looked bigger than the rest.
+   So the content area is a FIXED height (the smallest case, set from the
+   viewport in measure) pinned to the foot of the folder, which is itself
+   pinned to the foot of the screen. The cascade then shows only as more paper
+   above, which is what it is meant to be. */
+.doss-in{position:relative;z-index:1;flex:0 0 auto;height:var(--contentH,620px);
+  min-height:0;display:grid;gap:55px;
   padding:33px;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
 .doss.wide .doss-in{grid-template-columns:1fr}
 /* ---- SIDES ALTERNATE ----
@@ -696,7 +729,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .doss:nth-child(odd) .doss-txt{order:1}
 .doss:nth-child(odd) .doss-img{order:2}
 /* the plate's corners follow the folder's, so it reads as printed on it */
-.doss-img{position:relative;min-height:220px;overflow:hidden;
+/* The plate is inset from the top and bottom of its cell — just two cells, so
+   the picture is nearly the full height of the folder's content but still
+   sits ON the paper rather than running to its edges. In px, not a
+   percentage: a percentage margin resolves against the container's WIDTH, so
+   a vertical inset written that way changes with the column, not the height. */
+.doss-img{position:relative;min-height:200px;margin:22px 0;overflow:hidden;
   background:rgba(9,16,42,.06);
   border:1px solid var(--rule);border-radius:14px;
   display:flex;align-items:center;justify-content:center}
@@ -716,9 +754,9 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 /* Project headings are prose, not signage — Inter, like the copy under them.
    The drawing face (Chakra Petch) is kept for the sheet, the section headings
    and the header wordmark. */
-.doss h3{font-family:var(--body);font-weight:700;
-  font-size:clamp(1.7rem,3vw,2.6rem);line-height:1.12;margin-bottom:14px;
-  letter-spacing:-.02em;color:var(--tomato);text-wrap:balance}
+.doss h3{font-family:var(--file);font-weight:600;
+  font-size:clamp(1.4rem,2.4vw,2.15rem);line-height:1.24;margin-bottom:18px;
+  letter-spacing:-.035em;color:var(--tomato);text-wrap:balance}
 .doss .tags{font-family:var(--mono);font-size:.78rem;letter-spacing:.07em;
   color:var(--key);margin-bottom:18px}
 
@@ -733,7 +771,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   .doss-pin{position:sticky;top:0;overflow:hidden;height:100vh;height:100svh}
   /* No shadow on the tabs at all: a tab is not a thing sitting ON the folder,
      it is the same sheet of card cut to a shape — so nothing casts across the
-     join where the label meets the rest of the paper. */
+     join where the label meets the rest of the paper.
+     The FIRST folder does carry one, though: it is the only file with an
+     ordinary page behind it rather than another folder, and the shadow is
+     what separates the two. It is thrown upward, since the only place About
+     can be seen is above the folder's top edge. */
+  .doss:first-child .doss-face{box-shadow:0 -5px 14px rgba(9,16,42,.13)}
   .doss{position:absolute;inset:0;transform:translateY(100%);
     /* the hinge: below the bottom edge, so the rise is an arc, not a slide */
     transform-origin:50% 130%;will-change:transform}
@@ -752,12 +795,30 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      next one covers it (DOSS.par) — otherwise the stack rises off the foot of
      the page and shows daylight under it. */
   .doss-face{--ovX:calc(0.20 * 100svh + 40px);
-             --ovY:calc(0.14 * 100vw + 0.34 * 100svh);
+             --ovY:calc(0.14 * 100vw + 0.42 * 100svh);
     position:absolute;top:var(--tabH);
     left:calc(-1 * var(--ovX));right:calc(-1 * var(--ovX));
     bottom:calc(-1 * var(--ovY));
-    padding:0 var(--ovX) var(--ovY);
-    border-radius:0}
+    /* the extra padding is the folder's own step down the cascade, so every
+       content area ends on the same line — the foot of the screen */
+    padding:0 var(--ovX)
+            calc(var(--ovY) + var(--base,33px) + var(--i,0) * var(--sep,33px)
+                 + var(--foot,0px));
+    /* the foot of every folder is rounded, including the last one's — it is
+       simply far below the fold, along with the side edges, which is where
+       all of them are meant to stay */
+    border-radius:0 0 16px 16px}
+
+  /* ---- THE LAST FOLDER'S FOOT ----
+     This is the edge you actually watch leave, when the pin lets go and the
+     stack scrolls away into Skills — so a square edge crossing the screen is
+     a hard cut. It gets a big radius instead: the folder hangs --ovX past
+     each side of the screen, so a corner only shows at all if its radius
+     reaches back further than that. This one starts its curve well inside the
+     visible width, and the sweep leaves with the sheet. */
+  .doss:last-child .doss-face{
+    border-radius:0 0 calc(var(--ovX) + 140px) calc(var(--ovX) + 140px)}
+
   /* About holds still underneath while the folders come up over it — and it
      carries the page grid ITSELF, painted on opaque white, so the lattice is
      locked to the panel instead of sliding through behind it. */
@@ -939,8 +1000,8 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .fin{display:flex;flex-direction:column;align-items:center;
   margin-bottom:55px;text-align:center}
 .fin span{font-family:var(--display);font-weight:700;
-  font-size:clamp(2.2rem,8vw,5rem);line-height:1;text-transform:uppercase;
-  color:var(--navy)}
+  font-size:clamp(1.9rem,6.2vw,4rem);line-height:1.04;text-transform:uppercase;
+  color:var(--navy);text-wrap:balance}
 .fin-details{display:flex;flex-direction:column;align-items:center}
 .slide-l,.slide-r{transform:translateX(var(--sx,0vw));opacity:var(--so,1);
   will-change:transform}
@@ -1127,7 +1188,9 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
           </div>
         </article>
 
-        <article class="doss" style="--i:2">
+        <!-- cut from the blueprint itself: dark stock, light ink. The readout
+             in the corner reads this to know to go white over it. -->
+        <article class="doss" style="--i:2" data-ink="light">
           <div class="doss-tab"><span>EfW Facility</span></div>
           <div class="doss-face">
             <div class="doss-in">
@@ -1208,8 +1271,8 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
     <div class="wrap">
       <h2 class="sr">Contact</h2>
       <p class="fin">
-        <span class="slide-l">Let's build</span>
-        <span class="slide-r">something.</span>
+        <span class="slide-l">That's everything —</span>
+        <span class="slide-r">for now.</span>
       </p>
       <div class="fin-details">
         <a class="email slide-l" href="mailto:hello@leonpanjwani.com"><span>→</span> hello@leonpanjwani.com</a>
@@ -1278,18 +1341,30 @@ const ROLL = { minH:12, maxH:76, fade:55 };
    step is the whole point — it means the next folder is already on its way up
    before the one beneath it has finished covering the screen. rise: the swing
    angle in degrees, alternating side to side about the hinge below the page. */
-const DOSS = { hold:0.3, step:0.62, dur:0.8, rest:0.35, rise:7,
-               sep:66, par:0.70, under:220 };
+const DOSS = { hold:0.12, step:0.75, dur:0.8, rest:0.35, rise:7, flat:0.16,
+               base:33, sep:33, par:0.42, under:220 };
 /* sep:   each folder comes to rest this many px LOWER than the one behind it,
           so the stack cascades and every tab above stays in view instead of
           the files piling on one another at the foot of the screen.
+   step ≈ dur, so the next folder sets off just as the one before it lands:
+          SOMETHING IS ALWAYS MOVING. Nothing here is ever allowed to sit
+          still while the page is pinned — a frozen screen that won't answer
+          the wheel reads as broken, not as a pause.
+   flat:  the tilt keeps straightening for this long AFTER the folder has
+          landed, so a file is still very slightly askew as it arrives and
+          settles level about the time its label reaches the top of the
+          screen — rather than snapping square the instant it stops rising.
+   base:  even the first folder rests below the top of the screen, so its tab
+          has somewhere to climb from. Without it the leading label starts at
+          the top edge and is gone the instant the stack moves, before the
+          next file has surfaced to replace it.
    par:   once a folder has landed it KEEPS climbing, at this fraction of a
-          screen per screen of scroll — a little slower than whatever is still
-          rising behind it (about 60% of its speed), so the stack reads as
-          layers being scrolled rather than as a pile that assembles itself and
-          stops dead. It cannot go much above 0.85: a folder has to still be
-          covering the screen when the next one lands 0.62 screens later, and
-          the face only reaches ~485px below the fold.
+          screen per screen of scroll — slower than whatever is still rising
+          behind it, so the stack reads as layers being scrolled rather than as
+          a pile that assembles itself and stops dead. step and par are tied
+          together: a folder must still cover the screen when the next lands,
+          `step` screens later, so step × par × screen must stay under the
+          face's reach below the fold (~550px, see --ovY).
    under: how far below the fold a folder waits. A whole screen isn't enough:
           the folder is far wider than the screen and it waits TILTED, so the
           leading corner of its top edge would otherwise lift into view at the
@@ -1422,6 +1497,7 @@ const corners=["tl","tr","bl","br"].map(k=>{
 
 /* the Work folders — the dossier stack */
 const dossStack=document.getElementById("dossStack"),
+      aboutEl=document.getElementById("about"),
       dossEls=[...document.querySelectorAll("#work .doss")],
       dossTabs=[...document.querySelectorAll("#work .doss-tab")];
 
@@ -2076,6 +2152,22 @@ function measure(){
   /* ---- THE DOSSIER STACK'S SCROLL BUDGET ----
      One screen for the pin to stick to, plus the rise schedule. Off on a
      phone and under reduced motion, where the folders simply flow. */
+  /* The cascade step and the content height it implies, published to CSS —
+     DOSS.sep stays the single source. The content area is sized for the LAST
+     folder, the one with the least room, so every folder gets that same
+     height and they present identically. */
+  doc.style.setProperty("--sep",DOSS.sep+"px");
+  doc.style.setProperty("--base",DOSS.base+"px");
+  const tabH=parseFloat(getComputedStyle(doc).getPropertyValue("--tabH"))||39;
+  M.tabH=tabH;
+  /* a margin of paper at the foot as well, so the folder reads as a sheet with
+     something printed on it rather than as a panel packed to its own edges */
+  const foot=Math.round(vh*0.03);
+  doc.style.setProperty("--foot",foot+"px");
+  doc.style.setProperty("--contentH",
+    Math.max(240,Math.round(vh-tabH-foot-DOSS.base
+             -Math.max(0,dossEls.length-1)*DOSS.sep))+"px");
+
   layoutTabs();
   dossOn = dossEls.length>0 && !small && !reduce;
   if(dossStack){
@@ -2291,24 +2383,58 @@ function update(){
        #work is pulled up over About by a whole screen — is the LANDING itself.
        DOSS.hold then buys a beat of scroll on About before anything rises, so
        the section can be read without the folders answering immediately. */
+    /* clamped to the schedule PLUS the tail, so the folders carry on climbing
+       through it — the last file gets its moment on screen without the page
+       going dead under the wheel */
     const sc=clamp(-dossStack.getBoundingClientRect().top/vh-DOSS.hold,
-                   0,M.dossS);
+                   0,M.dossS+DOSS.rest);
     /* In px, not %, because the offsets are a fixed cascade rather than a
        fraction of anything. The rise is LINEAR — an eased one decelerates into
        its resting place and reads as an animation arriving, where this has to
        read as paper being scrolled — and a folder that has landed carries on
        climbing at DOSS.par, slower than whatever is still coming up behind it.
        That difference in speed is the whole effect. */
-    const RISE=vh+DOSS.under;
+    const RISE=vh+DOSS.under, tops=[];
     dossEls.forEach((el,i)=>{
       const start=i*DOSS.step;
       const k=clamp((sc-start)/DOSS.dur);
       const lag=DOSS.par*vh*Math.max(0,sc-start-DOSS.dur);
       const sgn=i%2?-1:1;
-      const y=(1-k)*RISE + k*i*DOSS.sep - lag;
+      const y=(1-k)*RISE + k*(DOSS.base+i*DOSS.sep) - lag;
+      tops[i]=y+M.tabH;                       // where this folder's card starts
+      /* the tilt runs on past the landing — see DOSS.flat */
+      const f=clamp((sc-start)/(DOSS.dur+DOSS.flat));
       el.style.transform=`translateY(${y.toFixed(1)}px) `+
-                         `rotate(${(sgn*(1-k)*DOSS.rise).toFixed(2)}deg)`;
+                         `rotate(${(sgn*(1-f)*DOSS.rise).toFixed(2)}deg)`;
     });
+
+    /* ---- THE READOUT OVER DARK STOCK ----
+       One of the folders is cut from the blueprint itself, and the coordinate
+       readout sits in the corner the folders climb past — navy ink on navy
+       card is invisible. Find the topmost folder actually under the readout
+       (later folders paint over earlier ones) and take its ink. */
+    const cy=(M.cA?M.cA.y:24)+9;
+    for(let i=dossEls.length-1;i>=0;i--){
+      if(tops[i]<=cy){
+        if(dossEls[i].dataset.ink==="light"){
+          coord.style.setProperty("--ink","#ffffff");
+          coord.style.setProperty("--halo","rgba(9,16,42,.55)");
+        }
+        break;
+      }
+    }
+
+    /* ---- ABOUT IS THE FOLDER UNDERNEATH ----
+       It climbs as the first file arrives, exactly as a landed folder does,
+       instead of lying still while the paper slides over it. It can only be
+       pushed as far as that folder has actually covered from the bottom
+       though — About is one screen tall with nothing below it, so lifting it
+       any faster would open a strip of bare page under it. */
+    if(aboutEl){
+      const f0=(1-clamp(sc/DOSS.dur))*(vh+DOSS.under);
+      const push=Math.min(DOSS.par*vh*sc, Math.max(0,vh-f0), vh);
+      aboutEl.style.transform=push>0.5?`translateY(${(-push).toFixed(1)}px)`:"";
+    }
   }
 
   /* ---- LOOSE FILES: the strip walks sideways ----
