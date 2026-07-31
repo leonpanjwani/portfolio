@@ -75,15 +75,28 @@
      means transparent. That is what left the roll unpainted on iOS. */
   --black:#192c64;       /* kept as an alias so text rules read unchanged */
   --tomato:#FF6347;      /* accent: hover state + the cursor */
-  /* folder stock: one step bluer than --paper, so a dossier reads as stock cut
-     from the same material as the drawing rather than as white card */
-  --folder:#dbe3f4;
+  /* ---- FOLDER STOCK ----
+     Four weights of card rather than four outlines: the colour is what tells
+     one file from the next, so none of them needs a border. Three sit on the
+     drawing's own blues; the manila is the one warm note on the page, and it
+     is muted enough not to argue with the accent. */
+  --folder:#b9d4f2;         /* light blue */
+  --folder-beige:#e8dcc0;   /* light brown card */
+  --folder-grey:#d9dce2;    /* grey paper */
+  /* the fourth is cut from the blueprint itself (--blue), which is dark — so
+     that folder carries its own ink, see --ink below */
+  /* A light print wash for text ON the folders: the ink thins in patches, so
+     the words read as run off on a press rather than drawn by a screen. Much
+     gentler than --print-mask, which is for display sizes on the blueprint —
+     at body size that one eats the letterforms. */
+  --ink-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='q' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.05 0.6' numOctaves='3' seed='9' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.3 0 0 0 0.76'/></filter><rect width='260' height='260' filter='url(%23q)'/></svg>");
   /* paper grain, used as a multiply wash over the folder stock */
   --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.5'/></svg>");
-  /* the fan: how much of each folder's top edge shows above the one in front,
-     and the height of the index tab standing above that edge */
-  --fanY:14px;
-  --tabH:26px;
+  /* the height of the index tab standing above each folder's top edge. The
+     folders themselves are FLUSH — no vertical stagger — so the tabs all
+     stand at one height and it is only their horizontal positions that tell
+     the files apart, the way a drawer of folders actually reads. */
+  --tabH:39px;
   --u:11px;              /* one pixel/grid cell */
   /* the header zone: one cell of clearance plus the 55px island. Nothing is
      allowed to paint over it — the dossier folders stop at its bottom edge. */
@@ -627,43 +640,87 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    The grain is a ::before, and an absolutely positioned child paints ABOVE
    in-flow content — hence the z-index pair, the same trap the island's
    material layers hit. */
-.doss-face{background:var(--folder);border:1px solid rgba(25,44,100,.28);
+/* ---- FOUR STOCKS, FOUR INKS ----
+   The tab is cut from the same sheet as its folder. One of them is the
+   blueprint itself, which is dark — so the ink travels with the stock rather
+   than being fixed: --ink for the copy, --key for the mono labels, --rule for
+   the hairlines. Everything inside a folder inherits from these, so a stock
+   can be swapped without hunting down the text that sits on it. */
+.doss{color:var(--ink);
+  --stock:var(--folder); --ink:var(--navy); --key:var(--blue);
+  --rule:rgba(25,44,100,.16)}
+.doss:nth-child(2){--stock:var(--folder-beige)}
+.doss:nth-child(3){--stock:var(--blue); --ink:#ffffff; --key:var(--pale);
+  --rule:rgba(255,255,255,.26)}
+.doss:nth-child(4){--stock:var(--folder-grey)}
+.doss-face{background:var(--stock);border:0;
   display:flex;flex-direction:column;overflow:hidden}
-.doss-face::before{content:"";position:absolute;inset:0;z-index:0;
-  pointer-events:none;background-image:var(--grain);background-size:180px 180px;
-  mix-blend-mode:multiply;opacity:.16}
+/* ---- ONE SHEET OF PAPER ----
+   Grain plus a coarser mottle, so the card reads as stock with a surface
+   rather than a flat fill. The tab carries the SAME wash, and both offset
+   their pattern by their own position inside the folder — so the texture runs
+   continuously from the tab into the face instead of restarting at the join
+   and drawing a seam there. */
+.doss-face::before,.doss-tab::before{content:"";position:absolute;inset:0;
+  z-index:0;pointer-events:none;
+  background-image:var(--grain),var(--grain);
+  background-size:180px 180px,540px 540px;
+  mix-blend-mode:multiply;opacity:.34}
+.doss-face::before{background-position:var(--ovX) calc(-1 * var(--tabH))}
+.doss-tab::before{background-position:var(--bx,0px) 0}
 /* the index tab, standing on the folder's top edge and stepped across the
    stack so every folder's tab is its own — as on a real set of files */
 /* +1px of height so the tab OVERLAPS the folder's own top border and hides the
    segment of it that would otherwise draw a line straight under the label —
    the tab and the stock have to read as one piece of paper. */
-.doss-tab{position:absolute;z-index:2;height:calc(var(--tabH) + 1px);
-  top:calc(var(--i,0) * var(--fanY));
-  left:calc(55px + var(--i,0) * 148px);width:137px;
-  display:flex;align-items:center;padding:0 16px;
-  background:var(--folder);border:1px solid rgba(25,44,100,.28);border-bottom:0;
-  border-radius:4px 11px 0 0;
-  font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+/* Width comes from the LABEL, so the tabs cannot be stepped by a fixed
+   distance without leaving gaps of whatever each name didn't use. `left` is
+   set in JS instead (layoutTabs), each tab starting where the one before it
+   ended — the 55px here is only the position of the first, and the fallback
+   if the script never runs. */
+.doss-tab{position:absolute;z-index:2;height:calc(var(--tabH) + 1px);top:0;
+  left:calc(55px + var(--i,0) * 212px);
+  display:flex;align-items:center;justify-content:center;padding:0 18px;
+  white-space:nowrap;overflow:hidden;
+  background:var(--stock);border:0;border-radius:11px 11px 0 0;
+  font-family:var(--body);font-weight:600;font-size:.98rem;letter-spacing:.05em;
   text-transform:uppercase;color:var(--tomato)}
 .doss-in{position:relative;z-index:1;flex:1;min-height:0;display:grid;gap:55px;
   padding:33px;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
 .doss.wide .doss-in{grid-template-columns:1fr}
-.doss-img{position:relative;min-height:220px;overflow:hidden;background:#e9ebf3;
-  border:1px solid rgba(25,44,100,.18);
+/* ---- SIDES ALTERNATE ----
+   Media right on the first folder, then swapping each time down the stack, so
+   the eye isn't dragged down the same column four times. `order` only moves
+   the items between the two columns — the columns themselves keep their
+   widths, so whichever side the copy lands on gets the wider one. */
+.doss:nth-child(odd) .doss-txt{order:1}
+.doss:nth-child(odd) .doss-img{order:2}
+/* the plate's corners follow the folder's, so it reads as printed on it */
+.doss-img{position:relative;min-height:220px;overflow:hidden;
+  background:rgba(9,16,42,.06);
+  border:1px solid var(--rule);border-radius:14px;
   display:flex;align-items:center;justify-content:center}
 .doss-img img,.doss-img video{position:absolute;inset:0;
   width:100%;height:100%;object-fit:cover}
 .doss-img .ph{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
-  color:var(--blue);text-align:center;padding:16px}
+  color:var(--key);text-align:center;padding:16px}
+/* the copy is PRINTED on the card — masked so the ink thins in patches. The
+   tab's label is masked through a span, not the tab itself: masking the tab
+   would thin its paper too and let the page show through the folder. */
+.doss-txt,.doss-tab span{
+  -webkit-mask-image:var(--ink-mask); mask-image:var(--ink-mask);
+  -webkit-mask-size:260px 260px;      mask-size:260px 260px;
+  -webkit-mask-repeat:repeat;         mask-repeat:repeat}
+.doss-tab span{position:relative;z-index:1}
 .doss-txt{display:flex;flex-direction:column;justify-content:center;min-width:0}
 /* Project headings are prose, not signage — Inter, like the copy under them.
    The drawing face (Chakra Petch) is kept for the sheet, the section headings
    and the header wordmark. */
 .doss h3{font-family:var(--body);font-weight:700;
-  font-size:clamp(1.3rem,2.2vw,1.9rem);line-height:1.16;margin-bottom:11px;
-  letter-spacing:-.01em;color:var(--tomato);text-wrap:balance}
-.doss .tags{font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;
-  color:var(--navy);margin-bottom:14px}
+  font-size:clamp(1.7rem,3vw,2.6rem);line-height:1.12;margin-bottom:14px;
+  letter-spacing:-.02em;color:var(--tomato);text-wrap:balance}
+.doss .tags{font-family:var(--mono);font-size:.78rem;letter-spacing:.07em;
+  color:var(--key);margin-bottom:18px}
 
 @media(min-width:821px){
   /* the pin is what stays still; z-index puts the folders over About.
@@ -671,21 +728,36 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      sticking the instant About lands — otherwise the first folder can't
      begin until you have scrolled a full viewport of nothing. */
   #work{padding:0;position:relative;z-index:2;margin-top:-100vh;margin-top:-100svh}
-  /* stuck BELOW the header zone, and only as tall as what's left: the folders
-     rise to the bottom of the menu bar and never paint over it */
-  .doss-pin{position:sticky;top:var(--headZ);overflow:hidden;
-    height:calc(100vh - var(--headZ));height:calc(100svh - var(--headZ))}
+  /* the full screen, stuck at the very top: the folders are allowed over the
+     header band, and the highest of them climbs past it as the stack travels */
+  .doss-pin{position:sticky;top:0;overflow:hidden;height:100vh;height:100svh}
+  /* No shadow on the tabs at all: a tab is not a thing sitting ON the folder,
+     it is the same sheet of card cut to a shape — so nothing casts across the
+     join where the label meets the rest of the paper. */
   .doss{position:absolute;inset:0;transform:translateY(100%);
     /* the hinge: below the bottom edge, so the rise is an arc, not a slide */
     transform-origin:50% 130%;will-change:transform}
-  /* each folder sits one fan-step lower than the one behind it, so the stack
-     shows a cascade of top edges and tabs rather than one flush sheet */
-  /* rounded all round: the top corners read at rest, the bottom ones while the
-     folder is still on its way up and its lower edge is on the screen */
-  /* inset a couple of cells, so both side edges of the folder are visible */
-  .doss-face{position:absolute;left:22px;right:22px;bottom:0;
-    top:calc(var(--tabH) + var(--i,0) * var(--fanY));
-    border-radius:14px}
+  /* ---- FULL BLEED, EVEN MID-SWING ----
+     The folder is WIDER than the screen and hangs off both sides, with the
+     overhang paid back as padding so its contents still sit in the visible
+     middle. That is what stops a side edge swinging into view while the
+     folder is tilted: rotating about a hinge below the page drags the top
+     corners inward by about 1.3 × screen height × tanθ, which at 7° is ~145px
+     on a 900px screen — so the overhang is scaled from the viewport rather
+     than guessed at. The pin clips whatever hangs over.
+     Every folder starts on the SAME line under the tab row, so one that has
+     risen hides the folder before it completely except its tab, which stands
+     clear at its own place along the row. */
+  /* ovY must cover the tilt AND the climb a landed folder makes before the
+     next one covers it (DOSS.par) — otherwise the stack rises off the foot of
+     the page and shows daylight under it. */
+  .doss-face{--ovX:calc(0.20 * 100svh + 40px);
+             --ovY:calc(0.14 * 100vw + 0.34 * 100svh);
+    position:absolute;top:var(--tabH);
+    left:calc(-1 * var(--ovX));right:calc(-1 * var(--ovX));
+    bottom:calc(-1 * var(--ovY));
+    padding:0 var(--ovX) var(--ovY);
+    border-radius:0}
   /* About holds still underneath while the folders come up over it — and it
      carries the page grid ITSELF, painted on opaque white, so the lattice is
      locked to the panel instead of sliding through behind it. */
@@ -706,12 +778,15 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   .doss-tab{top:0;left:22px}
   .doss-in{grid-template-columns:1fr;gap:33px;padding:22px}
 }
-.beat{display:grid;grid-template-columns:84px 1fr;gap:12px;padding:10px 0;border-top:1px solid rgba(25,44,100,.14)}
-.beat .k{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--blue)}
-.beat .v{font-size:.92rem}
+.beat{display:grid;grid-template-columns:96px 1fr;gap:14px;padding:12px 0;
+  border-top:1px solid var(--rule,rgba(25,44,100,.14))}
+.beat .k{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--key,var(--blue))}
+.beat .v{font-size:1.05rem;line-height:1.5}
 .plate-links{margin-top:14px;display:flex;gap:16px;flex-wrap:wrap}
 .plate-links a{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--blue);border-bottom:1px solid rgba(25,44,100,.2);padding-bottom:3px;transition:.2s}
+  color:var(--key,var(--blue));border-bottom:1px solid var(--rule,rgba(25,44,100,.2));
+  padding-bottom:3px;transition:.2s}
 .plate-links a:hover{color:var(--tomato);border-color:var(--tomato)}
 @media(max-width:520px){.beat{grid-template-columns:1fr;gap:2px}}
 
@@ -841,6 +916,15 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;color:var(--blue)}
 .portrait figcaption{margin-top:22px;font-family:var(--mono);font-size:.68rem;
   letter-spacing:.14em;text-transform:uppercase;color:rgba(25,44,100,.55)}
+/* The caption hangs BELOW the picture, so while it is in flow the figure's box
+   is taller than the portrait and its centre sits lower than the face's — and
+   the copy, centred against that box, ends up low by half a caption. Taking
+   the caption out of the flow makes the figure's box the picture itself, so
+   the copy centres on the FACE however long either of them gets. Only on the
+   two-column layout; stacked, it has to stay in flow. */
+@media(min-width:761px){
+  .portrait figcaption{position:absolute;left:0;top:100%;margin-top:22px}
+}
 
 
 /* ---- THE CLOSE ----
@@ -977,6 +1061,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
           <p class="about-big">Outside of term time I'm at home in London, or hopefully on holiday.
             I love food, travelling, designing, and then building things (especially when my
             design&nbsp;works).</p>
+          <p class="about-big">Scroll down to see some of my&nbsp;work.</p>
         </div>
       </div>
     </div>
@@ -997,7 +1082,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
       <div class="doss-pin">
 
         <article class="doss" style="--i:0">
-          <div class="doss-tab">Uni</div>
+          <div class="doss-tab"><span>AUV</span></div>
           <div class="doss-face">
             <div class="doss-in">
               <!-- the clip IS the evidence: the fin drive under way. Muted and
@@ -1023,7 +1108,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
         </article>
 
         <article class="doss" style="--i:1">
-          <div class="doss-tab">Personal</div>
+          <div class="doss-tab" data-side="right"><span>Inflatable Helmet</span></div>
           <div class="doss-face">
             <div class="doss-in">
               <div class="doss-img">
@@ -1043,11 +1128,11 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
         </article>
 
         <article class="doss" style="--i:2">
-          <div class="doss-tab">Uni</div>
+          <div class="doss-tab"><span>EfW Facility</span></div>
           <div class="doss-face">
             <div class="doss-in">
               <div class="doss-img">
-                <img src="img/efw.jpg" alt="Energy-from-Waste facility design" onerror="this.remove()" />
+                <img src="img/efw.jpg" alt="The waste bunker and grab crane at an Energy-from-Waste facility" onerror="this.remove()" />
                 <div class="ph">[ PLATE 03 — ADD img/efw.jpg ]</div>
               </div>
               <div class="doss-txt">
@@ -1062,14 +1147,11 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
           </div>
         </article>
 
-        <article class="doss" style="--i:3">
-          <div class="doss-tab">Personal</div>
+        <!-- no plate on this one: you are looking at the project -->
+        <article class="doss wide" style="--i:3">
+          <div class="doss-tab"><span>Website</span></div>
           <div class="doss-face">
             <div class="doss-in">
-              <div class="doss-img">
-                <img src="img/site.jpg" alt="This website" onerror="this.remove()" />
-                <div class="ph">[ ADD img/site.jpg ]</div>
-              </div>
               <div class="doss-txt">
                 <h3>This website — a drawing you can&nbsp;scroll</h3>
                 <div class="tags">INDEPENDENT · WEBGL · NO BUILD&nbsp;STEP</div>
@@ -1196,7 +1278,27 @@ const ROLL = { minH:12, maxH:76, fade:55 };
    step is the whole point — it means the next folder is already on its way up
    before the one beneath it has finished covering the screen. rise: the swing
    angle in degrees, alternating side to side about the hinge below the page. */
-const DOSS = { hold:0.3, step:0.62, dur:0.8, rest:0.35, rise:7 };
+const DOSS = { hold:0.3, step:0.62, dur:0.8, rest:0.35, rise:7,
+               sep:66, par:0.70, under:220 };
+/* sep:   each folder comes to rest this many px LOWER than the one behind it,
+          so the stack cascades and every tab above stays in view instead of
+          the files piling on one another at the foot of the screen.
+   par:   once a folder has landed it KEEPS climbing, at this fraction of a
+          screen per screen of scroll — a little slower than whatever is still
+          rising behind it (about 60% of its speed), so the stack reads as
+          layers being scrolled rather than as a pile that assembles itself and
+          stops dead. It cannot go much above 0.85: a folder has to still be
+          covering the screen when the next one lands 0.62 screens later, and
+          the face only reaches ~485px below the fold.
+   under: how far below the fold a folder waits. A whole screen isn't enough:
+          the folder is far wider than the screen and it waits TILTED, so the
+          leading corner of its top edge would otherwise lift into view at the
+          bottom of the About section. */
+/* drift: the whole stack also CLIMBS as you scroll, by this fraction of a
+   screen across the run — so the folders keep travelling and their tops pass
+   off the head of the page, rather than collating into a heap that sits
+   perfectly still. Shared by every folder, so the stack stays coherent: only
+   its position on the screen changes, not the arrangement. */
 /* rest: a beat of scroll after the LAST folder has landed, before the stack
    lets go — otherwise the final project is snatched away the instant it
    arrives. */
@@ -1320,7 +1422,44 @@ const corners=["tl","tr","bl","br"].map(k=>{
 
 /* the Work folders — the dossier stack */
 const dossStack=document.getElementById("dossStack"),
-      dossEls=[...document.querySelectorAll("#work .doss")];
+      dossEls=[...document.querySelectorAll("#work .doss")],
+      dossTabs=[...document.querySelectorAll("#work .doss-tab")];
+
+/* ---- THE TAB ROW ----
+   Every tab is cut to the SAME width — the widest label decides it — and they
+   step along the row with a cell between them. Measured rather than declared,
+   because the widest label is whatever the projects happen to be called and
+   the width changes with the font that finally loads.
+   A tab marked data-side="right" is cut at the other end of its sheet instead,
+   and the ones after it close up the space, the way a real set of files has
+   its tabs in a few different positions rather than one tidy run. */
+/* TAB_RIGHT: where a right-hand tab starts, as a fraction of the width — well
+   right of centre, but not jammed against the edge of the sheet. */
+const TAB_GAP=11, TAB_IN=55, TAB_RIGHT=0.58;
+function layoutTabs(){
+  if(!dossTabs.length) return;
+  if(document.documentElement.clientWidth<821){
+    dossTabs.forEach(t=>{t.style.left="";t.style.width=""});
+    return;                                     // stacked; the CSS places them
+  }
+  dossTabs.forEach(t=>{t.style.width=""});      // measure at natural width
+  const w=Math.ceil(Math.max(...dossTabs.map(t=>t.getBoundingClientRect().width)));
+  const vw=document.documentElement.clientWidth;
+  let x=TAB_IN;
+  dossTabs.forEach(t=>{
+    t.style.width=w+"px";
+    let L;
+    if(t.dataset.side==="right"){
+      L=Math.min(Math.round(vw*TAB_RIGHT),vw-TAB_IN-w);
+    }else{
+      L=Math.round(x); x+=w+TAB_GAP;
+    }
+    t.style.left=L+"px";
+    /* offset the tab's grain by its own position, so the paper texture runs
+       on into the face below instead of restarting and drawing a seam */
+    t.style.setProperty("--bx",(-L)+"px");
+  });
+}
 let dossOn=false;         // desktop + motion: the pinned, scroll-driven stack
 
 /* the loose-files strip, and the two halves of the closing line */
@@ -1937,6 +2076,7 @@ function measure(){
   /* ---- THE DOSSIER STACK'S SCROLL BUDGET ----
      One screen for the pin to stick to, plus the rise schedule. Off on a
      phone and under reduced motion, where the folders simply flow. */
+  layoutTabs();
   dossOn = dossEls.length>0 && !small && !reduce;
   if(dossStack){
     if(dossOn){
@@ -1944,8 +2084,9 @@ function measure(){
       /* the pin is a screen minus the header zone, so that much of the stack
          is the pin itself; the rest is the hold plus the rise schedule — get
          this wrong and the folders finish before, or after, the stack lets go */
+      /* the pin is a whole screen now, so no header zone to discount */
       dossStack.style.height=
-        Math.round(vh*(1+DOSS.hold+M.dossS+DOSS.rest))-M.headZ+"px";
+        Math.round(vh*(1+DOSS.hold+M.dossS+DOSS.rest))+"px";
     }else{
       M.dossS=0; dossStack.style.height="";
       dossEls.forEach(el=>{el.style.transform=""});
@@ -2152,10 +2293,20 @@ function update(){
        the section can be read without the folders answering immediately. */
     const sc=clamp(-dossStack.getBoundingClientRect().top/vh-DOSS.hold,
                    0,M.dossS);
+    /* In px, not %, because the offsets are a fixed cascade rather than a
+       fraction of anything. The rise is LINEAR — an eased one decelerates into
+       its resting place and reads as an animation arriving, where this has to
+       read as paper being scrolled — and a folder that has landed carries on
+       climbing at DOSS.par, slower than whatever is still coming up behind it.
+       That difference in speed is the whole effect. */
+    const RISE=vh+DOSS.under;
     dossEls.forEach((el,i)=>{
-      const k=ease(clamp((sc-i*DOSS.step)/DOSS.dur));
+      const start=i*DOSS.step;
+      const k=clamp((sc-start)/DOSS.dur);
+      const lag=DOSS.par*vh*Math.max(0,sc-start-DOSS.dur);
       const sgn=i%2?-1:1;
-      el.style.transform=`translateY(${((1-k)*100).toFixed(2)}%) `+
+      const y=(1-k)*RISE + k*i*DOSS.sep - lag;
+      el.style.transform=`translateY(${y.toFixed(1)}px) `+
                          `rotate(${(sgn*(1-k)*DOSS.rise).toFixed(2)}deg)`;
     });
   }
