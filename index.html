@@ -745,7 +745,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .pl-slide{position:absolute;inset:0;opacity:0;visibility:hidden;
   transition:opacity .32s ease;
   display:flex;align-items:center;justify-content:center}
-.pl-slide.on{opacity:1;visibility:visible}
+/* inherit, NOT visible. visibility is inherited, and a descendant that sets
+   `visible` reappears inside a hidden ancestor — so when update() culled a
+   folder with visibility:hidden, the slide on show kept painting: a carousel
+   image left hanging over whatever you had scrolled to. `inherit` means the
+   slide is visible exactly when its folder is. */
+.pl-slide.on{opacity:1;visibility:inherit}
 .doss-img img,.doss-img video{position:absolute;inset:0;
   width:100%;height:100%;object-fit:cover}
 /* a slide marked .fit is shown WHOLE — drawings, slides and anything much
@@ -853,7 +858,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      next one covers it (DOSS.par) — otherwise the stack rises off the foot of
      the page and shows daylight under it. */
   .doss-face{--ovX:calc(0.20 * 100svh + 40px);
-             --ovY:calc(0.14 * 100vw + 0.42 * 100svh);
+             --ovY:calc(0.14 * 100vw + 0.62 * 100svh);
     position:absolute;top:var(--tabH);
     left:calc(-1 * var(--ovX));right:calc(-1 * var(--ovX));
     bottom:calc(-1 * var(--ovY));
@@ -947,7 +952,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    block half that difference — a square up the page, closing the gap to the
    last folder without moving the section itself. The section stays exactly a
    viewport tall, so nothing below it shifts. */
-#skills{min-height:100vh;min-height:100svh;padding:55px 0 165px;
+#skills{min-height:100vh;min-height:100svh;padding:0 0 220px;
   display:flex;align-items:center}
 /* Pulled in two squares either side of the page measure, so the set sits in
    the middle of the screen with real margin around it. Whole squares, so the
@@ -991,7 +996,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    the type off the grid — so the air comes out instead. Whole cells, so
    nothing moves off a line. */
 @media(max-height:820px){
-  #skills{padding:33px 0 143px}
+  #skills{padding:0 0 176px}
   .skl-list{margin-top:33px}
 }
 @media(max-width:760px){
@@ -1307,7 +1312,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
                        alt="Process flow diagram for the Energy-from-Waste facility"></div>
               </div>
               <div class="doss-txt">
-                <h3>Energy-from-Waste facility&nbsp;design</h3>
+                <h3>Energy-from-Waste facility design &amp; tender&nbsp;proposal</h3>
                 <div class="tags">PROCESS DESIGN · THERMOFLUIDS · TEAM&nbsp;PROJECT</div>
                 <div class="beat"><div class="k">Problem</div><div class="v">Design a large-scale Energy-from-Waste plant end to end, from waste arriving on site to energy leaving&nbsp;it.</div></div>
                 <div class="beat"><div class="k">Approach</div><div class="v">Engineered the mechanical and process flow across waste sorting, incineration and energy recovery, then tested the design against financial and feasibility&nbsp;analysis.</div></div>
@@ -1340,7 +1345,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
                 </div>
               </div>
               <div class="doss-txt">
-                <h3>This website — a drawing you can&nbsp;scroll</h3>
+                <h3>leonpanjwani.com</h3>
                 <div class="tags">INDEPENDENT · WEBGL · NO BUILD&nbsp;STEP</div>
                 <div class="beat"><div class="k">Problem</div><div class="v">A portfolio that shows how I think about design, rather than one that just lists what I have&nbsp;made.</div></div>
                 <div class="beat"><div class="k">Approach</div><div class="v">Built from scratch as a single hand-written file — no framework and no build step. The title page is a drawing sheet on an 11px grid; the name is real extruded 3D type whose size is solved so no view can cross the&nbsp;frame.</div></div>
@@ -1403,7 +1408,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
       <div class="skl-list">
         <div class="skl-group">
           <h3>Design &amp; Analysis</h3>
-          <ul><li>Fusion 360</li><li>MATLAB</li><li>ANSYS</li><li>CFD</li></ul>
+          <ul><li>Fusion 360</li><li>MATLAB</li><li>ANSYS</li><li>CFD</li><li>AI</li></ul>
         </div>
         <div class="skl-group">
           <h3>Making</h3>
@@ -1486,8 +1491,8 @@ const ROLL = { minH:12, maxH:76, fade:55 };
    step is the whole point — it means the next folder is already on its way up
    before the one beneath it has finished covering the screen. rise: the swing
    angle in degrees, alternating side to side about the hinge below the page. */
-const DOSS = { hold:0.12, step:0.55, dur:0.6, rest:0.4, rise:7, flat:0.16,
-               base:33, sep:0, par:0.42, under:220, lastDrop:44, settle:0.18 };
+const DOSS = { hold:0.12, step:0.55, dur:0.6, rest:0.22, rise:7,
+               base:33, sep:0, par:0.68, under:220, lastDrop:44 };
 /* sep:   each folder comes to rest this many px LOWER than the one behind it,
           so the stack cascades and every tab above stays in view instead of
           the files piling on one another at the foot of the screen.
@@ -1495,21 +1500,26 @@ const DOSS = { hold:0.12, step:0.55, dur:0.6, rest:0.4, rise:7, flat:0.16,
           SOMETHING IS ALWAYS MOVING. Nothing here is ever allowed to sit
           still while the page is pinned — a frozen screen that won't answer
           the wheel reads as broken, not as a pause.
-   flat:  the tilt keeps straightening for this long AFTER the folder has
-          landed, so a file is still very slightly askew as it arrives and
-          settles level about the time its label reaches the top of the
-          screen — rather than snapping square the instant it stops rising.
-   base:  even the first folder rests below the top of the screen, so its tab
-          has somewhere to climb from. Without it the leading label starts at
-          the top edge and is gone the instant the stack moves, before the
-          next file has surfaced to replace it.
+   THE SWING ends WITH the rise, not after it: the sheet is square to the page
+          at the exact moment its top edge reaches the top of the screen. It
+          used to keep straightening for a beat afterwards, which — together
+          with a landing that overshot and eased back down — read as a little
+          bounce and a straighten-out on arrival. Every folder now moves in one
+          direction only: up.
+   base:  the padding under a folder's contents, so they stop clear of the
+          foot of the screen rather than running into it. It is no longer a
+          resting offset: a file lands with its top edge ON the top of the
+          screen and covers it completely, which is the moment the whole sheet
+          is visible at once.
    par:   once a folder has landed it KEEPS climbing, at this fraction of a
           screen per screen of scroll — slower than whatever is still rising
           behind it, so the stack reads as layers being scrolled rather than as
           a pile that assembles itself and stops dead. step and par are tied
           together: a folder must still cover the screen when the next lands,
-          `step` screens later, so step × par × screen must stay under the
-          face's reach below the fold (~550px, see --ovY).
+          `step` screens later, so step × par × screen (0.55 × 0.68 × 900 =
+          337px) must stay under the face's reach below the fold — which is
+          why --ovY carries 0.62 of a screen rather than the 0.42 it did when
+          the push was gentler.
    under: how far below the fold a folder waits. A whole screen isn't enough:
           the folder is far wider than the screen and it waits TILTED, so the
           leading corner of its top edge would otherwise lift into view at the
@@ -1538,7 +1548,7 @@ const DOSS = { hold:0.12, step:0.55, dur:0.6, rest:0.4, rise:7, flat:0.16,
    solves it at zoom 1 — so pulling BACK is always safe and pushing in would
    break that guarantee. Back to 1 by t=.88, before the dimensions return, so
    they are drawn against a name at its true size. */
-const TOUR = { travel:2.0, depth:0.24, drop:-44, fit:0.88,
+const TOUR = { travel:1.6, depth:0.24, drop:-44, fit:0.88,
                seg:[0,.22,.36,.58,.72,1],
                cam:[[0,1],[.20,.90],[.38,.87],[.52,.85],[.68,.90],[.88,1],[1,1]] };
 /* drop: where the name RESTS relative to the frame's centre, in px (negative
@@ -2571,14 +2581,23 @@ function update(){
        climbing at DOSS.par, slower than whatever is still coming up behind it.
        That difference in speed is the whole effect. */
     const RISE=vh+DOSS.under, tops=[], n=dossEls.length;
-    /* where folder i sits, as arithmetic — see the landing note below */
+    /* ---- WHERE FOLDER i SITS ----
+       It rises to ONE PLACE and then keeps going: the face's top edge lands on
+       the top of the viewport — one sheet, edge to edge, nothing else showing
+       — and from there the only movement is further up, at DOSS.par, as the
+       next file pushes it off the screen. Nothing ever comes back down.
+       It used to overshoot to that line and then ease back to a resting
+       offset, which read as a bounce at the top and a straighten-out after it.
+       Arithmetic, so nothing here needs the DOM. */
     const yAt=i=>{
       const start=i*DOSS.step;
       const k=clamp((sc-start)/DOSS.dur);
       const lag=DOSS.par*vh*Math.max(0,sc-start-DOSS.dur);
-      const rest=DOSS.base+i*DOSS.sep+(i===n-1?DOSS.lastDrop:0);
-      const settle=ease(clamp((sc-start-DOSS.dur)/DOSS.settle));
-      return (1-k)*RISE + k*(-M.tabH) + settle*(rest+M.tabH) - lag;
+      /* every file lands on the same line, the last one included — resting it
+         lower was what stopped it ever being the whole screen. DOSS.lastDrop
+         still shortens its CONTENT, which is what took the dead space off it */
+      const land=-M.tabH;
+      return (1-k)*RISE + k*land - lag;
     };
     /* The folders behind the last sheet are only a problem where they show
        BELOW its foot — and that only happens once its foot has risen into
@@ -2602,7 +2621,10 @@ function update(){
     const ys=[], fs=[], cover=[];
     for(let i=0;i<n;i++){
       ys[i]=yAt(i);
-      fs[i]=clamp((sc-i*DOSS.step)/(DOSS.dur+DOSS.flat));
+      /* the swing finishes WITH the rise, so the sheet is horizontal at the
+         moment its edge reaches the top — it used to run on past the landing
+         and straighten out afterwards */
+      fs[i]=clamp((sc-i*DOSS.step)/DOSS.dur);
     }
     for(let i=n-1,m=1e9;i>=0;i--){
       cover[i]=m;
@@ -2610,15 +2632,6 @@ function update(){
     }
     dossEls.forEach((el,i)=>{
       const sgn=i%2?-1:1;
-      /* ---- LAND FULL SCREEN, THEN SETTLE ----
-         The folder arrives with its face's top edge ON the top of the
-         viewport — one sheet, edge to edge, nothing else showing — and only
-         then eases down by its base offset to let the tabs behind it back
-         into view. Landing straight onto that offset was the bug: the face
-         stopped 72px down, and by the time the climb had carried it up past
-         the top the NEXT folder was already on screen, so no folder was ever
-         the whole screen on its own. The window is short by design — the next
-         sheet's edge appears about a tenth of a screen of scroll later. */
       const y=ys[i];
       tops[i]=y+M.tabH;                       // where this folder's card starts
       /* Once the last sheet has landed it covers everything above its own
@@ -2644,6 +2657,9 @@ function update(){
       if(dossShown[i]!==shown){
         dossShown[i]=shown;
         el.style.visibility=shown?"":"hidden";
+        /* release the compositing layer too, or the folder keeps a raster of
+           itself alive for the whole section */
+        el.style.willChange=shown?"transform":"auto";
         dossVids[i].forEach(v=>{
           if(!shown) v.pause();
           /* only the slide on show gets to play again — the carousel owns
@@ -2653,7 +2669,6 @@ function update(){
       }
       if(!shown) return;                      // nothing worth writing
       if(dossOp[i]!==op){ dossOp[i]=op; el.style.opacity=op }
-      /* the tilt runs on past the landing — see DOSS.flat */
       const f=fs[i];
       const tf=`translateY(${y.toFixed(1)}px) `+
                `rotate(${(sgn*(1-f)*dossTilt).toFixed(2)}deg)`;

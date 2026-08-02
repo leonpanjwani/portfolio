@@ -202,6 +202,11 @@ placeholder frame shows, exactly as the project plates behave.
   folders live, average two. The burial test compares against the **top of the
   viewport**, not against the folder's own `y` — once a folder has climbed
   away both numbers are off-screen and comparing them says it is still showing.
+- **`visibility` is inherited, and a child can undo it.** `.pl-slide.on` used to
+  set `visibility:visible`, which reappears inside a `visibility:hidden`
+  ancestor — so a culled folder still painted its carousel image, left hanging
+  over whatever you had scrolled to. It is `visibility:inherit` now. Anything
+  that has to disappear with a culled folder must inherit, not assert.
 - **Never call `getBoundingClientRect()` inside the scroll loop** if the number
   can be arithmetic. The last sheet's foot used to be measured every frame,
   which is a forced layout every frame; it is now `y + tabH + M.faceH`, with
