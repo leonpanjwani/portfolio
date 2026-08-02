@@ -1251,9 +1251,6 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
                 <div class="pl-slide fit">
                   <img src="img/auv-exploded.jpg" loading="lazy"
                        alt="Exploded assembly drawing of the AUV with its parts list"></div>
-                <div class="pl-slide">
-                  <img src="img/auv-team.jpg" loading="lazy"
-                       alt="The project team with the finished vehicle"></div>
               </div>
               <div class="doss-txt">
                 <h3>Biomimetic AUV — design &amp;&nbsp;build</h3>
@@ -1674,6 +1671,19 @@ const dossStack=document.getElementById("dossStack"),
       aboutEl=document.getElementById("about"),
       dossEls=[...document.querySelectorAll("#work .doss")],
       dossTabs=[...document.querySelectorAll("#work .doss-tab")];
+/* ---- WHAT MAKES THE STACK EXPENSIVE ----
+   Five folders, each a sheet wider and taller than the screen, each carrying a
+   grain layer that composites with mix-blend-mode, and each with a video
+   decoding inside it. All five exist for the whole section, so the browser was
+   compositing five oversized blended layers and decoding five videos on every
+   frame of the scroll — while only one or two are ever actually on screen.
+   These three caches let update() write to a folder only when something about
+   it has really changed, and take the ones that are off screen out of the
+   pipeline altogether. */
+const dossVids=dossEls.map(el=>[...el.querySelectorAll("video")]);
+const dossShown=dossEls.map(()=>null);     // last visibility state written
+const dossTf=dossEls.map(()=>"");          // last transform string written
+const dossOp=dossEls.map(()=>"");          // last opacity written
 
 /* the skills list — an ordinary section, its groups fading up in order */
 const skillsEl=document.getElementById("skills"),
@@ -2283,7 +2293,14 @@ function measure(){
   const headZ=headTop+headH;
   doc.style.setProperty("--headZ",headZ+"px");
 
-  M={vw,vh,small,headH,headZ,heroX,heroY,lh,RA,BA,U,wrapL,
+  /* the last sheet's height, measured once per layout: update() needs where
+     its foot is on every frame, and reading that back off the DOM in the
+     scroll loop is a forced layout per frame for a number that only changes
+     when the viewport does */
+  const lastFaceEl=dossEls.length
+    ? dossEls[dossEls.length-1].querySelector(".doss-face") : null;
+  const faceH=lastFaceEl?lastFaceEl.offsetHeight:vh;
+  M={vw,vh,small,headH,headZ,heroX,heroY,lh,RA,BA,U,wrapL,faceH,
      headFrom,headTo,sw0,heroFS,base0,
      /* the pinned walkthrough's scroll budget — zero when there's no 3D */
      W:R3?Math.round(vh*TOUR.travel):0};
@@ -2553,23 +2570,46 @@ function update(){
        read as paper being scrolled — and a folder that has landed carries on
        climbing at DOSS.par, slower than whatever is still coming up behind it.
        That difference in speed is the whole effect. */
-    const RISE=vh+DOSS.under, tops=[];
+    const RISE=vh+DOSS.under, tops=[], n=dossEls.length;
+    /* where folder i sits, as arithmetic — see the landing note below */
+    const yAt=i=>{
+      const start=i*DOSS.step;
+      const k=clamp((sc-start)/DOSS.dur);
+      const lag=DOSS.par*vh*Math.max(0,sc-start-DOSS.dur);
+      const rest=DOSS.base+i*DOSS.sep+(i===n-1?DOSS.lastDrop:0);
+      const settle=ease(clamp((sc-start-DOSS.dur)/DOSS.settle));
+      return (1-k)*RISE + k*(-M.tabH) + settle*(rest+M.tabH) - lag;
+    };
     /* The folders behind the last sheet are only a problem where they show
        BELOW its foot — and that only happens once its foot has risen into
        view. Keyed to the foot's actual position rather than to how far the
        sheet has risen, because the two part company as soon as the stack
        starts scrolling away: the rise saturates and never comes back, so
        scrolling up left the folders behind stuck invisible and the bare grid
-       showing where the Website folder should have been. */
-    const lastFace=dossEls[dossEls.length-1].querySelector(".doss-face");
-    const foot=lastFace?lastFace.getBoundingClientRect().bottom:1e9;
-    const behind=clamp((foot-vh)/120);
+       showing where the Website folder should have been.
+       Computed, not measured: a getBoundingClientRect() here was a forced
+       layout on every frame of the scroll. */
+    const behind=clamp((yAt(n-1)+M.tabH+M.faceH-vh)/120);
+    /* ---- WHAT IS ACTUALLY COVERED ----
+       A folder that has finished its swing covers the whole screen from its
+       FACE top downward — the sheet is wider than the viewport and its skirt
+       runs past the foot. Anything whose own top edge is below that line is
+       completely hidden and need not be painted. It has to be the face top,
+       not the folder top: the tab row is where earlier tabs show through, and
+       a tab is only as wide as its label. A folder still mid-swing does not
+       count, because a tilted top edge crosses the screen on a slant and
+       leaves a wedge of what is behind it showing. */
+    const ys=[], fs=[], cover=[];
+    for(let i=0;i<n;i++){
+      ys[i]=yAt(i);
+      fs[i]=clamp((sc-i*DOSS.step)/(DOSS.dur+DOSS.flat));
+    }
+    for(let i=n-1,m=1e9;i>=0;i--){
+      cover[i]=m;
+      if(fs[i]>=1) m=Math.min(m,ys[i]+M.tabH);
+    }
     dossEls.forEach((el,i)=>{
-      const start=i*DOSS.step;
-      const k=clamp((sc-start)/DOSS.dur);
-      const lag=DOSS.par*vh*Math.max(0,sc-start-DOSS.dur);
       const sgn=i%2?-1:1;
-      const last=i===dossEls.length-1?DOSS.lastDrop:0;
       /* ---- LAND FULL SCREEN, THEN SETTLE ----
          The folder arrives with its face's top edge ON the top of the
          viewport — one sheet, edge to edge, nothing else showing — and only
@@ -2579,20 +2619,45 @@ function update(){
          the top the NEXT folder was already on screen, so no folder was ever
          the whole screen on its own. The window is short by design — the next
          sheet's edge appears about a tenth of a screen of scroll later. */
-      const rest=DOSS.base+i*DOSS.sep+last;
-      const settle=ease(clamp((sc-start-DOSS.dur)/DOSS.settle));
-      const y=(1-k)*RISE + k*(-M.tabH) + settle*(rest+M.tabH) - lag;
+      const y=ys[i];
       tops[i]=y+M.tabH;                       // where this folder's card starts
       /* Once the last sheet has landed it covers everything above its own
          foot — but its skirt is short, so the folder behind kept showing
          BELOW that foot as a grey band, which is what looked like a heavy bar
          rather than a shadow. Nothing beneath it is visible any more, so the
          earlier folders fade out and the page shows through instead. */
-      if(i<dossEls.length-1) el.style.opacity=behind.toFixed(3);
+      const op=i<n-1?behind.toFixed(3):"1";
+      /* ---- CULL ----
+         A folder still below the fold, or faded out behind the last sheet, is
+         painting an oversized blended layer and decoding a video for nobody.
+         visibility:hidden takes it out of paint and compositing without
+         touching layout, and its video stops. y is the top of the TAB, which
+         stands above the face — so y is the first edge of the folder that can
+         appear, and the test is against it rather than against the face.
+         Three ways to be invisible: faded out, still below the fold, or buried
+         under a folder that has landed on top of it. The burial test is against
+         the top of the SCREEN, not against y: once a folder has climbed away
+         its own top edge is far off the top of the viewport, and comparing two
+         off-screen numbers said it was still showing when the only part of it
+         inside the screen was under another sheet. */
+      const shown=(+op>0.004)&&y<vh&&cover[i]>Math.max(0,y);
+      if(dossShown[i]!==shown){
+        dossShown[i]=shown;
+        el.style.visibility=shown?"":"hidden";
+        dossVids[i].forEach(v=>{
+          if(!shown) v.pause();
+          /* only the slide on show gets to play again — the carousel owns
+             which one that is */
+          else if(v.parentElement.classList.contains("on")) v.play().catch(()=>{});
+        });
+      }
+      if(!shown) return;                      // nothing worth writing
+      if(dossOp[i]!==op){ dossOp[i]=op; el.style.opacity=op }
       /* the tilt runs on past the landing — see DOSS.flat */
-      const f=clamp((sc-start)/(DOSS.dur+DOSS.flat));
-      el.style.transform=`translateY(${y.toFixed(1)}px) `+
-                         `rotate(${(sgn*(1-f)*dossTilt).toFixed(2)}deg)`;
+      const f=fs[i];
+      const tf=`translateY(${y.toFixed(1)}px) `+
+               `rotate(${(sgn*(1-f)*dossTilt).toFixed(2)}deg)`;
+      if(dossTf[i]!==tf){ dossTf[i]=tf; el.style.transform=tf }
     });
 
     /* ---- THE READOUT OVER DARK STOCK ----
