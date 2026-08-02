@@ -491,7 +491,6 @@ a{color:inherit;text-decoration:none}
 #dims .ah{fill:var(--white);stroke:none;opacity:.85}
 #dims text{fill:var(--white);font-family:var(--mono);font-size:12px;
   letter-spacing:.08em;opacity:.95}
-@media(prefers-reduced-motion:reduce){#gl,#vlabel,#dims{display:none}}
 
 /* The name is printed on the sheet and never moves again — no dock, no scale,
    so no transform and nothing to promote to its own layer. */
@@ -1001,7 +1000,6 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   .skl-group ul{justify-content:flex-start}
 }
 @media(max-width:820px){.skl-group{opacity:1!important}}
-@media(prefers-reduced-motion:reduce){.skl-group{opacity:1!important}}
 @media(max-width:520px){
 }
 
@@ -1097,9 +1095,6 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .fin-details{display:flex;flex-direction:column;align-items:center}
 .slide-l,.slide-r{transform:translateX(var(--sx,0vw));opacity:var(--so,1);
   will-change:transform}
-@media(prefers-reduced-motion:reduce){
-  .slide-l,.slide-r{transform:none!important;opacity:1!important}
-}
 /* 33 + 10 + 1 = 44: four cells tall, on 22 of clearance — so the two rows and
    the button below them all keep landing on the same boxes as the line above. */
 .email{display:flex;width:fit-content;align-items:center;gap:12px;margin-top:22px;
@@ -1498,7 +1493,7 @@ const ROLL = { minH:12, maxH:76, fade:55 };
    before the one beneath it has finished covering the screen. rise: the swing
    angle in degrees, alternating side to side about the hinge below the page. */
 const DOSS = { hold:0.12, step:0.55, dur:0.6, rest:0.4, rise:7, flat:0.16,
-               base:33, sep:0, par:0.42, under:220, lastDrop:44 };
+               base:33, sep:0, par:0.42, under:220, lastDrop:44, settle:0.18 };
 /* sep:   each folder comes to rest this many px LOWER than the one behind it,
           so the stack cascades and every tab above stays in view instead of
           the files piling on one another at the foot of the screen.
@@ -1599,7 +1594,24 @@ const layer=document.getElementById("layer"), nameEl=document.getElementById("na
       burger=document.getElementById("burger"), coord=document.getElementById("coord"),
       menubar=document.getElementById("menubar"),
       cxEl=document.getElementById("cx"), cyEl=document.getElementById("cy");
+/* ---- REDUCED MOTION ----
+   The page IS its scroll. The walkthrough, the folder stack and the roll are
+   how the content is arranged, not decoration laid over it — switching them
+   all off left a reader with the preference on no hero, no Work section and a
+   column of bare text. So the preference now separates the two kinds of
+   movement instead of banning both:
+
+     SCROLL-LINKED  the tour, the folders, the roll, the skills fade, the
+                    close. Every frame is one the reader asked for by
+                    scrolling, and it stops the instant they stop. Kept.
+     ON ITS OWN     the opening assembly, the portrait's tile physics, the
+                    corner peel, autoplaying video, smooth scrolling and the
+                    folders' 7° swing. These move unasked. Still off.
+
+   `reduce` now gates only the second list. */
 const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* the swing is the one part of the folder motion that is not simply travel */
+const dossTilt=reduce?0:DOSS.rise;
 /* A touch screen has no hover, so anything driven by pointer position needs a
    second way in. Checked once — a device doesn't change input type mid-visit. */
 const coarse=matchMedia("(pointer: coarse)").matches;
@@ -1736,7 +1748,7 @@ let dossOn=false;         // desktop + motion: the pinned, scroll-driven stack
 const glCanvas=document.getElementById("gl"), vlabel=document.getElementById("vlabel"),
       dims=document.getElementById("dims"), stage=document.getElementById("stage");
 let R3=null;
-if(!reduce && window.THREE) try{
+if(window.THREE) try{
   const renderer=new THREE.WebGLRenderer({canvas:glCanvas,alpha:true,antialias:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
   const scene=new THREE.Scene();
@@ -2311,7 +2323,7 @@ function measure(){
              -Math.max(0,dossEls.length-1)*DOSS.sep))+"px");
 
   layoutTabs();
-  dossOn = dossEls.length>0 && !small && !reduce;
+  dossOn = dossEls.length>0 && !small;   /* scroll-linked, so it stays on */
   if(dossStack){
     if(dossOn){
       M.dossS=DOSS.step*(dossEls.length-1)+DOSS.dur;
@@ -2556,7 +2568,18 @@ function update(){
       const lag=DOSS.par*vh*Math.max(0,sc-start-DOSS.dur);
       const sgn=i%2?-1:1;
       const last=i===dossEls.length-1?DOSS.lastDrop:0;
-      const y=(1-k)*RISE + k*(DOSS.base+i*DOSS.sep+last) - lag;
+      /* ---- LAND FULL SCREEN, THEN SETTLE ----
+         The folder arrives with its face's top edge ON the top of the
+         viewport — one sheet, edge to edge, nothing else showing — and only
+         then eases down by its base offset to let the tabs behind it back
+         into view. Landing straight onto that offset was the bug: the face
+         stopped 72px down, and by the time the climb had carried it up past
+         the top the NEXT folder was already on screen, so no folder was ever
+         the whole screen on its own. The window is short by design — the next
+         sheet's edge appears about a tenth of a screen of scroll later. */
+      const rest=DOSS.base+i*DOSS.sep+last;
+      const settle=ease(clamp((sc-start-DOSS.dur)/DOSS.settle));
+      const y=(1-k)*RISE + k*(-M.tabH) + settle*(rest+M.tabH) - lag;
       tops[i]=y+M.tabH;                       // where this folder's card starts
       /* Once the last sheet has landed it covers everything above its own
          foot — but its skirt is short, so the folder behind kept showing
@@ -2567,7 +2590,7 @@ function update(){
       /* the tilt runs on past the landing — see DOSS.flat */
       const f=clamp((sc-start)/(DOSS.dur+DOSS.flat));
       el.style.transform=`translateY(${y.toFixed(1)}px) `+
-                         `rotate(${(sgn*(1-f)*DOSS.rise).toFixed(2)}deg)`;
+                         `rotate(${(sgn*(1-f)*dossTilt).toFixed(2)}deg)`;
     });
 
     /* ---- THE READOUT OVER DARK STOCK ----
@@ -2600,7 +2623,7 @@ function update(){
   }
 
   /* ---- SKILLS: the groups fade up in order as the section arrives ---- */
-  if(sklGroups.length&&skillsEl&&!reduce){
+  if(sklGroups.length&&skillsEl){
     const p=(vh-skillsEl.getBoundingClientRect().top)/vh;
     sklGroups.forEach((g,i)=>{
       g.style.setProperty("--sk",
@@ -2612,7 +2635,7 @@ function update(){
      Scroll-linked, so it plays backwards on the way up. The offset is in vw so
      each half genuinely starts off the side of the screen and travels all the
      way in to the centre, whatever the words measure. */
-  if(!reduce&&slideEls.length){
+  if(slideEls.length){
     /* The travel has to FINISH, and this is the last thing on the page: given
        more scroll than the document has left, the halves are still short of
        the middle at the bottom and can never close. So the span is whichever
@@ -3286,7 +3309,9 @@ function intro(){
     doc.style.scrollBehavior=sb;
   }
   measure(); update(); lockGrid();
-  if(reduce){
+  /* Reduced motion with no 3D to fall back on: the sketched intro is the only
+     thing that would have drawn the name, so ink it in place instead. */
+  if(reduce&&!(R3&&R3.ready)){
     words.forEach(w=>w.classList.add("drawn","inked","shaded"));
     cells.forEach(c=>c.classList.add("on"));
     update(); return;
@@ -3302,7 +3327,11 @@ function intro(){
       cells.forEach((c,i)=>setTimeout(()=>c.classList.add("on"),140+i*80));
       setTimeout(update,120);
     };
-    if(scrollY>4) finishIntro(); else start3DIntro();
+    /* Reduced motion gets the assembled name, not the assembly — the intro is
+       the one piece here that plays on its own. The walkthrough still runs,
+       because it only moves while the reader scrolls. */
+    if(reduce||scrollY>4){ finishIntro(); cells.forEach(c=>c.classList.add("on")) }
+    else start3DIntro();
     return;
   }
   /* 2D fallback: one continuous left→right stroke per line, the second
