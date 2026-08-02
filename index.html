@@ -54,7 +54,13 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&family=Martian+Mono:wght@400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- Only the weights the stylesheet actually asks for. Martian Mono went
+     entirely when the folder tabs moved to Chakra Petch; Chakra 400/600 and
+     Inter 500 are declared nowhere. Requesting a weight that is never used
+     costs a download; NOT requesting one that is used is worse — the browser
+     synthesises it and the type changes shape — so this list is derived from
+     the font-weight declarations rather than guessed. -->
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Share+Tech+Mono&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
 
 <style>
 /* ==========================================================================
@@ -82,7 +88,7 @@
      is muted enough not to argue with the accent. */
   --folder:#b9d4f2;         /* light blue */
   --folder-beige:#e8dcc0;   /* light brown card */
-  --folder-grey:#d9dce2;    /* grey paper */
+  --folder-grey:#f4f3ee;    /* off-white paper — the plainest file in the set */
   /* the fourth is cut from the blueprint itself (--blue), which is dark — so
      that folder carries its own ink, see --ink below */
   /* A light print wash for text ON the folders: the ink thins in patches, so
@@ -91,7 +97,6 @@
      at body size that one eats the letterforms. */
   --ink-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='q' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.05 0.6' numOctaves='3' seed='9' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.3 0 0 0 0.76'/></filter><rect width='260' height='260' filter='url(%23q)'/></svg>");
   /* paper grain, used as a multiply wash over the folder stock */
-  --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.5'/></svg>");
   /* the height of the index tab standing above each folder's top edge. The
      folders themselves are FLUSH — no vertical stagger — so the tabs all
      stand at one height and it is only their horizontal positions that tell
@@ -108,7 +113,6 @@
   /* the folders' own face: the tab labels and the project titles. Martian Mono
      is wide and slab-ish, so it wants tighter tracking and a smaller size than
      the same words set in Inter. */
-  --file:"Martian Mono",ui-monospace,Menlo,monospace;
   /* Typewriter, kept for later. Nothing uses it right now, so Courier Prime is
      NOT in the font link — add &family=Courier+Prime:wght@400;700 there before
      switching anything to it, or it will fall back to Courier New. */
@@ -656,8 +660,15 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .doss:nth-child(3){--stock:var(--blue); --ink:#ffffff; --key:var(--pale);
   --rule:rgba(255,255,255,.26)}
 .doss:nth-child(4){--stock:var(--folder-grey)}
-.doss:nth-child(5){--stock:#eef2fb}
-.doss-face{background:var(--stock);border:0;
+.doss:nth-child(5){--stock:#FBF3C4}   /* legal-pad yellow, aged down to sit with the rest */
+/* longhands only: a `background:` shorthand here would wipe the grain layers */
+.doss-face{background-color:var(--stock);
+  background-image:var(--grain-a),var(--grain-b);
+  background-size:180px 180px,540px 540px;
+  background-position:var(--ovX) calc(-1 * var(--tabH)),
+                      var(--ovX) calc(-1 * var(--tabH));
+  background-blend-mode:multiply,multiply;
+  border:0;
   display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
 /* ---- ONE SHEET OF PAPER ----
    Grain plus a coarser mottle, so the card reads as stock with a surface
@@ -665,15 +676,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    their pattern by their own position inside the folder — so the texture runs
    continuously from the tab into the face instead of restarting at the join
    and drawing a seam there. */
-.doss-face::before,.doss-tab::before{content:"";position:absolute;inset:0;
-  z-index:0;pointer-events:none;
-  background-image:var(--grain),var(--grain);
-  background-size:180px 180px,540px 540px;
-  mix-blend-mode:multiply;opacity:.34}
-.doss-face::before{background-position:var(--ovX) calc(-1 * var(--tabH))}
-/* border-radius:inherit, because the tab can no longer clip with overflow —
-   its fillets have to hang outside it (below) */
-.doss-tab::before{background-position:var(--bx,0px) 0;border-radius:inherit}
+/* (the grain used to live on a blended pseudo-element here — see --grain-a) */
 
 /* ---- THE FILLETS ----
    Where the tab meets the sheet the corner is not square: the card sweeps out
@@ -706,8 +709,15 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   --fil:15px;                                  /* the fillet into the sheet */
   display:flex;align-items:center;justify-content:center;padding:0 18px;
   white-space:nowrap;
-  background:var(--stock);border:0;border-radius:15px 15px 0 0;
-  font-family:var(--file);font-weight:600;font-size:.82rem;letter-spacing:0;
+  background-color:var(--stock);
+  /* the tab is cut from the same sheet, so it offsets the pattern by its own
+     position along the row — that is what stops a seam at the join */
+  background-image:var(--grain-a),var(--grain-b);
+  background-size:180px 180px,540px 540px;
+  background-position:var(--bx,0px) 0,var(--bx,0px) 0;
+  background-blend-mode:multiply,multiply;
+  border:0;border-radius:15px 15px 0 0;
+  font-family:var(--display);font-weight:700;font-size:.92rem;letter-spacing:.13em;
   text-transform:uppercase;color:var(--tomato)}
 /* ---- EVERY FOLDER PRESENTS THE SAME ----
    The faces are identical boxes, but the cascade sets each one lower than the
@@ -800,14 +810,20 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   -webkit-mask-size:260px 260px;      mask-size:260px 260px;
   -webkit-mask-repeat:repeat;         mask-repeat:repeat}
 .doss-tab span{position:relative;z-index:1}
-.doss-txt{display:flex;flex-direction:column;justify-content:center;min-width:0}
+/* The copy runs a little narrower than its column and sits centred in it, so
+   the lines are shorter and the block is taller — closer to the plate's own
+   proportion — while its centre line stays on the plate's. Narrowing by
+   changing the grid ratio instead would have moved the plate. */
+.doss-txt{display:flex;flex-direction:column;justify-content:center;min-width:0;
+  width:90%;margin-inline:auto}
+@media(max-width:820px){.doss-txt{width:100%}}
 /* Project headings are prose, not signage — Inter, like the copy under them.
    The drawing face (Chakra Petch) is kept for the sheet, the section headings
    and the header wordmark. */
-.doss h3{font-family:var(--file);font-weight:600;
-  font-size:clamp(1.4rem,2.4vw,2.15rem);line-height:1.24;margin-bottom:18px;
-  letter-spacing:-.035em;color:var(--tomato);text-wrap:balance}
-.doss .tags{font-family:var(--mono);font-size:.78rem;letter-spacing:.07em;
+.doss h3{font-family:var(--body);font-weight:700;
+  font-size:clamp(1.7rem,2.95vw,2.6rem);line-height:1.2;margin-bottom:18px;
+  letter-spacing:-.03em;color:var(--tomato);text-wrap:balance}
+.doss .tags{font-family:var(--mono);font-size:.88rem;letter-spacing:.07em;
   color:var(--key);margin-bottom:18px}
 
 @media(min-width:821px){
@@ -895,42 +911,83 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   .doss-tab{top:0;left:22px}
   .doss-in{grid-template-columns:1fr;gap:33px;padding:22px}
 }
-.beat{display:grid;grid-template-columns:96px 1fr;gap:14px;padding:12px 0;
-  border-top:1px solid var(--rule,rgba(25,44,100,.14))}
-.beat .k{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--key,var(--blue))}
-.beat .v{font-size:1.05rem;line-height:1.5}
-.plate-links{margin-top:14px;display:flex;gap:16px;flex-wrap:wrap}
+/* Plain paragraphs: no label column and no rule between them. The three
+   beats read as one short account of the project rather than as a form with
+   fields, and in Additional Work the name of each piece of work carries the
+   emphasis the label used to. */
+.beat{font-size:1.32rem;line-height:1.48;margin:0 0 18px}
+.beat:last-of-type{margin-bottom:0}
+.beat b{font-weight:700}
+/* ---- THE CEILING ON ALL OF THAT ----
+   A folder's content area is a fixed height solved from the viewport, and the
+   face clips. Type that fits a 1080px screen runs off the bottom of the paper
+   on a 13" laptop, so the sizes step down in two stages rather than one — a
+   folder has to fit before it has to be big. */
+@media(max-height:940px){
+  .doss h3{font-size:clamp(1.6rem,2.75vw,2.45rem)}
+  .doss .tags{font-size:.88rem}
+  .beat{font-size:1.18rem}
+  .plate-links a{font-size:.88rem}
+}
+@media(max-height:840px){
+  .doss h3{font-size:clamp(1.4rem,2.4vw,2.15rem)}
+  .doss .tags{font-size:.78rem}
+  .beat{font-size:1.05rem}
+  .plate-links a{font-size:.8rem}
+}
+.plate-links{margin-top:22px;display:flex;gap:22px;flex-wrap:wrap}
 /* tomato on every folder, whatever its stock — the accent is what marks a
    link as a thing you can open. Hover fills the rule in rather than changing
    the colour, since the colour is already the accent. */
-.plate-links a{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--tomato);border-bottom:1px solid rgba(255,99,71,.45);
-  padding-bottom:3px;transition:.2s}
-.plate-links a:hover{border-color:var(--tomato)}
+/* ---- THE LABEL ROLLS TO ITSELF ----
+   Two copies of the word, one in the box and one waiting a line below it,
+   both moving by the SAME distance — --roll, in em, so it tracks the type
+   size through the media queries. The link clips, so the copy is out of sight
+   until it comes up. No padding under the text: padding would make the box
+   taller than the line, the two copies would travel different distances, and
+   the waiting copy would show a sliver of itself in the gap. */
+.plate-links a{--roll:1.5em;
+  position:relative;display:inline-block;overflow:hidden;
+  font-family:var(--mono);font-size:.92rem;line-height:1.5;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--tomato);
+  border-bottom:2px dotted rgba(255,99,71,.6);padding-bottom:0}
+.plate-links a .lbl{display:block;
+  transition:transform .58s cubic-bezier(.22,.9,.25,1)}
+.plate-links a::after{content:attr(data-label);position:absolute;left:0;top:0;
+  transform:translateY(var(--roll));
+  transition:transform .58s cubic-bezier(.22,.9,.25,1)}
+.plate-links a:hover .lbl{transform:translateY(calc(-1 * var(--roll)))}
+.plate-links a:hover::after,.plate-links a:focus-visible::after{transform:translateY(0)}
+.plate-links a:focus-visible .lbl{transform:translateY(calc(-1 * var(--roll)))}
+/* on a dark folder the dots need more of the accent in them to read at all */
+.doss[data-ink="light"] .plate-links a{border-bottom-color:rgba(255,99,71,.85)}
+.plate-links a:hover{border-bottom-color:var(--tomato)}
+@media(prefers-reduced-motion:reduce){
+  .plate-links a .lbl,.plate-links a::after{transition:none}
+}
 /* ---- LINK PREVIEWS ----
    A link shows what it leads to before it takes you there: click once for the
    preview, once more to open the file in its own tab. */
 .plate-links{position:relative}
-.pv{position:absolute;z-index:6;top:calc(100% + 11px);left:0;width:264px;
+.pv{position:absolute;z-index:6;top:calc(100% + 11px);left:0;width:374px;
   background:var(--white);border:1px solid rgba(25,44,100,.22);border-radius:9px;
   box-shadow:0 14px 34px rgba(9,16,42,.24);overflow:hidden;cursor:pointer;
   opacity:0;transform:translateY(-6px);pointer-events:none;
   transition:opacity .18s ease,transform .18s ease}
 .pv.on{opacity:1;transform:none;pointer-events:auto}
-.pv-shot{height:132px;background:var(--paper);position:relative;
+.pv-shot{height:198px;background:var(--paper);position:relative;
   display:flex;align-items:center;justify-content:center;
   border-bottom:1px solid rgba(25,44,100,.14)}
 /* the first page, shown from the TOP — a preview cropped about its centre is
    a preview of nothing */
 .pv-shot img{position:absolute;inset:0;width:100%;height:100%;
   object-fit:cover;object-position:top center}
-.pv-meta{padding:10px 13px;font-family:var(--mono);font-size:.66rem;
+.pv-meta{padding:13px 16px;font-family:var(--mono);font-size:.76rem;
   letter-spacing:.08em;text-transform:uppercase;color:var(--navy);
   display:flex;justify-content:space-between;align-items:center;gap:10px}
 .pv-meta em{font-style:normal;color:var(--tomato)}
-@media(max-width:820px){.pv{width:min(264px,72vw)}}
-@media(max-width:520px){.beat{grid-template-columns:1fr;gap:2px}}
+@media(max-width:820px){.pv{width:min(374px,78vw)}
+  .pv-shot{height:150px}}
 
 
 /* ---- TOMATO ACCENTS ----
@@ -952,8 +1009,14 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    block half that difference — a square up the page, closing the gap to the
    last folder without moving the section itself. The section stays exactly a
    viewport tall, so nothing below it shifts. */
-#skills{min-height:100vh;min-height:100svh;padding:0 0 220px;
-  display:flex;align-items:center}
+#skills{padding:0}
+/* the extra 0.4 of a screen is what is left of the reveal once the panel is
+   pinned, plus the beat after it */
+.skl-stack{position:relative;height:calc(1.4 * 100vh);height:calc(1.4 * 100svh)}
+.skl-pin{position:sticky;top:0;height:100vh;height:100svh;
+  display:flex;align-items:center;overflow:hidden;
+  background-color:var(--white);background-image:var(--page-grid);
+  background-size:55px 55px,55px 55px;background-position:var(--wrapL,55px) 0}
 /* Pulled in two squares either side of the page measure, so the set sits in
    the middle of the screen with real margin around it. Whole squares, so the
    left and right edges still land on grid lines. */
@@ -966,7 +1029,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    the gap are whole squares, so fixing the first one fixes all of them; it is
    `top`, not margin, because the section is flex-centred and any change to
    the block's height would just re-centre it away again. */
-.skl-list{display:grid;gap:var(--sklGap,55px);margin-top:55px;
+.skl-list{display:grid;gap:var(--sklGap,55px);margin-top:110px;
   position:relative;top:var(--sklFix,0px)}
 /* heading and skills on one baseline: the heading takes what it needs, the
    skills take the rest and sit hard against the right edge. */
@@ -996,11 +1059,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    the type off the grid — so the air comes out instead. Whole cells, so
    nothing moves off a line. */
 @media(max-height:820px){
-  #skills{padding:0 0 176px}
-  .skl-list{margin-top:33px}
+  .skl-list{margin-top:55px}
 }
 @media(max-width:760px){
-  #skills{min-height:0;padding:88px 0}
+  /* no pinning on a phone: the panel simply flows */
+  .skl-stack{height:auto}
+  .skl-pin{position:static;height:auto;padding:88px 0;background-image:none}
   .skl-group{grid-template-columns:1fr;gap:11px;min-height:0}
   .skl-group ul{justify-content:flex-start}
 }
@@ -1013,7 +1077,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    else and the type should not pretend otherwise. */
 .about-big{font-family:var(--body);font-weight:600;font-size:clamp(1.5rem,2.9vw,2.3rem);
   line-height:1.34;letter-spacing:-.015em;color:var(--navy);text-wrap:pretty}
-.about-big b{font-weight:600;color:var(--tomato)}
+.about-big b,.about-big.cue{font-weight:600;color:var(--tomato)}
 /* the greeting is bigger but stays IN the sentence — an inline span, sized in
    em so it tracks the clamp above rather than needing its own */
 .about-big .hey{font-size:1.4em;font-weight:700;letter-spacing:-.025em}
@@ -1115,9 +1179,19 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .btn:hover{background:var(--tomato);border-color:var(--tomato);color:#fff}
 .fin-details .btn{margin-top:33px}
 
-footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
-  justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--mono);
+/* Grid, not space-between: with three items of different widths, spacing them
+   apart puts the middle one wherever the two outer ones leave it — and the
+   copyright is much longer than the LinkedIn link, so the place name sat left
+   of centre. 1fr auto 1fr centres the middle against the PAGE instead. */
+footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;
+  font-family:var(--mono);
   font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(25,44,100,.72)}
+footer>span:last-child{justify-self:end}
+@media(max-width:620px){
+  footer{grid-template-columns:1fr;justify-items:center;gap:8px;text-align:center}
+  footer>span:last-child{justify-self:center}
+}
 
 .rv{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
 .rv.in{opacity:1;transform:none}
@@ -1172,7 +1246,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
       <button id="burger" type="button" aria-label="Menu" aria-expanded="false"
               aria-controls="links"><span></span><span></span><span></span></button>
       <div id="links">
-        <a href="#about">About</a><a href="#work">Work</a>
+        <a href="#about">About</a><a href="#work">Projects</a>
         <a href="#skills">Skills</a><a href="#contact">Contact</a>
       </div>
     </nav>
@@ -1209,10 +1283,10 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
           <p class="about-big"><span class="hey">Hey, I'm Leon.</span> I'm a third-year
             <b>General Engineering</b> undergraduate studying at the <b>University of
             Sheffield</b>.</p>
-          <p class="about-big">Outside of term time I'm at home in London, or hopefully on holiday.
+          <p class="about-big">Outside of term time I'm at home in <b>London</b>, or hopefully on holiday.
             I love food, travelling, designing, and then building things (especially when my
             design&nbsp;works).</p>
-          <p class="about-big">Scroll down to see some of my&nbsp;work.</p>
+          <p class="about-big cue">Scroll down to see some of my&nbsp;work.</p>
         </div>
       </div>
     </div>
@@ -1228,7 +1302,7 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
        ⚠️ PLACEHOLDER IMAGES — img/ has only the portrait, so each folder shows
        its frame instead. The copy is real. -->
   <section id="work">
-    <h2 class="sr">Work</h2>
+    <h2 class="sr">Projects</h2>
     <div class="doss-stack" id="dossStack">
       <div class="doss-pin">
 
@@ -1258,14 +1332,20 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
                        alt="Exploded assembly drawing of the AUV with its parts list"></div>
               </div>
               <div class="doss-txt">
-                <h3>Biomimetic AUV — design &amp;&nbsp;build</h3>
+                <h3>Biomimetic AUV</h3>
                 <div class="tags">MECHATRONICS · TEAM PROJECT · FUSION&nbsp;360</div>
-                <div class="beat"><div class="k">Problem</div><div class="v">Build a working submersible that propels itself the way aquatic animals do, rather than with a conventional&nbsp;propeller.</div></div>
-                <div class="beat"><div class="k">Approach</div><div class="v">Co-designed and constructed the vehicle, then used computational analysis to validate the propulsion and structure before&nbsp;manufacture.</div></div>
-                <div class="beat"><div class="k">Outcome</div><div class="v">A fully functional submersible, documented to full-detail manufacturing drawings costed for theoretical mass&nbsp;production.</div></div>
+                <p class="beat">Build a working submersible that propels itself the way aquatic animals do, rather than with a conventional&nbsp;propeller.</p>
+                <p class="beat">Co-designed and constructed the vehicle, then used computational analysis to validate the propulsion and structure before&nbsp;manufacture.</p>
+                <p class="beat">A fully functional submersible, documented to full-detail manufacturing drawings costed for theoretical mass&nbsp;production.</p>
                 <div class="plate-links">
                   <a href="files/auv-manufacture-report.pdf" target="_blank" rel="noopener"
                      data-kind="PDF · 14pp" data-shot="img/pv-auv-manufacture-report.jpg">Manufacture report ↗</a>
+                  <a href="https://sketchfab.com/3d-models/sharky-lenny-project-poseidon-e19a883f7a13442ba5fa143890d25351"
+                     target="_blank" rel="noopener"
+                     data-kind="Sketchfab · 3D" data-shot="img/pv-auv-model.jpg">3D model ↗</a>
+                  <a href="https://drive.google.com/drive/folders/17trFwf-lSw0yyGsKCe7NSToi-jF_tpAQ?usp=drive_link"
+                     target="_blank" rel="noopener"
+                     data-kind="Drive · STEP" data-shot="img/auv-exploded.jpg">CAD files ↗</a>
                 </div>
               </div>
             </div>
@@ -1286,9 +1366,9 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
               <div class="doss-txt">
                 <h3>Pocket-sized inflatable&nbsp;helmet</h3>
                 <div class="tags">INDEPENDENT R&amp;D · PROTOTYPING ·&nbsp;MATERIALS</div>
-                <div class="beat"><div class="k">Problem</div><div class="v">Cyclists skip helmets because they are awkward to carry. Could one inflate to full size and pack down to pocket&nbsp;size?</div></div>
-                <div class="beat"><div class="k">Approach</div><div class="v">Self-directed: researched collapsing structures and the market to set the requirements, then fabricated prototypes in TPU-laminated nylon, testing thermal bonding, airtight sealing and pressure&nbsp;retention.</div></div>
-                <div class="beat"><div class="k">Outcome</div><div class="v">Successive working prototypes, each narrowing down the bonding method that best held&nbsp;pressure.</div></div>
+                <p class="beat">Cyclists skip helmets because they are awkward to carry. Could one inflate to full size and pack down to pocket&nbsp;size?</p>
+                <p class="beat">Self-directed: researched collapsing structures and the market to set the requirements, then fabricated prototypes in TPU-laminated nylon, testing thermal bonding, airtight sealing and pressure&nbsp;retention.</p>
+                <p class="beat">Successive working prototypes, each narrowing down the bonding method that best held&nbsp;pressure.</p>
                 <div class="plate-links">
                   <a href="#" data-kind="PDF" data-shot="img/helmet.jpg">Write-up ↗</a>
                 </div>
@@ -1314,9 +1394,9 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
               <div class="doss-txt">
                 <h3>Energy-from-Waste facility design &amp; tender&nbsp;proposal</h3>
                 <div class="tags">PROCESS DESIGN · THERMOFLUIDS · TEAM&nbsp;PROJECT</div>
-                <div class="beat"><div class="k">Problem</div><div class="v">Design a large-scale Energy-from-Waste plant end to end, from waste arriving on site to energy leaving&nbsp;it.</div></div>
-                <div class="beat"><div class="k">Approach</div><div class="v">Engineered the mechanical and process flow across waste sorting, incineration and energy recovery, then tested the design against financial and feasibility&nbsp;analysis.</div></div>
-                <div class="beat"><div class="k">Outcome</div><div class="v">Delivered as a formal tender proposal and defended in&nbsp;presentation.</div></div>
+                <p class="beat">Design a large-scale Energy-from-Waste plant end to end, from waste arriving on site to energy leaving&nbsp;it.</p>
+                <p class="beat">Engineered the mechanical and process flow across waste sorting, incineration and energy recovery, then tested the design against financial and feasibility&nbsp;analysis.</p>
+                <p class="beat">Delivered as a formal tender proposal and defended in&nbsp;presentation.</p>
                 <div class="plate-links">
                   <a href="files/efw-pitch.pdf" target="_blank" rel="noopener"
                      data-kind="Slides · 20pp" data-shot="img/pv-efw-pitch.jpg">Pitch ↗</a>
@@ -1347,9 +1427,9 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
               <div class="doss-txt">
                 <h3>leonpanjwani.com</h3>
                 <div class="tags">INDEPENDENT · WEBGL · NO BUILD&nbsp;STEP</div>
-                <div class="beat"><div class="k">Problem</div><div class="v">A portfolio that shows how I think about design, rather than one that just lists what I have&nbsp;made.</div></div>
-                <div class="beat"><div class="k">Approach</div><div class="v">Built from scratch as a single hand-written file — no framework and no build step. The title page is a drawing sheet on an 11px grid; the name is real extruded 3D type whose size is solved so no view can cross the&nbsp;frame.</div></div>
-                <div class="beat"><div class="k">Outcome</div><div class="v">The site you are reading, deployed straight from&nbsp;GitHub.</div></div>
+                <p class="beat">A portfolio that shows how I think about design, rather than one that just lists what I have&nbsp;made.</p>
+                <p class="beat">One file, written by hand, with no framework or build step. Everything lands on an 11px grid and the name is real 3D type, sized so it never crosses the border at any angle. I worked through it with AI, prompting my way past the parts I had not done before and checking what came&nbsp;back.</p>
+                <p class="beat">The site you are reading, deployed straight from&nbsp;GitHub.</p>
                 <div class="plate-links">
                   <a href="https://github.com/leonpanjwani" target="_blank" rel="noopener"
                      data-kind="GitHub">Source ↗</a>
@@ -1360,33 +1440,35 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
         </article>
 
         <article class="doss" style="--i:4">
-          <div class="doss-tab"><span>Others</span></div>
+          <div class="doss-tab"><span>Additional Work</span></div>
           <div class="doss-face">
             <div class="doss-in">
+              <!-- photographs and renders, not slides, so they fill the plate
+                   rather than sitting in a band of white: no .fit here -->
               <div class="doss-img">
-                <div class="pl-slide fit">
-                  <img src="img/gec.jpg" loading="lazy"
-                       alt="Global Engineering Challenge presentation"></div>
-                <div class="pl-slide fit">
+                <div class="pl-slide">
                   <img src="img/eyh.jpg" loading="lazy"
-                       alt="Engineering You're Hired presentation"></div>
-                <div class="pl-slide fit">
+                       alt="A crewed surface base on Mars"></div>
+                <div class="pl-slide">
                   <img src="img/cfd.jpg" loading="lazy"
-                       alt="CFD analysis report"></div>
+                       alt="Computed velocity field of a turbulent jet"></div>
+                <div class="pl-slide">
+                  <img src="img/gec.jpg" loading="lazy"
+                       alt="An electric city bus in service in Johannesburg"></div>
               </div>
               <div class="doss-txt">
-                <h3>Others</h3>
+                <h3>Additional work</h3>
                 <div class="tags">TEAM CHALLENGES · ANALYSIS ·&nbsp;COURSEWORK</div>
-                <div class="beat"><div class="k">GEC</div><div class="v">Global Engineering Challenge, 2025 — a sustainable rural transport scheme for South Africa, taken to a team presentation and awarded a&nbsp;Distinction.</div></div>
-                <div class="beat"><div class="k">EYH</div><div class="v">Engineering You're Hired, 2026 — led the team that designed and pitched a self-sufficient life-support solution for Mars mission expansion; voted most effective solution and&nbsp;presentation.</div></div>
-                <div class="beat"><div class="k">CFD</div><div class="v">Computational fluid dynamics coursework: meshing, solver setup and validation, written up against the analytical&nbsp;result.</div></div>
+                <p class="beat"><b>Engineering You're Hired</b>, 2026 — led the team that designed and pitched a self-sufficient life-support solution for Mars mission expansion; voted most effective solution and&nbsp;presentation.</p>
+                <p class="beat"><b>Computational Fluid Dynamics</b> coursework: meshing, solver setup and validation, written up against the analytical&nbsp;result.</p>
+                <p class="beat"><b>Global Engineering Challenge</b>, 2025 — a sustainable rural transport scheme for South Africa, taken to a team presentation and awarded a&nbsp;Distinction.</p>
                 <div class="plate-links">
-                  <a href="files/gec-presentation.pdf" target="_blank" rel="noopener"
-                     data-kind="Slides · 15pp" data-shot="img/pv-gec-presentation.jpg">GEC ↗</a>
                   <a href="files/eyh-presentation.pdf" target="_blank" rel="noopener"
                      data-kind="Slides · 13pp" data-shot="img/pv-eyh-presentation.jpg">EYH ↗</a>
                   <a href="files/cfd-analysis.pdf" target="_blank" rel="noopener"
                      data-kind="PDF · 12pp" data-shot="img/pv-cfd-analysis.jpg">CFD ↗</a>
+                  <a href="files/gec-presentation.pdf" target="_blank" rel="noopener"
+                     data-kind="Slides · 15pp" data-shot="img/pv-gec-presentation.jpg">GEC ↗</a>
                 </div>
               </div>
             </div>
@@ -1402,13 +1484,22 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
   <!-- ---- SKILLS ----
        Laid out like About — the title in the portrait's column, the list in
        the copy's — and scrolling like any other section. -->
+  <!-- ---- SKILLS ----
+       A pinned panel, like About: the set holds the screen while the groups
+       come in one at a time, and the budget runs on past the last of them so
+       there is a beat of stillness before the close arrives. It carries the
+       page grid ITSELF, on opaque white — a pinned panel over a scrolling
+       background would drag the lattice through behind the type, and this
+       whole section is aligned to that lattice. -->
   <section id="skills">
+   <div class="skl-stack" id="sklStack">
+    <div class="skl-pin">
     <div class="wrap skl-wrap">
       <div class="skl-head"><h2>Skills</h2></div>
       <div class="skl-list">
         <div class="skl-group">
           <h3>Design &amp; Analysis</h3>
-          <ul><li>Fusion 360</li><li>MATLAB</li><li>ANSYS</li><li>CFD</li><li>AI</li></ul>
+          <ul><li>Fusion 360</li><li>MATLAB</li><li>ANSYS</li><li>CFD</li><li>Prompt Engineering</li></ul>
         </div>
         <div class="skl-group">
           <h3>Making</h3>
@@ -1424,6 +1515,8 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
         </div>
       </div>
     </div>
+    </div>
+   </div>
   </section>
 
   <!-- ---- THE CLOSE ----
@@ -1463,7 +1556,7 @@ const NAME = ["LEON","PANJWANI."];       // 2 lines on the title page, 1 docked
 
 const CELLS = [
   {slot:"L1", info:"University of Sheffield",              nav:"About",   href:"#about"},
-  {slot:"L2", info:"MEng General Engineering (Mech)",      nav:"Work",    href:"#work"},
+  {slot:"L2", info:"MEng General Engineering (Mech)",      nav:"Projects",href:"#work"},
   {slot:"L3", info:"Sheffield / London",                   nav:"Skills",  href:"#skills"},
   {slot:"R",  info:`hello@leonpanjwani.com<br><a href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener">linkedin.com/in/leonpanjwani</a>`,
               nav:"Contact", href:"#contact"}
@@ -1561,7 +1654,14 @@ const TOUR = { travel:1.6, depth:0.24, drop:-44, fit:0.88,
 
 /* The skills list, as fractions of a screen of scroll: how far apart the
    groups come up, and how long each takes. */
-const SKL = { step:0.08, dur:0.28 };  /* four rows now — tighter stagger so the set still finishes before Contact */
+/* The skills reveal, as fractions of its whole travel — which starts BEFORE
+   the panel is pinned. `lead` is how much of a screen of that travel happens
+   on the way in, while the last folder is still climbing off the panel: the
+   groups are already arriving as it uncovers them, rather than the panel
+   landing full of nothing and only then filling up.
+   The last group is in at 3×step + dur = 0.80 of the travel; what is left is
+   the beat of stillness before the panel lets go. */
+const SKL = { lead:0.55, step:0.20, dur:0.22 };
 
 /* Chakra Petch Bold, pre-extracted to raw outlines (font units, y-up) so the
    3D letters are the same glyphs the CSS renders — no font parser, no extra
@@ -1696,7 +1796,7 @@ const dossTf=dossEls.map(()=>"");          // last transform string written
 const dossOp=dossEls.map(()=>"");          // last opacity written
 
 /* the skills list — an ordinary section, its groups fading up in order */
-const skillsEl=document.getElementById("skills"),
+const skillsEl=document.getElementById("sklStack"),
       sklGroups=[...document.querySelectorAll(".skl-group")];
 
 /* the two halves of the closing line, and the section they live in */
@@ -2704,12 +2804,18 @@ function update(){
     }
   }
 
-  /* ---- SKILLS: the groups fade up in order as the section arrives ---- */
+  /* ---- SKILLS: one group at a time, then a beat ----
+     Measured against the PINNED panel's own scroll budget rather than against
+     the section's arrival, so the groups answer the wheel one by one while the
+     panel holds the screen. SKL.step and .dur are fractions of that budget;
+     what is left over at the end is the pause. */
   if(sklGroups.length&&skillsEl){
-    const p=(vh-skillsEl.getBoundingClientRect().top)/vh;
+    const span=Math.max(1,skillsEl.offsetHeight-vh);   // the pinned budget
+    const lead=vh*SKL.lead;                            // and the run-up to it
+    const p=clamp((lead-skillsEl.getBoundingClientRect().top)/(lead+span));
     sklGroups.forEach((g,i)=>{
       g.style.setProperty("--sk",
-        ease(clamp((p-0.08-i*SKL.step)/SKL.dur)).toFixed(3));
+        ease(clamp((p-i*SKL.step)/SKL.dur)).toFixed(3));
     });
   }
 
@@ -2812,10 +2918,14 @@ function lockGrid(){
      what its background-position is anchored to) and push the set down onto
      the next one. */
   const sklList=document.querySelector(".skl-list");
-  if(sklList&&content){
+  const sklPin=document.querySelector(".skl-pin");
+  if(sklList&&sklPin){
     document.documentElement.style.setProperty("--sklFix","0px");
+    /* against the PIN, not the page: the panel carries its own copy of the
+       grid, and measuring against a scrolling background would give a
+       different answer at every scroll position */
     const off=((sklList.getBoundingClientRect().top
-               -content.getBoundingClientRect().top)%SQ+SQ)%SQ;
+               -sklPin.getBoundingClientRect().top)%SQ+SQ)%SQ;
     /* Nearest line, not the next one down — a half-square shove would show as
        the set sitting low in its own section. No half-cell nudge on top of it:
        the row is one square and its content is centred, so landing the row on
@@ -2880,6 +2990,18 @@ addEventListener("mousemove",e=>{
    number of slides is a property of the project, and a single-file plate
    should not carry controls for a set of one.
    ========================================================================== */
+/* Each link carries a second copy of its own label — as a data attribute
+   rendered by ::after, NOT as another text node, because the preview card
+   builds its title from the link's textContent and a real duplicate would
+   read it twice. Wrapping the words in a span leaves textContent alone. */
+document.querySelectorAll("#work .plate-links a").forEach(a=>{
+  const txt=a.textContent.trim();
+  a.dataset.label=txt;
+  const lbl=document.createElement("span");
+  lbl.className="lbl"; lbl.textContent=txt;
+  a.textContent=""; a.appendChild(lbl);
+});
+
 document.querySelectorAll("#work .doss-img").forEach(plate=>{
   const slides=[...plate.querySelectorAll(".pl-slide")];
   if(!slides.length) return;
@@ -2932,6 +3054,12 @@ document.querySelectorAll("#work .doss-img").forEach(plate=>{
 (function previews(){
   const links=[...document.querySelectorAll("#work .plate-links a[data-kind]")];
   if(!links.length) return;
+  const hoverable=matchMedia("(hover:hover) and (pointer:fine)").matches;
+  /* ONE timer for the whole set, not one per link. Each link used to hold its
+     own: leaving A scheduled A's close, entering B cleared only B's, and A's
+     fired 160ms later and shut B's card — so sliding from one link to the next
+     killed the preview instead of swapping it. */
+  let hold=0;
   let open=null;
   const closeAll=()=>{
     if(!open) return;
@@ -2951,15 +3079,36 @@ document.querySelectorAll("#work .doss-img").forEach(plate=>{
       `<em>${link.dataset.kind} ↗</em></div>`;
     link.parentNode.appendChild(card);
     link.setAttribute("aria-expanded","false");
-    link.addEventListener("click",e=>{
-      e.preventDefault(); e.stopPropagation();
-      const wasOpen=open&&open.card===card;
+    const show=()=>{
+      clearTimeout(hold);
+      if(open&&open.card===card) return;
       closeAll();
-      if(wasOpen) return;
       card.classList.add("on");
       link.setAttribute("aria-expanded","true");
       open={card,link};
-    });
+    };
+    /* a grace period on the way out, so the pointer can cross the gap between
+       the link and the card without the card vanishing under it */
+    const dismiss=()=>{ clearTimeout(hold); hold=setTimeout(closeAll,160) };
+    if(hoverable){
+      /* Hover opens it, and the click then goes STRAIGHT THROUGH to the file:
+         with the preview already on screen there is nothing left for a first
+         click to do, and swallowing it would make the link take two. */
+      link.addEventListener("mouseenter",show);
+      link.addEventListener("mouseleave",dismiss);
+      link.addEventListener("focus",show);
+      link.addEventListener("blur",dismiss);
+      card.addEventListener("mouseenter",()=>clearTimeout(hold));
+      card.addEventListener("mouseleave",dismiss);
+    }else{
+      /* No hover to give: the first tap previews, the second follows it. */
+      link.addEventListener("click",e=>{
+        const wasOpen=open&&open.card===card;
+        if(wasOpen) return;                 // let the second tap through
+        e.preventDefault(); e.stopPropagation();
+        show();
+      });
+    }
     /* the card itself is the way through to the file */
     card.addEventListener("click",e=>{
       e.stopPropagation();
@@ -3005,6 +3154,16 @@ function navY(id){
   if(id==="work"&&dossOn)
     return dossStack.getBoundingClientRect().top+scrollY
            +vh*(DOSS.hold+DOSS.dur);
+  /* Skills sits high in its own section, so that the reader meets it right
+     under the foot of the last folder. Arriving by MENU has no such approach —
+     land on the block itself, centred, wherever it sits in the section. */
+  /* Skills is a pinned panel now: land far enough into its budget that every
+     group has come in, rather than at its top where they are all still out. */
+  if(id==="skills"){
+    const st=document.getElementById("sklStack");
+    if(st) return st.getBoundingClientRect().top+scrollY
+                  +Math.max(0,st.offsetHeight-vh)*0.66;
+  }
   const el=document.getElementById(id);
   if(!el) return 0;
   const y=el.getBoundingClientRect().top+scrollY;

@@ -202,6 +202,15 @@ placeholder frame shows, exactly as the project plates behave.
   folders live, average two. The burial test compares against the **top of the
   viewport**, not against the folder's own `y` — once a folder has climbed
   away both numbers are off-screen and comparing them says it is still showing.
+- **`mix-blend-mode` is a backdrop read; `background-blend-mode` is not.** The
+  folder grain used to be a blended pseudo-element, which forced a sheet 2.35×
+  the screen into its own composited group every frame. It is now two grain
+  layers blended into the stock on the face and tab themselves. The two
+  weights (`--grain-a` 0.174, `--grain-b` 0.090) are **solved**, not carried
+  over: multiplying twice into a colour is different arithmetic from stacking
+  two layers and multiplying the pair at 34%. Re-solve them if either the
+  layer count or the opacity changes — the target is RMS under one level in
+  255.
 - **`visibility` is inherited, and a child can undo it.** `.pl-slide.on` used to
   set `visibility:visible`, which reappears inside a `visibility:hidden`
   ancestor — so a culled folder still painted its carousel image, left hanging
