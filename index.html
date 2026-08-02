@@ -1116,12 +1116,9 @@ footer{padding:22px 0;border-top:1px solid rgba(255,99,71,.4);display:flex;
 
 .rv{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
 .rv.in{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){
-  .rv{opacity:1!important;transform:none!important}
-  html{scroll-behavior:auto}
-  .ltr{opacity:1!important;clip-path:none!important;animation:none!important;
-       transition:none!important}
-}
+/* Instant rather than smooth: a jump is not an animation, and this is the one
+   part of the preference the page can honour without gutting itself. */
+@media(prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
 </style>
 </head>
 
@@ -1601,17 +1598,22 @@ const layer=document.getElementById("layer"), nameEl=document.getElementById("na
    column of bare text. So the preference now separates the two kinds of
    movement instead of banning both:
 
-     SCROLL-LINKED  the tour, the folders, the roll, the skills fade, the
-                    close. Every frame is one the reader asked for by
-                    scrolling, and it stops the instant they stop. Kept.
-     ON ITS OWN     the opening assembly, the portrait's tile physics, the
-                    corner peel, autoplaying video, smooth scrolling and the
-                    folders' 7° swing. These move unasked. Still off.
+   Splitting them was not enough: with the assembly and the swing still held
+   back, a reader with the preference on got a page that opened on a finished
+   drawing and a stack of folders that slid up flat — the two moments the site
+   is built around. So the preference no longer switches any of the page's
+   behaviour off. Everything runs for everyone.
 
-   `reduce` now gates only the second list. */
-const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
-/* the swing is the one part of the folder motion that is not simply travel */
-const dossTilt=reduce?0:DOSS.rise;
+   The one thing it still changes is `scroll-behavior`, which becomes instant
+   instead of smooth — a jump rather than an animation, and the one place the
+   preference asks for something the page can honour without ceasing to be
+   itself.
+
+   `reduce` is kept as the single switch: set it back to `prefersReduce` to
+   restore the stripped-back version, and every gate below follows. */
+const prefersReduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reduce=false;
+const dossTilt=DOSS.rise;
 /* A touch screen has no hover, so anything driven by pointer position needs a
    second way in. Checked once — a device doesn't change input type mid-visit. */
 const coarse=matchMedia("(pointer: coarse)").matches;
@@ -3327,10 +3329,7 @@ function intro(){
       cells.forEach((c,i)=>setTimeout(()=>c.classList.add("on"),140+i*80));
       setTimeout(update,120);
     };
-    /* Reduced motion gets the assembled name, not the assembly — the intro is
-       the one piece here that plays on its own. The walkthrough still runs,
-       because it only moves while the reader scrolls. */
-    if(reduce||scrollY>4){ finishIntro(); cells.forEach(c=>c.classList.add("on")) }
+    if(scrollY>4){ finishIntro(); cells.forEach(c=>c.classList.add("on")) }
     else start3DIntro();
     return;
   }
