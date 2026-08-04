@@ -950,7 +950,10 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      ends one square below its contents rather than flush against them, the way
      every other sheet does, and then a square and a half of page before the
      Skills panel begins its own. */
-  .doss:last-child{margin-bottom:88px}
+  /* 2.5 squares (137.5px) closer to the last file — 77 off this margin and
+     60.5 off the panel's own pad, which leaves 93.5px between the foot of the
+     last sheet and the top of the Skills panel. */
+  .doss:last-child{margin-bottom:11px}
   .doss:last-child .doss-face{padding-bottom:55px}
   .doss-tab{top:0;left:22px}
   /* One column, so the alternating sides become an alternating ORDER and every
@@ -1139,12 +1142,21 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      the page grid would slide through behind it. Flowing on a phone, it can
      just let the page's own grid show — painting white over it was what left
      this section a blank field. */
-  .skl-pin{position:static;min-height:0;height:auto;padding:88px 0;
+  .skl-pin{position:static;min-height:0;height:auto;padding:27.5px 0 88px;
     background-image:none;background-color:transparent}
   /* stacked, so the row is no longer one square — but every step is still a
      whole number of cells, which is what keeps the type on the boxes once
      lockGrid has snapped the top of the set to a line */
-  .skl-list{gap:33px;margin-top:55px}
+  /* The heading gets a box of its own — one square — with the type centred in
+     it, so it sits mid-box like every row below it rather than hanging off a
+     line. And the snap moves the WHOLE set here, not just the list: on desktop
+     only the list has to land, but with the heading now measured in squares
+     the two travel together, and both offsets below are whole squares so
+     everything stays in phase. */
+  .skl-wrap{position:relative;top:var(--sklFix,0px)}
+  .skl-head{display:flex;align-items:center;height:55px}
+  .skl-head h2{line-height:1}
+  .skl-list{gap:33px;margin-top:55px;top:0}
   .skl-group{grid-template-columns:1fr;gap:11px;min-height:0}
   .skl-group ul{justify-content:flex-start;row-gap:0}
 }
