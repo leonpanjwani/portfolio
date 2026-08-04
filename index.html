@@ -939,10 +939,19 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      underneath it: no page showing through, nothing moved, and scrolling reads
      as one sheet sliding up over the last. */
   .doss{--ulap:calc(var(--tabH) + 77px);
+        /* --after is paper the next file does NOT get to stand on: --ulap is
+           cancelled by the margin, so it only decides how far this sheet runs
+           on underneath. --after is not cancelled, so it is the air between
+           one project's last plate and the next one's tab. */
+        --after:55px;
         margin-bottom:calc(-1 * var(--ulap));padding-top:var(--tabH)}
-  .doss-face{padding-bottom:var(--ulap)}
-  .doss:last-child{margin-bottom:55px}
-  .doss:last-child .doss-face{padding-bottom:0}
+  .doss-face{padding-bottom:calc(var(--ulap) + var(--after))}
+  /* The last file has nothing to run under, so its paper simply ends — but it
+     ends one square below its contents rather than flush against them, the way
+     every other sheet does, and then a square and a half of page before the
+     Skills panel begins its own. */
+  .doss:last-child{margin-bottom:88px}
+  .doss:last-child .doss-face{padding-bottom:55px}
   .doss-tab{top:0;left:22px}
   /* One column, so the alternating sides become an alternating ORDER and every
      other project would open with its plate. The copy leads on every file
