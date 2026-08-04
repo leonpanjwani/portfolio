@@ -944,6 +944,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   .doss:last-child{margin-bottom:55px}
   .doss:last-child .doss-face{padding-bottom:0}
   .doss-tab{top:0;left:22px}
+  /* One column, so the alternating sides become an alternating ORDER — every
+     other project would open with its text and hide the plate below the fold.
+     The plate leads on every file here. Same specificity as the rule it undoes
+     (.doss:nth-child(odd) .doss-txt), and after it, which is what lets it win. */
+  .doss:nth-child(odd) .doss-img{order:1}
+  .doss:nth-child(odd) .doss-txt{order:2}
   /* HEIGHT:AUTO is the fix for folders that arrived cut off. --contentH is
      solved for the pinned desktop stack — a screen minus the tab, the foot and
      the rest offsets — and the face clips. Stacked into one column on a phone
@@ -1370,7 +1376,7 @@ footer>span:last-child{justify-self:end}
           <p class="about-big"><span class="hey">Hey, I'm Leon.</span> I'm a third-year
             <b>General Engineering</b> undergraduate studying at the <b>University of
             Sheffield</b>.</p>
-          <p class="about-big">Outside of term time I'm at home in <b>London</b>, or hopefully on holiday.
+          <p class="about-big">Outside of term time I'm at home in London, or hopefully on holiday.
             I love food, travelling, designing, and then building things (especially when my
             design&nbsp;works).</p>
           <p class="about-big cue">Scroll down to see some of my&nbsp;work.</p>
