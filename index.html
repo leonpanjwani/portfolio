@@ -927,22 +927,21 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      on across the join instead of restarting at it.
      The last file is left alone — there is nothing after it to hide under, and
      its paper would show through the Skills section. */
-  /* ---- THE FILES SLIDE OVER ONE ANOTHER ----
-     Not the desktop mechanism — that pins a screen and flies the folders up
-     over it, which needs every card to fit a screen, and stacked into one
-     column on a phone they do not. Each card STICKS instead, and the next one
-     scrolls up over it: the same reading, no angle, and no height to solve.
-     --stick is set per card in lockGrid to (viewport − card height), so a card
-     taller than the screen scrolls all the way through BEFORE it pins. Sticking
-     at 0 would pin it the moment its top arrived and bury its own bottom half.
-     The bottom margin is minus the whole underlap, so the next card starts
-     exactly where this one's contents end and the extended paper runs on
-     behind it — no page showing, no content overlapping. */
+  /* ---- THE FILES RUN INTO ONE ANOTHER ----
+     NOT sticky. Sticky cards were tried and are wrong here: a card taller than
+     the screen has to be given a negative stick offset to scroll through
+     before it pins, and once several of them are stuck at once they occupy the
+     same band of the page — the tabs pile up and the last file's label ends up
+     sitting at the top of the stack.
+     Ordinary flow instead, with the paper made longer by --ulap and the same
+     amount taken back off the bottom margin. The next sheet then begins
+     exactly where this one's contents end, and this one's paper carries on
+     underneath it: no page showing through, nothing moved, and scrolling reads
+     as one sheet sliding up over the last. */
   .doss{--ulap:calc(var(--tabH) + 77px);
-        position:sticky;top:var(--stick,0px);
         margin-bottom:calc(-1 * var(--ulap));padding-top:var(--tabH)}
   .doss-face{padding-bottom:var(--ulap)}
-  .doss:last-child{position:static;margin-bottom:55px}
+  .doss:last-child{margin-bottom:55px}
   .doss:last-child .doss-face{padding-bottom:0}
   .doss-tab{top:0;left:22px}
   /* HEIGHT:AUTO is the fix for folders that arrived cut off. --contentH is
@@ -2372,11 +2371,20 @@ function measure(){
   if(UW>0){
     heroFS=(fx+innerW-2*U-heroX)/UW;                       // front view fits
     if(EXT) heroFS=Math.min(heroFS,(innerH/2-2*U)/EXT.ey); // every view fits
-    /* A phone is the one place the name genuinely fills the sheet: the frame
-       is narrow, so the height solve binds and the deepest view reaches almost
-       to the bottom margin — over the view label. A little off the fit leaves
-       the label somewhere to stand. */
-    heroFS=Math.max(40,Math.floor(heroFS*TOUR.fit*(small?0.82:1)));
+    /* ---- ROOM FOR THE LABEL, ON A PHONE ----
+       Portrait, the sheet has three things stacked in it: the name, the view
+       label under it and the info block welded to the bottom corner. EXT.ey is
+       the deepest any view of the name reaches, so the name is capped at
+       whatever still leaves the label a line above that block. Math.min, so
+       when the WIDTH solve is already the smaller of the two — which it
+       usually is on a phone — this changes nothing. */
+    if(EXT&&small){
+      const blockH = innerW<9*SQ ? 3*(3*U)+4*U : 0;   // the stacked info block
+      const labelTop = innerH - blockH - 5*U;         // its top, 2 cells clear
+      const room = labelTop - 3*U - (innerH/2 + TOUR.drop);
+      if(room>0) heroFS=Math.min(heroFS,room/EXT.ey);
+    }
+    heroFS=Math.max(40,Math.floor(heroFS*TOUR.fit));
   }else heroFS=Math.min(vw*(small?0.135:0.115),165);       // unknown glyphs
   nameEl.style.fontSize=heroFS+"px";
   /* Hairline stroke — the wireframe's 1px feature edges are the reference
@@ -2528,8 +2536,15 @@ function measure(){
      clamped inside the frame. Desktop keeps the block-relative placement,
      where the name never comes near it. */
   vlabel.style.left=heroX+"px";
-  const vTop = small && EXT
-    ? Math.min(heroY+lh+EXT.ey*heroFS+3*U, BA-4*U)
+  /* On a phone the label is not placed relative to the NAME at all. Chasing
+     the name is what kept it in the way: the 2D block is only what the front
+     view fills, the turned views project past it, and a clamp inside the frame
+     still left it landing in the info block. It is anchored to the sheet
+     instead — two cells above the info block, where nothing else goes — and
+     the hero solve above is what keeps the deepest view clear of it. A fixed
+     place for a fixed annotation. */
+  const vTop = small
+    ? BA-(stack?bh:0)-5*U
     : heroY+2*lh+6*U;
   vlabel.style.top=Math.round(vTop)+"px";
 
@@ -3020,20 +3035,6 @@ function lockGrid(){
      the offset from the page grid's own origin (the top of .content, which is
      what its background-position is anchored to) and push the set down onto
      the next one. */
-  /* ---- WHERE EACH FILE PINS (phone) ----
-     A sticky card with top:0 pins as soon as its top edge arrives, which on a
-     card taller than the screen means you never see its lower half. Offsetting
-     the stick by (viewport − height) lets it scroll through completely and
-     then hold while the next one climbs over it. Zero for cards that already
-     fit. Read once per layout, not per frame. */
-  if(document.documentElement.clientWidth<=820){
-    const vhNowPx=Math.max(document.documentElement.clientHeight,innerHeight);
-    dossEls.forEach(el=>{
-      el.style.setProperty("--stick",
-        Math.min(0,vhNowPx-el.offsetHeight).toFixed(0)+"px");
-    });
-  }else dossEls.forEach(el=>el.style.removeProperty("--stick"));
-
   const sklList=document.querySelector(".skl-list");
   let sklPin=document.querySelector(".skl-pin");
   /* The panel only carries its own grid while it is PINNED. Flowing — on a
