@@ -910,7 +910,21 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 }
 @media(max-width:820px){
   /* no fan on a phone: the folders are just stacked files, tab in flow */
-  .doss{margin-bottom:55px;padding-top:var(--tabH)}
+  /* ---- NO DAYLIGHT BETWEEN THE FILES ----
+     Stacked, the gap between one face and the next is the 55px margin plus the
+     next file's tab strip — 94px of page showing through. The paper is simply
+     made longer by --ulap and the SAME amount taken off the folder's bottom
+     margin, so every folder stays exactly where it was and the sheet runs on
+     underneath the one after it. Padding rather than a pseudo-element, because
+     a background continues through an element's own padding: the grain carries
+     on across the join instead of restarting at it.
+     The last file is left alone — there is nothing after it to hide under, and
+     its paper would show through the Skills section. */
+  .doss{--ulap:calc(var(--tabH) + 77px);
+        margin-bottom:calc(55px - var(--ulap));padding-top:var(--tabH)}
+  .doss-face{padding-bottom:var(--ulap)}
+  .doss:last-child{margin-bottom:55px}
+  .doss:last-child .doss-face{padding-bottom:0}
   .doss-tab{top:0;left:22px}
   /* HEIGHT:AUTO is the fix for folders that arrived cut off. --contentH is
      solved for the pinned desktop stack — a screen minus the tab, the foot and
@@ -1088,7 +1102,12 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 @media(max-width:760px){
   /* no pinning on a phone: the panel simply flows */
   .skl-stack{height:auto}
-  .skl-pin{position:static;height:auto;padding:88px 0;background-image:none}
+  /* the panel only paints its own grid because it is PINNED on desktop and
+     the page grid would slide through behind it. Flowing on a phone, it can
+     just let the page's own grid show — painting white over it was what left
+     this section a blank field. */
+  .skl-pin{position:static;min-height:0;height:auto;padding:88px 0;
+    background-image:none;background-color:transparent}
   .skl-group{grid-template-columns:1fr;gap:11px;min-height:0}
   .skl-group ul{justify-content:flex-start}
 }
@@ -1119,7 +1138,10 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    its column, so the two blocks read as a matched pair with the gutter between
    them rather than as a picture with a paragraph trailing off the page. */
 .about-copy{max-width:var(--faceW,495px);margin-left:auto}
-@media(max-width:760px){.about-copy{max-width:none;margin-left:0}}
+@media(max-width:760px){
+  .about-copy{max-width:none;margin-left:0}
+  .about-big{font-size:1.3rem}          /* the clamp floor is too big on a phone */
+}
 
 /* ==========================================================================
    ABOUT — PORTRAIT ON THE GRID
@@ -1153,7 +1175,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    outside the box it is supposed to belong to, and the row it sits in then
    measures short. */
 .portrait{position:relative;width:var(--faceW,495px);max-width:100%;margin:0}
-@media(max-width:760px){.portrait{width:100%}}
+@media(max-width:760px){.portrait{width:100%;margin-top:44px}}   /* clear of the roll */
 /* No frame and no background. A border would draw a box around something whose
    whole point is that it has no edge — the dissolve IS the edge. */
 /* positioned, and it has to be: the placeholder below is absolute, and an
@@ -2320,7 +2342,9 @@ function measure(){
      frame line. Height: sized against EXT, the worst-case projected extents
      over the whole view walkthrough, so the name is as big as it can be
      WITHOUT any tour view crossing the border. */
-  const heroX=wrapL+(small?2*U:2*SQ);
+  /* two cells in on a phone put the WIDTH DIMENSION's left arrow on the frame
+     line, since the dimension is drawn outside the name. Four clears it. */
+  const heroX=wrapL+(small?4*U:2*SQ);
   let heroFS;
   if(UW>0){
     heroFS=(fx+innerW-2*U-heroX)/UW;                       // front view fits
