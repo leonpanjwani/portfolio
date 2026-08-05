@@ -785,21 +785,21 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   background:var(--stock);color:var(--tomato);
   font-family:var(--mono);font-size:1.05rem;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 3px 10px rgba(9,16,42,.28);transition:.15s;opacity:.92}
+  box-shadow:0 3px 10px rgba(9,16,42,.28);transition:.15s}
 /* half on the picture, half off it — the translate is part of the resting
    transform, so the hover has to carry it too or the button jumps inward */
 .pl-nav.prev{left:0;transform:translateX(-50%)}
 .pl-nav.next{right:0;transform:translateX(50%)}
 .pl-nav.prev:hover{transform:translateX(-50%) scale(1.08)}
 .pl-nav.next:hover{transform:translateX(50%) scale(1.08)}
-.pl-nav:hover{opacity:1}
+.pl-nav:hover{box-shadow:0 4px 14px rgba(9,16,42,.34)}
 .pl-nav:focus-visible{outline:2px solid var(--tomato);outline-offset:2px}
 .pl-dots{position:absolute;left:0;right:0;bottom:12px;z-index:3;
   display:flex;justify-content:center;gap:8px}
 /* grey, not white: on a light slide a white dot disappears entirely. The ring
    keeps it legible on a dark one. */
 .pl-dots button{width:8px;height:8px;padding:0;border:0;border-radius:50%;
-  background:rgba(126,132,150,.95);box-shadow:0 0 0 1px rgba(255,255,255,.35);
+  background:#7e8496;box-shadow:0 0 0 1px rgba(255,255,255,.45);
   cursor:pointer;transition:.15s}
 .pl-dots button[aria-current="true"]{background:var(--tomato);transform:scale(1.25)}
 @media(max-width:820px){.pl-nav{width:36px;height:36px;margin-top:-18px}}
@@ -1410,7 +1410,7 @@ footer>span:last-child{justify-self:end}
           <p class="about-big"><span class="hey">Hey, I'm Leon.</span> I'm a third-year
             <b>General Engineering</b> undergraduate studying at the <b>University of
             Sheffield</b>.</p>
-          <p class="about-big">Outside of term time I'm at home in London, trying new things and staying busy.
+          <p class="about-big">Outside of term time I'm at home in London, trying new things, and staying busy.
             I love food, travelling, designing, and then building things (especially when my
             design&nbsp;works).</p>
           <p class="about-big cue">Scroll down to see some of my&nbsp;work.</p>
