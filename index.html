@@ -751,7 +751,11 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    sits ON the paper rather than running to its edges. In px, not a
    percentage: a percentage margin resolves against the container's WIDTH, so
    a vertical inset written that way changes with the column, not the height. */
-.doss-img{position:relative;min-height:200px;margin:22px 0;overflow:hidden;
+/* overflow:VISIBLE — the arrows straddle the plate's edge, so the plate can no
+   longer be the thing that clips. .pl-clip does it instead (built in the plate
+   module), which keeps the rounded corners on the images without cropping the
+   controls that hang outside them. */
+.doss-img{position:relative;min-height:200px;margin:22px 0;overflow:visible;
   background:rgba(9,16,42,.06);
   border:1px solid var(--rule);border-radius:14px;
   display:flex;align-items:center;justify-content:center}
@@ -759,6 +763,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    Each project carries several files, one shown at a time. The slides stack in
    the same box and cross-fade; only the live one is visible, so the arrows
    over the top are never fighting an image underneath. */
+.pl-clip{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
 .pl-slide{position:absolute;inset:0;opacity:0;visibility:hidden;
   transition:opacity .32s ease;
   display:flex;align-items:center;justify-content:center}
@@ -781,13 +786,21 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   font-family:var(--mono);font-size:1.05rem;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 3px 10px rgba(9,16,42,.28);transition:.15s;opacity:.92}
-.pl-nav.prev{left:14px} .pl-nav.next{right:14px}
-.pl-nav:hover{opacity:1;transform:scale(1.08)}
+/* half on the picture, half off it — the translate is part of the resting
+   transform, so the hover has to carry it too or the button jumps inward */
+.pl-nav.prev{left:0;transform:translateX(-50%)}
+.pl-nav.next{right:0;transform:translateX(50%)}
+.pl-nav.prev:hover{transform:translateX(-50%) scale(1.08)}
+.pl-nav.next:hover{transform:translateX(50%) scale(1.08)}
+.pl-nav:hover{opacity:1}
 .pl-nav:focus-visible{outline:2px solid var(--tomato);outline-offset:2px}
 .pl-dots{position:absolute;left:0;right:0;bottom:12px;z-index:3;
   display:flex;justify-content:center;gap:8px}
+/* grey, not white: on a light slide a white dot disappears entirely. The ring
+   keeps it legible on a dark one. */
 .pl-dots button{width:8px;height:8px;padding:0;border:0;border-radius:50%;
-  background:rgba(255,255,255,.55);cursor:pointer;transition:.15s}
+  background:rgba(126,132,150,.95);box-shadow:0 0 0 1px rgba(255,255,255,.35);
+  cursor:pointer;transition:.15s}
 .pl-dots button[aria-current="true"]{background:var(--tomato);transform:scale(1.25)}
 @media(max-width:820px){.pl-nav{width:36px;height:36px;margin-top:-18px}}
 /* ---- A WINDOW, NOT A PLATE ----
@@ -1397,7 +1410,7 @@ footer>span:last-child{justify-self:end}
           <p class="about-big"><span class="hey">Hey, I'm Leon.</span> I'm a third-year
             <b>General Engineering</b> undergraduate studying at the <b>University of
             Sheffield</b>.</p>
-          <p class="about-big">Outside of term time I'm at home in London, or hopefully on holiday.
+          <p class="about-big">Outside of term time I'm at home in London, trying new things and staying busy.
             I love food, travelling, designing, and then building things (especially when my
             design&nbsp;works).</p>
           <p class="about-big cue">Scroll down to see some of my&nbsp;work.</p>
@@ -1484,7 +1497,6 @@ footer>span:last-child{justify-self:end}
                 <p class="beat">Self-directed: researched collapsing structures and the market to set the requirements, then fabricated prototypes in TPU-laminated nylon, testing thermal bonding, airtight sealing and pressure&nbsp;retention.</p>
                 <p class="beat">Successive working prototypes, each narrowing down the bonding method that best held&nbsp;pressure.</p>
                 <div class="plate-links">
-                  <a href="#" data-kind="PDF" data-shot="img/helmet.jpg">Write-up ↗</a>
                 </div>
               </div>
             </div>
@@ -1523,7 +1535,7 @@ footer>span:last-child{justify-self:end}
         </article>
 
         <article class="doss" style="--i:3">
-          <div class="doss-tab"><span>Website</span></div>
+          <div class="doss-tab"><span>Website design</span></div>
           <div class="doss-face">
             <div class="doss-in">
               <!-- shown as what it is: a window with the page in it -->
@@ -1546,7 +1558,7 @@ footer>span:last-child{justify-self:end}
                 <p class="beat">The site you are reading, deployed straight from&nbsp;GitHub.</p>
                 <div class="plate-links">
                   <a href="https://github.com/leonpanjwani" target="_blank" rel="noopener"
-                     data-kind="GitHub">Source ↗</a>
+                     data-kind="GitHub" data-shot="img/github.svg">Source ↗</a>
                 </div>
               </div>
             </div>
@@ -3155,6 +3167,13 @@ document.querySelectorAll("#work .plate-links a").forEach(a=>{
 document.querySelectorAll("#work .doss-img").forEach(plate=>{
   const slides=[...plate.querySelectorAll(".pl-slide")];
   if(!slides.length) return;
+  /* The slides move into their own clipping box so the plate itself can let
+     the arrows hang over its edge. Built here rather than written into the
+     markup: it is a mechanism of the control, not part of the content. */
+  const clip=document.createElement("div");
+  clip.className="pl-clip";
+  slides.forEach(sl=>clip.appendChild(sl));
+  plate.insertBefore(clip,plate.firstChild);
   let i=0, dots=[];
   const show=n=>{
     i=(n+slides.length)%slides.length;
