@@ -1901,10 +1901,10 @@ footer>span:last-child{justify-self:end}
               </div>
               <div class="doss-txt">
                 <h3>Pocket-sized&nbsp;inflatable helmet</h3>
-                <div class="tags">INDEPENDENT R&amp;D · PROTOTYPING ·&nbsp;MATERIALS</div>
+                <div class="tags">INDEPENDENT R&amp;D · PROTOTYPING · MATERIALS ·&nbsp;IN&nbsp;PROGRESS</div>
                 <p class="beat">Cyclists skip helmets because they are awkward to carry. I wanted to know whether one could inflate to full size and still pack down to pocket&nbsp;size.</p>
                 <p class="beat">Nobody set me this one. I researched collapsing structures and the market to fix the requirements, then fabricated prototypes in TPU-laminated nylon, testing thermal bonding, airtight sealing and pressure&nbsp;retention.</p>
-                <p class="beat">Each prototype worked, and each one narrowed down the bonding method that best held&nbsp;pressure.</p>
+                <p class="beat">Each prototype has worked, and each has narrowed down the bonding method that best holds pressure. It is still in&nbsp;progress.</p>
                 <div class="plate-links">
                 </div>
               </div>
@@ -2376,8 +2376,17 @@ function syncDossVideo(next,force=false){
       if(!v.getAttribute("src")&&v.dataset.src){
         v.setAttribute("src",v.dataset.src); v.load();
       }
+      /* ---- ASK FIRST, THEN WAIT ----
+         play() is what STARTS the fetch. With preload="none" the element sits
+         at readyState 0 and nothing is in flight, so `canplay` will never fire
+         on its own — waiting for it before calling play() is a deadlock:
+         nothing is loading, so nothing can become playable, so nothing is ever
+         asked to play. Call it, and keep the canplay retry underneath for the
+         real case it was written for, where the call lands before there is
+         enough data and the promise rejects. */
       const go=()=>{ if(activeDossVideo===i) v.play().catch(()=>{}) };
-      if(v.readyState>=2) go(); else v.addEventListener("canplay",go,{once:true});
+      go();
+      if(v.readyState<2) v.addEventListener("canplay",go,{once:true});
     }else{
       v.pause();
       /* off screen entirely: give the decoder back */
@@ -2434,6 +2443,49 @@ function layoutTabs(){
   });
 }
 let dossOn=false;         // desktop + motion: the pinned, scroll-driven stack
+
+/* ==========================================================================
+   WHO STARTS THE CLIPS WHEN THERE IS NO STACK
+   --------------------------------------------------------------------------
+   syncDossVideo is driven from the pinned stack's scroll arithmetic — and the
+   call to it lives INSIDE `if(dossOn && M.dossS)`. Below 821px dossOn is false,
+   so none of it ever ran: no clip was given its source, no clip was ever asked
+   to play, and every plate sat on its poster for the life of the page. The
+   videos were not failing to play, they were never being started.
+   On that layout the folders are ordinary cards in flow, so the browser's own
+   answer to "is this on screen" is both the right one and cheaper than any
+   arithmetic. The observer stays connected on desktop as well, but defers —
+   the stack knows better there, because a folder can be on screen in the DOM
+   sense while buried under another sheet.
+   ========================================================================== */
+const dossCover=dossEls.map(()=>0);
+if("IntersectionObserver" in window && dossEls.length){
+  const vio=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      const i=dossEls.indexOf(e.target);
+      if(i<0) return;
+      /* How much of the SCREEN this folder covers — not how much of the folder
+         is visible. A card is often taller than the viewport, so its own
+         intersectionRatio tops out well below 1 and would make "most visible"
+         mean "shortest". */
+      const vp=(e.rootBounds&&e.rootBounds.height)||innerHeight||1;
+      dossCover[i]=e.isIntersecting ? e.intersectionRect.height/vp : 0;
+    });
+    if(dossOn) return;
+    /* One clip at a time, and only for a folder that genuinely holds the
+       screen: the fullest wins, and a third of the screen is the entry fee. */
+    let best=-1, top=0.34;
+    dossCover.forEach((c,i)=>{ if(c>top){ top=c; best=i } });
+    /* syncDossVideo reads dossShown to know when to hand a decoder back. On
+       this layout nothing is culled, so "shown" is simply "on screen at all". */
+    /* A folder mostly scrolled away hands its decoder back rather than holding
+       one for a sliver of itself: on this layout the sheets overlap, so two are
+       often on screen at once and both would otherwise stay attached. */
+    dossEls.forEach((_,i)=>{ dossShown[i]=dossCover[i]>0.12 });
+    syncDossVideo(best);
+  },{threshold:Array.from({length:21},(_,i)=>i*0.05)});
+  dossEls.forEach(el=>vio.observe(el));
+}
 
 
 /* ==========================================================================
