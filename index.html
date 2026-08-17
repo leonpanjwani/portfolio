@@ -50,6 +50,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Leon Panjwani — Engineering Portfolio</title>
 <link rel="icon" type="image/png" href="/favicon.png">
+<!-- Images are WebP, except three (efw, eyh, pv-eyh-presentation) that are
+     already such aggressive JPEGs that re-encoding them costs MORE bits — WebP
+     would have to spend bits reproducing the JPEG's own artefacts. Mixed
+     formats on purpose: each file is whichever is actually smaller. -->
 <meta name="description" content="Leon Panjwani — third-year MEng General Engineering student at the University of Sheffield, specialising in mechanical. Biomimetic AUVs, Energy-from-Waste plant design, and independent prototyping." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -60,6 +64,13 @@
      costs a download; NOT requesting one that is used is worse — the browser
      synthesises it and the type changes shape — so this list is derived from
      the font-weight declarations rather than guessed. -->
+<!-- Rokkitt has gone: the nav was the only thing set in it, and the nav is now
+     cut from the same face as the folder tabs. One family fewer to fetch, and
+     one thing fewer for document.fonts.ready to wait on before the intro can
+     start. Chakra Petch is requested at 500 and 700 only — the nav uses 500,
+     the tabs and the wordmark 700. Asking for a weight nothing sets costs a
+     download; setting a weight nothing asked for is worse, because the browser
+     synthesises it and the letterforms change shape. -->
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Share+Tech+Mono&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
 
 <style>
@@ -75,6 +86,10 @@
   --pale:#bdc5dd;        /* drawn lines on the blueprint */
   --paper:#e9ebf3;       /* flat light panels */
   --white:#ffffff;
+  /* the page itself is not paper-white — a hair of warmth off it, so the
+     folder stocks and the white islands still read as lighter than the sheet
+     they sit on */
+  --page:#faf9f6;
   /* Shadow ink is navy driven down to near-black: rgba(9,16,42,a). Written as
      literals, NOT as rgba(var(--x),a) — if that substitution fails the whole
      declaration is invalid at computed-value time, and for a background that
@@ -96,7 +111,32 @@
      gentler than --print-mask, which is for display sizes on the blueprint —
      at body size that one eats the letterforms. */
   --ink-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='q' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.05 0.6' numOctaves='3' seed='9' stitchTiles='stitch' result='t'/><feColorMatrix in='t' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.3 0 0 0 0.76'/></filter><rect width='260' height='260' filter='url(%23q)'/></svg>");
-  /* paper grain, used as a multiply wash over the folder stock */
+  /* ---- THE GRAIN, BAKED ----
+     A turbulence filter written into the ALPHA channel is a wash of flat black
+     at roughly a tenth: it dulls the stock but it has no grain to it, which is
+     why the paper stopped reading as paper. This is one 24KB greyscale tile
+     MULTIPLIED into the stock instead — the fine grain and the coarse mottle
+     both in it, at the transmission the original two-layer version worked out
+     to (0.745 + 0.17·fine + 0.085·mottle, mean 0.8725). Exact arithmetic, one
+     layer to composite, and it darkens the colour rather than painting over
+     it, so every stock keeps its own hue. */
+  /* Smooth stock, not sugar paper: a faint vertical striation from the roll, a
+     slow tonal drift across the sheet, and a whisper of tooth — nothing you
+     can pick a grain out of at arm's length. Measured transmission: mean
+     0.9816, sd 0.0074, range 0.965–1.000 — at most a 3.5% darkening. The
+     visible version before it was 0.915/0.037 and read as sandpaper.
+     ---- AND NOW IT IS BAKED ----
+     It used to be one greyscale tile multiplied into the stock colour with
+     background-blend-mode. That is much cheaper than mix-blend-mode (it never
+     reads the backdrop) but it is not free: the blend is recomputed every time
+     the layer is rastered, and these layers are 1794x1419 CSS px — about ten
+     million device pixels each at 2x, with up to three live at once. The
+     multiply is arithmetic that never changes, so it is done once, offline:
+     five tiles, one per stock, each the grain already multiplied into its own
+     colour. The blend goes away and the paint becomes a plain image tile,
+     which is the cheapest thing a background can be.
+     Regenerate with grain.png x the stock hex if a stock colour ever changes.
+     img/grain.png is kept as the master. */
   /* the height of the index tab standing above each folder's top edge. The
      folders themselves are FLUSH — no vertical stagger — so the tabs all
      stand at one height and it is only their horizontal positions that tell
@@ -110,6 +150,13 @@
   --maxw:1180px;
   --display:"Chakra Petch","Helvetica Neue",Arial,sans-serif;
   --mono:"Share Tech Mono",ui-monospace,Menlo,monospace;
+  /* The navigation is cut from the SAME face as the folder tabs — the drawing
+     face, Chakra Petch. It used to be a slab serif, which read as a second
+     voice on a page that only has one. Same family as --display; kept as its
+     own token so the nav can be retuned without touching the hero. Weight 500,
+     not the tabs' 700: a tab label is 0.92rem of uppercase and needs the
+     weight, the nav is 1.32rem of sentence case and does not. */
+  --menu:"Chakra Petch","Helvetica Neue",Arial,sans-serif;
   /* the folders' own face: the tab labels and the project titles. Martian Mono
      is wide and slab-ish, so it wants tighter tracking and a smaller size than
      the same words set in Inter. */
@@ -139,7 +186,7 @@
    animation. Anchoring has nothing to hold here: turn it off. */
 html,body{overflow-anchor:none}
 html{scroll-behavior:smooth}
-body{font-family:var(--body);background:var(--white);color:var(--black);
+body{font-family:var(--body);background:var(--page);color:var(--black);
   line-height:1.65;-webkit-font-smoothing:antialiased;text-wrap:pretty;
   /* CLIP, not hidden. Hidden makes the element a scroll container, and a
      scroll container between the viewport and a position:sticky descendant
@@ -428,7 +475,7 @@ a{color:inherit;text-decoration:none}
 #menu{position:relative;z-index:1}
 /* one grid row of links plus a cell of padding = the same 55px as the left
    island, so the pair sit level */
-#menubar{padding:10px var(--ipad,22px)}
+#menubar{padding:10px var(--ipad,22px);overflow:visible}
 @media(max-width:820px){
   /* on a phone the right island is just the burger until it's opened */
   #menubar{padding:0}
@@ -556,12 +603,18 @@ a{color:inherit;text-decoration:none}
 .cell.on{opacity:1}
 
 /* the menu is separate, and simply fades in as you scroll */
-#menu{font-family:var(--display);font-weight:700;font-size:.92rem;
+/* Set as WORDS, not caps — so the .13em tracking that opened up an all-caps
+   setting comes off with the uppercasing. */
+/* Set exactly as a folder tab is: the drawing face, bold, small, uppercase,
+   opened up with the same .13em of tracking. At this size the caps are signage
+   rather than prose, which is what a nav is — and it now matches the labels on
+   the files it points at. */
+#menu{font-family:var(--menu);font-weight:700;font-size:.92rem;
   letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
 /* --mink runs white → tomato with the surface, like the name's ink */
 #menu a{color:var(--mink,var(--tomato));transition:color .15s ease,background .15s ease}
 /* on the blueprint: lighter weight, white text, hover turns it tomato, no box */
-#menu.paper a{font-weight:500}
+#menu.paper a{font-weight:700}
 #menu.paper a:hover{color:var(--tomato)}
 /* on the page: tomato text stays tomato; hover adds the square translucent box */
 #menu:not(.paper) a:hover{background:rgba(255,99,71,.12)}
@@ -569,6 +622,64 @@ a{color:inherit;text-decoration:none}
    island out when it was one long bar */
 #links{display:flex;align-items:center;gap:33px}
 #links a{display:block;height:33px;line-height:33px;padding:0 11px}
+/* Projects remains a direct link; its adjacent chevron reveals shortcuts for
+   readers who know exactly which case study they want. Hover and focus share
+   the same state, so the menu is not mouse-only. */
+.project-menu{position:relative;display:flex;align-items:center}
+.project-toggle{width:22px;height:33px;padding:0;border:0;background:none;
+  color:var(--mink,var(--tomato));cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transform-origin:center;
+  transition:color .15s ease,transform .18s ease}
+/* the link beside it is 33px tall with 33px of line-height, so a 33px flex box
+   centred on the same row puts the chevron on the label's optical centre */
+.project-toggle svg{display:block;width:11px;height:7px;overflow:visible}
+/* left:-1px, not 0 — the panel has a 1px border, and it is the OUTER edge that
+   has to line up with the left edge of the menu item's hover box, not the edge
+   of its contents. */
+.project-popover{position:absolute;z-index:2;top:100%;left:-1px;
+  width:212px;padding:4px 0;
+  /* a little of the page shows through — enough to read as an overlay rather
+     than a solid slab, not enough to make the labels work for it */
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(25,44,100,.18);
+  /* a block shadow, thrown right and down only: no blur, no spread, so it
+     reads as a second sheet behind this one rather than as a glow */
+  box-shadow:6px 6px 0 rgba(9,16,42,.30);
+  /* it FOLDS: hinged on its top edge and swung down into place, which is why
+     the origin is the top and there is a perspective on the transform. */
+  transform-origin:top center;opacity:0;
+  transform:perspective(800px) rotateX(-82deg);pointer-events:none;
+  /* THIS transition governs the way OUT — the .open rule below governs the way
+     in. A single declaration would give the same curve to both, and a fold
+     that snaps back up reads as a mistake where a fold that unrolls does not.
+     So: quick and eager opening, slower and eased closing. */
+  transition:opacity .26s ease .04s,
+             transform .34s cubic-bezier(.32,0,.24,1) .02s}
+/* The shortcuts are a list, not signage — lighter and smaller than the nav
+   above them, but not so small that they read as a footnote. Ruled between
+   rather than around: a line the full width of the panel, which is why it is
+   drawn on the item and the item carries no side inset of its own. */
+/* The shortcuts follow the nav down: same face, same caps, a step smaller and
+   a little less tracking, so the panel reads as the menu continuing rather
+   than as a different object hanging off it. */
+.project-popover a{display:block;height:auto!important;min-height:0;
+  line-height:1.3!important;padding:13px 16px!important;
+  color:var(--tomato)!important;font-weight:700;font-size:.78rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-top:1px solid rgba(25,44,100,.14)}
+.project-popover a:first-child{border-top:0}
+.project-popover a:hover,.project-popover a:focus-visible{background:rgba(255,99,71,.12)}
+/* NO :hover rule here. Hover is driven from script instead, because CSS hover
+   ends the moment the pointer is between the label and the panel — and the
+   panel would vanish out from under a cursor on its way to it. The script
+   holds it open across that gap. */
+.project-menu:focus-within .project-popover,
+.project-menu.open .project-popover{opacity:1;
+  transform:perspective(800px) rotateX(0deg);pointer-events:auto;
+  transition:opacity .14s ease,transform .24s cubic-bezier(.2,.86,.28,1)}
+.project-menu:focus-within .project-toggle,
+.project-menu.open .project-toggle{color:var(--tomato);transform:rotate(180deg)}
+.project-toggle:focus-visible{outline:2px solid var(--tomato);outline-offset:2px}
 /* ---- HAMBURGER ----
    Desktop never sees it: the four labels are always shown, in a row. On a phone
    there isn't room for them, so the island collapses to a 26px control and the
@@ -586,8 +697,15 @@ a{color:inherit;text-decoration:none}
      itself grows, rather than a separate panel dropping below it */
   #links{flex-direction:column;align-items:stretch;gap:0;
     overflow:hidden;max-height:0;transition:max-height .28s ease}
-  #menu.open #links{max-height:200px}
+  #menu.open #links{max-height:360px}
   #links a{text-align:right;padding:0 14px}
+  .project-menu{display:flex;flex-wrap:wrap;justify-content:flex-end}
+  .project-toggle{margin-right:8px}
+  .project-popover{position:static;width:100%;padding:0;border:0;box-shadow:none;
+    max-height:0;overflow:hidden;opacity:1;transform:none;pointer-events:none;
+    transition:max-height .22s ease}
+  .project-menu.open .project-popover{max-height:180px;pointer-events:auto}
+  .project-popover a{padding-right:40px!important;color:var(--mink,var(--tomato))!important}
 }
 .cell .info{font-family:var(--display);font-weight:700;font-size:.78rem;
   letter-spacing:.04em;text-transform:uppercase;
@@ -599,7 +717,7 @@ a{color:inherit;text-decoration:none}
   .cell{padding:0 7px}
   /* the block is a full-width single column on mobile, so there's room to read */
   .cell .info{font-size:.62rem;white-space:normal;line-height:1.32;letter-spacing:.02em}
-  #menu{font-size:.62rem;letter-spacing:.05em}
+  #menu{font-size:.82rem;letter-spacing:.11em}
 }
 
 /* ==========================================================================
@@ -661,29 +779,32 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    the hairlines. Everything inside a folder inherits from these, so a stock
    can be swapped without hunting down the text that sits on it. */
 .doss{color:var(--ink);
-  --stock:var(--folder); --ink:var(--navy); --key:var(--blue);
-  --rule:rgba(25,44,100,.16)}
-.doss:nth-child(2){--stock:var(--folder-beige)}
-.doss:nth-child(3){--stock:var(--blue); --ink:#ffffff; --key:var(--pale);
+  --stock:var(--folder); --stock-grain:url("img/stock-blue.png");
+  --ink:var(--navy); --key:var(--blue);
+  --rule:rgba(25,44,100,.16);
+  /* The folders move as full-viewport layers. Hiding their reverse face avoids
+     a second raster during the tilt without changing their appearance. */
+  backface-visibility:hidden}
+.doss:nth-child(2){--stock:var(--folder-beige); --stock-grain:url("img/stock-beige.png")}
+.doss:nth-child(3){--stock:var(--blue); --stock-grain:url("img/stock-navy.png");
+  --ink:#ffffff; --key:var(--pale);
   --rule:rgba(255,255,255,.26)}
-.doss:nth-child(4){--stock:var(--folder-grey)}
-.doss:nth-child(5){--stock:#FBF3C4}   /* legal-pad yellow, aged down to sit with the rest */
-/* longhands only: a `background:` shorthand here would wipe the grain layers */
+.doss:nth-child(4){--stock:var(--folder-grey); --stock-grain:url("img/stock-grey.png")}
+.doss:nth-child(5){--stock:#FBF3C4; --stock-grain:url("img/stock-pad.png")}  /* legal-pad yellow */
+/* The tile is the stock colour WITH its grain already in it, so there is no
+   blend to compute. background-color stays as the fallback for the frame
+   before the tile has loaded, and if it never loads the folder is simply flat
+   paper rather than no paper. */
 .doss-face{background-color:var(--stock);
-  background-image:var(--grain-a),var(--grain-b);
-  background-size:180px 180px,540px 540px;
-  background-position:var(--ovX) calc(-1 * var(--tabH)),
-                      var(--ovX) calc(-1 * var(--tabH));
-  background-blend-mode:multiply,multiply;
+  background-image:var(--stock-grain);
+  background-size:240px 240px;
+  background-position:var(--ovX) calc(-1 * var(--tabH));
   border:0;
-  display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+  display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;
+  backface-visibility:hidden}
 /* ---- ONE SHEET OF PAPER ----
-   Grain plus a coarser mottle, so the card reads as stock with a surface
-   rather than a flat fill. The tab carries the SAME wash, and both offset
-   their pattern by their own position inside the folder — so the texture runs
-   continuously from the tab into the face instead of restarting at the join
-   and drawing a seam there. */
-/* (the grain used to live on a blended pseudo-element here — see --grain-a) */
+   The tab carries the same grain, offset from the folder face, so the texture
+   runs across their join instead of restarting along a visible seam. */
 
 /* ---- THE FILLETS ----
    Where the tab meets the sheet the corner is not square: the card sweeps out
@@ -691,16 +812,35 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    CONCAVE, which border-radius cannot describe — so it is a strip hanging off
    both sides of the tab's foot carrying a quarter-disc of stock in each end,
    the arc centred outside the corner so the paper curves away from it. */
+/* The fillets are stock too, so they take the grain. But the strip they live
+   on is mostly EMPTY — only its two ends carry paper — and a repeating grain
+   layer painted across it drew a pale bar straight through every label. So the
+   shape is cut with a MASK rather than drawn with the background: the strip is
+   stock with the tile multiplied into it, and the mask lets it through only
+   inside the two quarter-discs. The tile is offset by the tab's own position
+   minus the overhang, so the texture runs out of the tab and round the corner
+   without a jump. */
 .doss-tab::after{content:"";position:absolute;bottom:0;height:var(--fil);
   left:calc(-1 * var(--fil));right:calc(-1 * var(--fil));
   pointer-events:none;
-  background:
-    radial-gradient(circle at top left,
-      transparent calc(var(--fil) - 0.5px), var(--stock) var(--fil))
-      left top/var(--fil) var(--fil) no-repeat,
+  background-color:var(--stock);
+  background-image:var(--stock-grain);
+  background-size:240px 240px;
+  background-position:calc(var(--bx,0px) - var(--fil)) calc(-1 * var(--tabH));
+  -webkit-mask-image:radial-gradient(circle at top left,
+      transparent calc(var(--fil) - 0.5px), #000 var(--fil)),
     radial-gradient(circle at top right,
-      transparent calc(var(--fil) - 0.5px), var(--stock) var(--fil))
-      right top/var(--fil) var(--fil) no-repeat}
+      transparent calc(var(--fil) - 0.5px), #000 var(--fil));
+  mask-image:radial-gradient(circle at top left,
+      transparent calc(var(--fil) - 0.5px), #000 var(--fil)),
+    radial-gradient(circle at top right,
+      transparent calc(var(--fil) - 0.5px), #000 var(--fil));
+  -webkit-mask-size:var(--fil) var(--fil),var(--fil) var(--fil);
+  mask-size:var(--fil) var(--fil),var(--fil) var(--fil);
+  -webkit-mask-position:left top,right top;
+  mask-position:left top,right top;
+  -webkit-mask-repeat:no-repeat,no-repeat;
+  mask-repeat:no-repeat,no-repeat}
 /* the index tab, standing on the folder's top edge and stepped across the
    stack so every folder's tab is its own — as on a real set of files */
 /* +1px of height so the tab OVERLAPS the folder's own top border and hides the
@@ -717,12 +857,19 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   display:flex;align-items:center;justify-content:center;padding:0 18px;
   white-space:nowrap;
   background-color:var(--stock);
+  /* ---- THE LABEL STANDS PROUD AT ITS TOP RIGHT ----
+     A box-shadow, not a pseudo-element: a positioned child paints OVER its
+     parent's own background, which is what kept putting the smudge on the
+     label instead of behind it. A shadow is always behind.
+     Offset up and to the right with a spread wider than the offset, so it can
+     only appear on those two sides — nothing along the bottom, where the tab
+     meets the sheet and is the same piece of paper. */
+  box-shadow:5px -4px 8px -4px rgba(9,16,42,.30);
   /* the tab is cut from the same sheet, so it offsets the pattern by its own
      position along the row — that is what stops a seam at the join */
-  background-image:var(--grain-a),var(--grain-b);
-  background-size:180px 180px,540px 540px;
-  background-position:var(--bx,0px) 0,var(--bx,0px) 0;
-  background-blend-mode:multiply,multiply;
+  background-image:var(--stock-grain);
+  background-size:240px 240px;
+  background-position:var(--bx,0px) 0;
   border:0;border-radius:15px 15px 0 0;
   font-family:var(--display);font-weight:700;font-size:.92rem;letter-spacing:.13em;
   text-transform:uppercase;color:var(--tomato)}
@@ -734,9 +881,30 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    viewport in measure) pinned to the foot of the folder, which is itself
    pinned to the foot of the screen. The cascade then shows only as more paper
    above, which is what it is meant to be. */
+/* Equal columns now. They used to be 1.05 : 1, which was fine when the plate
+   took whatever height the row gave it — but a SQUARE plate is as wide as its
+   column, so the unequal split made the picture a different size on alternate
+   folders. */
 .doss-in{position:relative;z-index:1;flex:0 0 auto;height:var(--contentH,620px);
+  /* ---- WHAT IS PRINTED ON THE SHEET TRAVELS WITH THE SHEET ----
+     There used to be a --cy here: a counter-climb, equal and opposite to the
+     parallax, that held this block still on the screen while the paper went
+     on moving underneath it. It is gone. Printing is printing — when the sheet
+     travels, the thing printed on it travels too, and a paragraph hanging in
+     space over a moving background reads as a bug rather than as depth.
+     What is left is --lift, a plain offset up the page. It costs the exact
+     centring: the gap above is that much smaller than the gap below. Set
+     --lift to 0 to centre the block exactly. It was a whole square; it is
+     half a square now, which puts every folder's contents 27.5px lower than
+     they were.
+     HOW FAR the contents ride before the next file covers them is DOSS.par
+     (how fast a landed sheet keeps climbing) times DOSS.step (how long until
+     the next one lands) — 0.68 x 0.55 = 0.37 of a screen. Lower par if a
+     project should stay readable for longer; it is the same number that
+     decides how much of the stack is moving at once. */
+  transform:translateY(calc(-1 * var(--lift,27.5px)));
   min-height:0;display:grid;gap:55px;
-  padding:33px;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+  padding:22px 44px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .doss.wide .doss-in{grid-template-columns:1fr}
 /* ---- SIDES ALTERNATE ----
    Media right on the first folder, then swapping each time down the stack, so
@@ -745,6 +913,11 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    widths, so whichever side the copy lands on gets the wider one. */
 .doss:nth-child(odd) .doss-txt{order:1}
 .doss:nth-child(odd) .doss-img{order:2}
+/* the picture is on the right of an odd folder and the left of an even one, so
+   "toward the middle" is a different edge each time */
+.doss:nth-child(odd) .doss-img{justify-self:start}
+.doss:nth-child(even) .doss-img{justify-self:end}
+@media(max-width:820px){.doss-img{width:100%;justify-self:stretch}}
 /* the plate's corners follow the folder's, so it reads as printed on it */
 /* The plate is inset from the top and bottom of its cell — just two cells, so
    the picture is nearly the full height of the folder's content but still
@@ -755,7 +928,20 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    longer be the thing that clips. .pl-clip does it instead (built in the plate
    module), which keeps the rounded corners on the images without cropping the
    controls that hang outside them. */
-.doss-img{position:relative;min-height:200px;margin:22px 0;overflow:visible;
+/* SQUARE. The plate used to take whatever height the row gave it, so the same
+   picture was a different shape in every folder. A square is its own frame,
+   and the block shadow — right and down, no blur — sets it on the paper
+   without pretending to be a light source. align-self:center because a grid
+   item stretches by default, which would fight the aspect ratio. */
+/* ---- WHERE THE PICTURE SITS IN ITS COLUMN ----
+   A picture carries more weight than the same area of type, so a plate hard
+   against the outer margin drags the whole sheet that way. It is held at 88%
+   of its column and justified toward the MIDDLE of the folder, which puts the
+   larger margin on the outside — the two halves then read as evenly weighted
+   even though they are not evenly inked. */
+.doss-img{position:relative;aspect-ratio:1/1;height:auto;align-self:center;
+  width:95%;min-height:0;margin:22px 0;overflow:visible;
+  box-shadow:5px 5px 0 rgba(9,16,42,.13);
   background:rgba(9,16,42,.06);
   border:1px solid var(--rule);border-radius:14px;
   display:flex;align-items:center;justify-content:center}
@@ -808,7 +994,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    rather than mounted like a photograph, so the plate's own frame is dropped
    and the window carries its own. */
 .doss-img.browser{border:0;background:none;overflow:visible;min-height:0;
-  align-self:center}
+  align-self:center;aspect-ratio:auto;box-shadow:none}
 .bw{width:100%;background:var(--white);border:1px solid rgba(25,44,100,.20);
   border-radius:12px;overflow:hidden;box-shadow:0 14px 34px rgba(9,16,42,.16)}
 .bw-bar{height:38px;display:flex;align-items:center;gap:14px;padding:0 14px;
@@ -822,13 +1008,32 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 .bw-shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .doss-img .ph{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
   color:var(--key);text-align:center;padding:16px}
-/* the copy is PRINTED on the card — masked so the ink thins in patches. The
+/* The copy is PRINTED on the card — masked so the ink thins in patches. The
    tab's label is masked through a span, not the tab itself: masking the tab
-   would thin its paper too and let the page show through the folder. */
-.doss h3,.doss .tags,.doss .beat,.doss .plate-links a,.doss-tab span{
+   would thin its paper too and let the page show through the folder.
+   ---- ONE MASK PER BLOCK, NOT ONE PER ELEMENT ----
+   This used to name five selectors, which came to 39 separately masked
+   elements across the five folders — every heading, every tag line, every
+   paragraph, every link — each its own masked layer, all inside sheets that
+   re-raster when they move. It is the block that is printed, not the words:
+   masking .doss-txt gives one masked layer per folder instead of nine, and the
+   ink pattern now runs continuously down the whole block rather than
+   restarting at each paragraph, which is what a real print run does anyway.
+   .doss-ink is a wrapper built in script around the heading, the tag line and
+   the paragraphs — everything except .plate-links, which stays outside it and
+   is masked per link. That exclusion is not tidiness: a mask CLIPS its element
+   to the border box, and the link-preview cards are absolutely positioned and
+   hang below theirs. Masking any ancestor of those cards would cut them off. */
+.doss-ink,.doss .plate-links a,.doss-tab span{
   -webkit-mask-image:var(--ink-mask); mask-image:var(--ink-mask);
   -webkit-mask-size:260px 260px;      mask-size:260px 260px;
   -webkit-mask-repeat:repeat;         mask-repeat:repeat}
+/* ---- THE LABEL LIFTS AT ONE END ----
+   A shadow across the whole join would draw a line under the label and make it
+   a separate object stuck to the folder — the tab is the SAME sheet, cut to a
+   shape. So the shadow is only under its right end and fades out to nothing
+   before the middle: one corner standing a little proud, which is what a
+   handled file does. */
 .doss-tab span{position:relative;z-index:1}
 /* The copy runs a little narrower than its column and sits centred in it, so
    the lines are shorter and the block is taller — closer to the plate's own
@@ -838,14 +1043,18 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   /* 90% of the column, but never more than a readable measure: on an
      ultrawide the column alone would run to ~100 characters a line. 34em only
      binds above about 1900px of page width, so laptops are untouched. */
-  width:90%;max-width:34em;margin-inline:auto}
+  width:100%;max-width:34em;margin-inline:auto}
 @media(max-width:820px){.doss-txt{width:100%}}
 /* Project headings are prose, not signage — Inter, like the copy under them.
    The drawing face (Chakra Petch) is kept for the sheet, the section headings
    and the header wordmark. */
+/* pretty, not balance: balancing evens the lines, which is why a heading with
+   a bound pair in it ("Pocket-sized inflatable") could still be split the
+   other way round. Filling the first line keeps the break where the copy says
+   it goes. */
 .doss h3{font-family:var(--body);font-weight:700;
-  font-size:clamp(1.7rem,2.95vw,2.6rem);line-height:1.2;margin-bottom:18px;
-  letter-spacing:-.03em;color:var(--tomato);text-wrap:balance}
+  font-size:clamp(1.85rem,3.2vw,2.9rem);line-height:1.2;margin-bottom:14px;
+  letter-spacing:-.03em;color:var(--tomato);text-wrap:pretty}
 .doss .tags{font-family:var(--mono);font-size:.88rem;letter-spacing:.07em;
   color:var(--key);margin-bottom:18px}
 
@@ -865,20 +1074,33 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      ordinary page behind it rather than another folder, and the shadow is
      what separates the two. It is thrown upward, since the only place About
      can be seen is above the folder's top edge. */
-  .doss:first-child .doss-face{box-shadow:0 -5px 14px rgba(9,16,42,.13)}
+  /* Negative SPREAD, or the blur leaks out of the opposite edge: `0 5px 14px`
+     reaches 9px past the top of the box it is cast from, and since every
+     folder lands on the same line that leak drew a dark rule straight across
+     the head of the sheet in front. Shrinking the shadow box by more than the
+     offset keeps it on the side it is meant to be on. */
+  .doss:first-child .doss-face{box-shadow:0 -9px 14px -6px rgba(9,16,42,.15)}
   /* The last file is a slightly smaller sheet, resting lower than the rest,
      and it does not need the deep skirt the others use to cover each other —
      nothing follows it. Trimming that is what takes the dead space off its
      bottom, and it clears the screen sooner when it slides away. */
   .doss:last-child .doss-face{
-    --ovY:66px;
+    /* Its skirt was 66px — enough when the contents rode up with the sheet,
+       far too little now they hold their place while it climbs: the block ends
+       up as much as a whole climb below the sheet's own foot, which is why
+       Additional Work started losing its bottom and then everything under the
+       plate. It has to cover that climb (par × step = 0.374 of a screen) plus
+       the tab. Still shorter than the others, so it still clears the screen
+       sooner on the way out. */
+    --ovY:calc(0.045 * 100vw + 0.315 * 100svh);
     /* less padding under the contents than the others carry, which lets them
        sit further down the sheet — more centred on the paper that is left */
-    padding-bottom:calc(var(--ovY) + var(--base,33px) + var(--foot,0px)
-                        + var(--lastDrop,44px) - 55px);
+    /* the same gap under its contents as every other file — the centring is
+       solved in --contentH now, not folder by folder */
+    padding-bottom:calc(var(--ovY) + var(--base,33px) - var(--tabH));
     /* the same shadow the first folder throws against About, mirrored to fall
        downward off the foot instead of upward off the head */
-    box-shadow:0 5px 14px rgba(9,16,42,.13)}
+    box-shadow:0 9px 14px -6px rgba(9,16,42,.15)}
   .doss{position:absolute;inset:0;transform:translateY(100%);
     /* the hinge: below the bottom edge, so the rise is an arc, not a slide */
     transform-origin:50% 130%;will-change:transform}
@@ -896,16 +1118,47 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   /* ovY must cover the tilt AND the climb a landed folder makes before the
      next one covers it (DOSS.par) — otherwise the stack rises off the foot of
      the page and shows daylight under it. */
-  .doss-face{--ovX:calc(0.20 * 100svh + 40px);
-             --ovY:calc(0.14 * 100vw + 0.62 * 100svh);
+  /* ---- HOW FAR THE SHEET HANGS OFF ----
+     Every pixel of this is rastered on every frame of the scroll, two or three
+     sheets at a time, so both were solved rather than guessed: --ovX covers
+     the swing, which drags the top corners in by 1.3 × screen height × tan 7°
+     ≈ 0.16 of a screen; --ovY covers the climb a landed sheet makes before the
+     next covers it, par × step = 0.374 of a screen, plus the tab. Each keeps a
+     margin over its figure. Together they take a sixth off the area of every
+     folder. */
+  /* --ovX = 1.3 x screen height x tan(DOSS.rise), plus a margin. At 7 degrees
+     that was 1.3 x 0.1228 = 0.16 of a screen; at 4 degrees it is
+     1.3 x 0.0699 = 0.091. Change one and you must change the other — this
+     number is what keeps a tilted corner from swinging into view. */
+  /* ---- --ovY: THE SKIRT ----
+     How far a folder's face runs on below the fold. It has to cover the climb
+     a landed sheet makes before the next one lands on top of it —
+     par x step x screen = 0.68 x 0.55 = 0.374 of a screen, plus the tab — or
+     the stack rises off the foot of the page and daylight shows underneath.
+     At 1440x900 that floor is about 376px. It was 558px: a 48% margin on a
+     number that is paid for in rastered pixels on every frame. It is 420px
+     now, an 11% margin, which was checked rather than reasoned about: a sweep
+     of the whole Work section at every scroll step, counting bare-page pixels
+     anywhere on screen, is clean at HALF this value, and a control with no
+     skirt at all lights up with thousands. None of this is ever visible — it
+     is entirely below the fold — so the only thing it costs is paint. */
+  .doss-face{--ovX:calc(0.10 * 100svh + 24px);
+             --ovY:calc(0.075 * 100vw + 0.345 * 100svh);
     position:absolute;top:var(--tabH);
     left:calc(-1 * var(--ovX));right:calc(-1 * var(--ovX));
     bottom:calc(-1 * var(--ovY));
     /* the extra padding is the folder's own step down the cascade, so every
        content area ends on the same line — the foot of the screen */
+    /* ---- minus the tab ----
+       A folder rests with its FACE top on the top of the screen, which means
+       the folder itself sits a tab's height higher — so everything anchored to
+       the face's bottom sat a tab's height high too, and the gap under the
+       contents came out 39px bigger than the gap above them. Taking --tabH
+       back off the padding puts the block where --contentH was solved to put
+       it: the same air above and below. */
     padding:0 var(--ovX)
             calc(var(--ovY) + var(--base,33px) + var(--i,0) * var(--sep,33px)
-                 + var(--foot,0px));
+                 - var(--tabH));
     /* the foot of every folder is rounded, including the last one's — it is
        simply far below the fold, along with the side edges, which is where
        all of them are meant to stay */
@@ -914,12 +1167,25 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   /* the last sheet's foot is a straight edge like every other folder's */
   .doss:last-child .doss-face{border-radius:0}
 
+  /* ---- THE PLATE TAKES WHICHEVER IS SMALLER ----
+     95% of its column, or the height the row actually has for it. Below about
+     a 2:1 window the column is the smaller of the two and nothing changes;
+     above it the height takes over and the picture shrinks to fit instead of
+     being cut off. Only on the pinned desktop stack: a folder on a phone is
+     an ordinary card whose height comes from its contents, so there is no
+     ceiling to respect and --plateMax would wrongly shrink it. */
+  .doss-img{width:min(95%, var(--plateMax,560px))}
+  /* The browser window is not square: it is a 38px chrome bar plus a 16:10
+     shot, plus its own 1px border top and bottom. So for a given height budget
+     H the widest it may be is (H - 40) x 16/10. */
+  .doss-img.browser{width:min(95%, calc(1.6 * (var(--plateMax,560px) - 40px)))}
+
   /* About holds still underneath while the folders come up over it — and it
      carries the page grid ITSELF, painted on opaque white, so the lattice is
      locked to the panel instead of sliding through behind it. */
   #about{position:sticky;top:0;height:100vh;height:100svh;padding:0;
     display:flex;align-items:center;z-index:1;
-    background-color:var(--white);background-image:var(--page-grid);
+    background-color:var(--page);background-image:var(--page-grid);
     background-size:55px 55px,55px 55px;
     background-position:var(--wrapL,55px) 0}
   /* the landing: .content's top edge sits ROLL.fade above the viewport top at
@@ -985,13 +1251,13 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   /* and with no fixed height above it, the plate needs a shape of its own —
      it is a box of absolutely positioned slides, so it would otherwise
      collapse to its min-height */
-  .doss-img{aspect-ratio:4/3;min-height:0;margin:0}
+  .doss-img{margin:0}
 }
 /* Plain paragraphs: no label column and no rule between them. The three
    beats read as one short account of the project rather than as a form with
    fields, and in Additional Work the name of each piece of work carries the
    emphasis the label used to. */
-.beat{font-size:1.32rem;line-height:1.48;margin:0 0 18px}
+.beat{font-size:1.45rem;line-height:1.48;margin:0 0 14px}
 .beat:last-of-type{margin-bottom:0}
 .beat b{font-weight:700}
 /* ---- THE CEILING ON ALL OF THAT ----
@@ -1000,26 +1266,26 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    on a 13" laptop, so the sizes step down in two stages rather than one — a
    folder has to fit before it has to be big. */
 @media(max-height:940px){
-  .doss h3{font-size:clamp(1.6rem,2.75vw,2.45rem)}
-  .doss .tags{font-size:.88rem}
-  .beat{font-size:1.18rem}
-  .plate-links a{font-size:.88rem}
+  .doss h3{font-size:clamp(1.75rem,3vw,2.7rem)}
+  .doss .tags{font-size:.86rem}
+  .beat{font-size:1.35rem}
+  .plate-links a{font-size:.9rem}
 }
 @media(max-height:840px){
-  .doss h3{font-size:clamp(1.4rem,2.4vw,2.15rem)}
-  .doss .tags{font-size:.78rem}
-  .beat{font-size:1.05rem}
-  .plate-links a{font-size:.8rem}
+  .doss h3{font-size:clamp(1.6rem,2.75vw,2.5rem)}
+  .doss .tags{font-size:.82rem}
+  .beat{font-size:1.22rem}
+  .plate-links a{font-size:.86rem}
 }
 /* a third step, for windows short enough that even that overflows the paper */
 @media(max-height:700px){
-  .doss h3{font-size:clamp(1.2rem,2vw,1.7rem);margin-bottom:12px}
-  .doss .tags{font-size:.7rem;margin-bottom:12px}
-  .beat{font-size:.95rem;margin-bottom:12px}
+  .doss h3{font-size:clamp(1.3rem,2.2vw,2rem);margin-bottom:12px}
+  .doss .tags{font-size:.74rem;margin-bottom:12px}
+  .beat{font-size:1.05rem;margin-bottom:12px}
   .plate-links{margin-top:14px}
   .plate-links a{font-size:.74rem}
 }
-.plate-links{margin-top:22px;display:flex;gap:22px;flex-wrap:wrap}
+.plate-links{margin-top:16px;display:flex;gap:22px;flex-wrap:wrap}
 /* tomato on every folder, whatever its stock — the accent is what marks a
    link as a thing you can open. Hover fills the rule in rather than changing
    the colour, since the colour is already the accent. */
@@ -1102,7 +1368,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    so nothing changes. */
 .skl-pin{position:sticky;top:0;min-height:100vh;min-height:100svh;
   display:flex;align-items:center;overflow:hidden;
-  background-color:var(--white);background-image:var(--page-grid);
+  background-color:var(--page);background-image:var(--page-grid);
   background-size:55px 55px,55px 55px;background-position:var(--wrapL,55px) 0}
 /* Pulled in two squares either side of the page measure, so the set sits in
    the middle of the screen with real margin around it. Whole squares, so the
@@ -1116,8 +1382,25 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    the gap are whole squares, so fixing the first one fixes all of them; it is
    `top`, not margin, because the section is flex-centred and any change to
    the block's height would just re-centre it away again. */
-.skl-list{display:grid;gap:var(--sklGap,55px);margin-top:110px;
-  position:relative;top:var(--sklFix,0px)}
+/* The snap moves the WHOLE set, heading included. It used to shift only the
+   list, by up to half a square either way — so the space under "Skills" was a
+   different size on every screen while the gaps between the rows stayed exact.
+   The space between two rows is the gap plus the air inside their boxes:
+   55 + (55-44) = 66px. Under the heading it is the drop from its baseline to
+   the bottom of its line box (~9px at line-height 1, not the 14 I assumed when
+   I cut this to 44) plus the margin plus half a row's air — so 55 lands within
+   a couple of pixels of 66, and 44 was 11px short. */
+.skl-wrap{position:relative;top:calc(var(--sklFix,0px) + var(--sklUp,0px))}
+/* One whole square up the page — a square, so the set stays exactly in phase
+   with the lattice and lockGrid's snap still lands every row in the middle of
+   its box. Only while the panel is PINNED: flowing on a phone it would be
+   painted 55px over the foot of the last folder, since a relative offset moves
+   the paint without moving the box. */
+@media(min-width:761px){ .skl-wrap{--sklUp:-55px} }
+/* Two squares between the heading and the first group, not one. Whole
+   squares, so the whole set stays in phase with the lattice and lockGrid's
+   snap still lands every row in the middle of its box. */
+.skl-list{display:grid;gap:var(--sklGap,55px);margin-top:110px}
 /* heading and skills on one baseline: the heading takes what it needs, the
    skills take the rest and sit hard against the right edge. */
 /* Each row is exactly ONE square tall, and its content is centred in it — so
@@ -1145,6 +1428,10 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    desktop rhythm, and the row cannot shrink below two squares without taking
    the type off the grid — so the air comes out instead. Whole cells, so
    nothing moves off a line. */
+/* On a short window the air comes out again — one square, as it was. Four
+   two-square rows plus the title plus two squares of head-room does not fit
+   under about 820px, and the row cannot shrink without taking the type off the
+   grid, so this is the thing that gives. */
 @media(max-height:820px){
   .skl-list{margin-top:55px}
 }
@@ -1166,10 +1453,9 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      only the list has to land, but with the heading now measured in squares
      the two travel together, and both offsets below are whole squares so
      everything stays in phase. */
-  .skl-wrap{position:relative;top:var(--sklFix,0px)}
   .skl-head{display:flex;align-items:center;height:55px}
   .skl-head h2{line-height:1}
-  .skl-list{gap:33px;margin-top:55px;top:0}
+  .skl-list{gap:33px;margin-top:33px}
   .skl-group{grid-template-columns:1fr;gap:11px;min-height:0}
   .skl-group ul{justify-content:flex-start;row-gap:0}
 }
@@ -1199,9 +1485,15 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
 /* The copy is set to the SAME width as the portrait and pushed to the right of
    its column, so the two blocks read as a matched pair with the gutter between
    them rather than as a picture with a paragraph trailing off the page. */
-.about-copy{max-width:var(--faceW,495px);margin-left:auto}
+/* margin-left:auto pushes the block to the right of its column; margin-right
+   then pulls it back off that edge by a whole square. A margin rather than a
+   transform: the copy stays in flow, nothing is promoted to its own layer, and
+   because the column's right edge is on a grid line and the step is a whole
+   square, both of the block's edges stay on the lattice. */
+.about-copy{max-width:var(--faceW,495px);margin-left:auto;margin-right:55px}
 @media(max-width:760px){
-  .about-copy{max-width:none;margin-left:0}
+  /* stacked, there is no gutter to move away from */
+  .about-copy{max-width:none;margin-left:0;margin-right:0}
   .about-big{font-size:1.3rem}          /* the clamp floor is too big on a phone */
 }
 
@@ -1293,14 +1585,20 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   will-change:transform}
 /* 33 + 10 + 1 = 44: four cells tall, on 22 of clearance — so the two rows and
    the button below them all keep landing on the same boxes as the line above. */
-.email{display:flex;width:fit-content;align-items:center;gap:12px;margin-top:22px;
+/* justify-content:center — the box is widened to a whole number of cells by
+   lockGrid, so without this the text would sit against its left edge inside a
+   box that is up to a cell wider than it. width is set from script; fit-content
+   is the fallback for the frame before that runs. */
+.email{display:flex;width:fit-content;justify-content:center;
+  align-items:center;gap:12px;margin-top:22px;
   font-family:var(--display);font-size:clamp(1.05rem,3vw,1.6rem);line-height:33px;
   border-bottom:1px solid rgba(25,44,100,.2);padding-bottom:10px;transition:.2s}
 .email:hover{border-color:var(--tomato);color:var(--tomato)}
 .email span{color:var(--tomato)}
 /* one square tall, one square of clearance above — sits on the grid like the
    boxes. In Contact it is a third row in the centred stack, so it centres too. */
-.btn{display:inline-flex;align-items:center;height:55px;padding:0 22px;margin-top:55px;
+.btn{display:inline-flex;align-items:center;justify-content:center;
+  height:55px;padding:0 22px;margin-top:55px;
   font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
   border:1px solid var(--black);background:var(--white);transition:.2s}
 .btn:hover{background:var(--tomato);border-color:var(--tomato);color:#fff}
@@ -1373,7 +1671,26 @@ footer>span:last-child{justify-self:end}
       <button id="burger" type="button" aria-label="Menu" aria-expanded="false"
               aria-controls="links"><span></span><span></span><span></span></button>
       <div id="links">
-        <a href="#about">About</a><a href="#work">Projects</a>
+        <a href="#about">About</a>
+        <div class="project-menu" id="projectMenu">
+          <a href="#work">Projects</a>
+          <!-- a drawn chevron, not the ⌄ character: a glyph sits wherever its
+               font's metrics put it in the em box, which is what left it
+               riding low against the label. This one is centred by geometry. -->
+          <button class="project-toggle" id="projectToggle" type="button"
+                  aria-label="Project shortcuts" aria-expanded="false"
+                  aria-controls="projectPopover"><svg viewBox="0 0 12 8"
+                  aria-hidden="true" focusable="false"><path d="M1 1.6 6 6.4 11 1.6"
+                  fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="project-popover" id="projectPopover">
+            <a href="#auv">Biomimetic AUV</a>
+            <a href="#helmet">Inflatable Helmet</a>
+            <a href="#efw">EfW Facility</a>
+            <a href="#website">Website Design</a>
+            <a href="#additional">Additional Work</a>
+          </div>
+        </div>
         <a href="#skills">Skills</a><a href="#contact">Contact</a>
       </div>
     </nav>
@@ -1402,17 +1719,16 @@ footer>span:last-child{justify-self:end}
     <div class="wrap">
       <div class="about-grid rv">
         <figure class="portrait">
-          <div class="ph">[ ADD img/leon.jpg ]</div>
+          <div class="ph">[ ADD img/leon.webp ]</div>
           <canvas id="face" aria-label="Portrait of Leon Panjwani"></canvas>
         </figure>
         <div class="about-copy">
           <h2 class="sr">About</h2>
           <p class="about-big"><span class="hey">Hey, I'm Leon.</span> I'm a third-year
-            <b>General Engineering</b> undergraduate studying at the <b>University of
-            Sheffield</b>.</p>
-          <p class="about-big">Outside of term time I'm at home in London, trying new things, and staying busy.
-            I love food, travelling, designing, and then building things (especially when my
-            design&nbsp;works).</p>
+            <b>General Engineering</b> undergraduate at the <b>University of Sheffield</b>,
+            specialising in mechanical engineering and on track for First-Class Honours.</p>
+          <p class="about-big">I'm looking for a summer 2027 internship in product engineering,
+            industrial design, consulting or project&nbsp;management.</p>
           <p class="about-big cue">Scroll down to see some of my&nbsp;work.</p>
         </div>
       </div>
@@ -1433,69 +1749,69 @@ footer>span:last-child{justify-self:end}
     <div class="doss-stack" id="dossStack">
       <div class="doss-pin">
 
-        <article class="doss" style="--i:0">
+        <article class="doss" id="auv" style="--i:0">
           <div class="doss-tab"><span>AUV</span></div>
           <div class="doss-face">
             <div class="doss-in">
-              <!-- the clip IS the evidence: the fin drive under way. Muted and
-                   playsinline so it can autoplay on a phone; the poster is a
-                   frame of the same clip, so anything that blocks autoplay
-                   still shows the vehicle rather than an empty box. -->
+              <!-- The clip is the evidence: the fin drive under way. It is
+                   muted and playsinline, then starts only in this dossier's
+                   scroll window; its poster keeps the plate meaningful while
+                   the card is moving or video is unavailable. -->
               <div class="doss-img">
                 <div class="pl-slide">
-                  <video src="img/auv.mp4" poster="img/auv.jpg" autoplay muted loop
-                         playsinline preload="metadata"
+                  <video data-src="img/auv.mp4" poster="img/auv.webp" muted loop
+                         playsinline preload="none"
                          aria-label="The biomimetic AUV under way in the test tank"></video>
                 </div>
                 <!-- fit, not cover: the assembly animation is 2.7:1 and the
                      drawing is a drawing — cropping either to fill a squarish
                      plate would throw away the thing you are meant to see. -->
                 <div class="pl-slide fit">
-                  <video src="img/auv-assembly.mp4" muted loop playsinline preload="none"
+                  <video data-src="img/auv-assembly.mp4" muted loop playsinline preload="none"
                          aria-label="CAD assembly of the AUV"></video>
                 </div>
                 <div class="pl-slide fit">
-                  <img src="img/auv-exploded.jpg" loading="lazy"
+                  <img src="img/auv-exploded.webp" loading="lazy"
                        alt="Exploded assembly drawing of the AUV with its parts list"></div>
               </div>
               <div class="doss-txt">
                 <h3>Biomimetic AUV</h3>
                 <div class="tags">MECHATRONICS · TEAM PROJECT · FUSION&nbsp;360</div>
-                <p class="beat">Build a working submersible that propels itself the way aquatic animals do, rather than with a conventional&nbsp;propeller.</p>
-                <p class="beat">Co-designed and constructed the vehicle, then used computational analysis to validate the propulsion and structure before&nbsp;manufacture.</p>
-                <p class="beat">A fully functional submersible, documented to full-detail manufacturing drawings costed for theoretical mass&nbsp;production.</p>
+                <p class="beat">Most submersibles push themselves along with a propeller. This one had to swim instead, the way aquatic animals&nbsp;do.</p>
+                <p class="beat">I co-designed and built the vehicle with my team, then ran computational analysis to validate the propulsion and the structure before&nbsp;manufacture.</p>
+                <p class="beat">It works: a fully functional submersible, documented to full-detail manufacturing drawings and costed for theoretical mass&nbsp;production.</p>
                 <div class="plate-links">
                   <a href="files/auv-manufacture-report.pdf" target="_blank" rel="noopener"
-                     data-kind="PDF · 14pp" data-shot="img/pv-auv-manufacture-report.jpg">Manufacture report ↗</a>
+                     data-kind="PDF · 14pp" data-shot="img/pv-auv-manufacture-report.webp">Manufacture report ↗</a>
                   <a href="https://sketchfab.com/3d-models/sharky-lenny-project-poseidon-e19a883f7a13442ba5fa143890d25351"
                      target="_blank" rel="noopener"
-                     data-kind="Sketchfab · 3D" data-shot="img/pv-auv-model.jpg">3D model ↗</a>
+                     data-kind="Sketchfab · 3D" data-shot="img/pv-auv-model.webp">3D model ↗</a>
                   <a href="https://drive.google.com/drive/folders/17trFwf-lSw0yyGsKCe7NSToi-jF_tpAQ?usp=drive_link"
                      target="_blank" rel="noopener"
-                     data-kind="Drive · STEP" data-shot="img/auv-exploded.jpg">CAD files ↗</a>
+                     data-kind="Drive · STEP" data-shot="img/auv-exploded.webp">CAD files ↗</a>
                 </div>
               </div>
             </div>
           </div>
         </article>
 
-        <article class="doss" style="--i:1">
+        <article class="doss" id="helmet" style="--i:1">
           <div class="doss-tab" data-side="right"><span>Inflatable Helmet</span></div>
           <div class="doss-face">
             <div class="doss-in">
               <div class="doss-img">
                 <div class="pl-slide">
-                  <video src="img/helmet.mp4" poster="img/helmet.jpg" autoplay muted loop
-                         playsinline preload="metadata"
+                  <video data-src="img/helmet.mp4" poster="img/helmet.webp" muted loop
+                         playsinline preload="none"
                          aria-label="Folding the collapsing structure by hand"></video>
                 </div>
               </div>
               <div class="doss-txt">
-                <h3>Pocket-sized inflatable&nbsp;helmet</h3>
+                <h3>Pocket-sized&nbsp;inflatable helmet</h3>
                 <div class="tags">INDEPENDENT R&amp;D · PROTOTYPING ·&nbsp;MATERIALS</div>
-                <p class="beat">Cyclists skip helmets because they are awkward to carry. Could one inflate to full size and pack down to pocket&nbsp;size?</p>
-                <p class="beat">Self-directed: researched collapsing structures and the market to set the requirements, then fabricated prototypes in TPU-laminated nylon, testing thermal bonding, airtight sealing and pressure&nbsp;retention.</p>
-                <p class="beat">Successive working prototypes, each narrowing down the bonding method that best held&nbsp;pressure.</p>
+                <p class="beat">Cyclists skip helmets because they are awkward to carry. I wanted to know whether one could inflate to full size and still pack down to pocket&nbsp;size.</p>
+                <p class="beat">Nobody set me this one. I researched collapsing structures and the market to fix the requirements, then fabricated prototypes in TPU-laminated nylon, testing thermal bonding, airtight sealing and pressure&nbsp;retention.</p>
+                <p class="beat">Each prototype worked, and each one narrowed down the bonding method that best held&nbsp;pressure.</p>
                 <div class="plate-links">
                 </div>
               </div>
@@ -1505,36 +1821,46 @@ footer>span:last-child{justify-self:end}
 
         <!-- cut from the blueprint itself: dark stock, light ink. The readout
              in the corner reads this to know to go white over it. -->
-        <article class="doss" style="--i:2" data-ink="light">
+        <article class="doss" id="efw" style="--i:2" data-ink="light">
           <div class="doss-tab"><span>EfW Facility</span></div>
           <div class="doss-face">
             <div class="doss-in">
+              <!-- The photograph opens the set, then the two proposal slides in
+                   the order they were pitched, then the process flow diagram.
+                   All three of the drawn ones are .fit — they are 16:9 slides
+                   and a square plate would crop the content off them. -->
               <div class="doss-img">
                 <div class="pl-slide">
                   <img src="img/efw.jpg"
                        alt="The waste bunker and grab crane at an Energy-from-Waste facility"></div>
                 <div class="pl-slide fit">
-                  <img src="img/efw-pfd.jpg" loading="lazy"
+                  <img src="img/efw-solution.webp" loading="lazy"
+                       alt="Proposal slide: all waste diverted from landfill by 2031, via AI-assisted sorting, incineration of residual waste and energy recovery"></div>
+                <div class="pl-slide fit">
+                  <img src="img/efw-keydata.webp" loading="lazy"
+                       alt="Proposal slide: key figures and the project timeline from commencement in 2026 to commissioning in July 2030"></div>
+                <div class="pl-slide fit">
+                  <img src="img/efw-pfd.webp" loading="lazy"
                        alt="Process flow diagram for the Energy-from-Waste facility"></div>
               </div>
               <div class="doss-txt">
                 <h3>Energy-from-Waste facility design &amp; tender&nbsp;proposal</h3>
                 <div class="tags">PROCESS DESIGN · THERMOFLUIDS · TEAM&nbsp;PROJECT</div>
-                <p class="beat">Design a large-scale Energy-from-Waste plant end to end, from waste arriving on site to energy leaving&nbsp;it.</p>
-                <p class="beat">Engineered the mechanical and process flow across waste sorting, incineration and energy recovery, then tested the design against financial and feasibility&nbsp;analysis.</p>
-                <p class="beat">Delivered as a formal tender proposal and defended in&nbsp;presentation.</p>
+                <p class="beat">A large-scale Energy-from-Waste plant, designed end to end: from waste arriving on site to energy leaving&nbsp;it.</p>
+                <p class="beat">I engineered the mechanical and process flow across waste sorting, incineration and energy recovery, then tested the design against financial and feasibility&nbsp;analysis.</p>
+                <p class="beat">It went out as a formal tender proposal, and we defended it in&nbsp;presentation.</p>
                 <div class="plate-links">
                   <a href="files/efw-pitch.pdf" target="_blank" rel="noopener"
-                     data-kind="Slides · 20pp" data-shot="img/pv-efw-pitch.jpg">Pitch ↗</a>
+                     data-kind="Slides · 20pp" data-shot="img/pv-efw-pitch.webp">Pitch ↗</a>
                   <a href="files/efw-tender-proposal.pdf" target="_blank" rel="noopener"
-                     data-kind="PDF · 88pp" data-shot="img/pv-efw-tender-proposal.jpg">Tender proposal ↗</a>
+                     data-kind="PDF · 88pp" data-shot="img/pv-efw-tender-proposal.webp">Tender proposal ↗</a>
                 </div>
               </div>
             </div>
           </div>
         </article>
 
-        <article class="doss" style="--i:3">
+        <article class="doss" id="website" style="--i:3">
           <div class="doss-tab"><span>Website design</span></div>
           <div class="doss-face">
             <div class="doss-in">
@@ -1546,16 +1872,16 @@ footer>span:last-child{justify-self:end}
                     <span>leonpanjwani.com</span>
                   </div>
                   <div class="bw-shot">
-                    <img src="img/site.jpg" loading="lazy"
+                    <img src="img/site.webp" loading="lazy"
                          alt="The title page of this site — the name drawn on a blueprint"></div>
                 </div>
               </div>
               <div class="doss-txt">
                 <h3>leonpanjwani.com</h3>
                 <div class="tags">INDEPENDENT · WEBGL · NO BUILD&nbsp;STEP</div>
-                <p class="beat">A portfolio that shows how I think about design, rather than one that just lists what I have&nbsp;made.</p>
-                <p class="beat">One file, written by hand, with no framework or build step. Everything lands on an 11px grid and the name is real 3D type, sized so it never crosses the border at any angle. I worked through it with AI, prompting my way past the parts I had not done before and checking what came&nbsp;back.</p>
-                <p class="beat">The site you are reading, deployed straight from&nbsp;GitHub.</p>
+                <p class="beat">My CV already lists what I have made. I wanted this one to show how I think while I am making&nbsp;it.</p>
+                <p class="beat">One HTML file, written by hand. No framework, no build step, nothing to install. Every edge on the page lands on an 11px grid, and the name is real extruded 3D type, sized so that no view of it crosses the border as it turns. I had not built anything like this before, so I worked through it with AI and picked out what was worth&nbsp;keeping.</p>
+                <p class="beat">You are looking at it. It deploys straight from&nbsp;GitHub.</p>
                 <div class="plate-links">
                   <a href="https://github.com/leonpanjwani" target="_blank" rel="noopener"
                      data-kind="GitHub" data-shot="img/github.svg">Source ↗</a>
@@ -1565,7 +1891,7 @@ footer>span:last-child{justify-self:end}
           </div>
         </article>
 
-        <article class="doss" style="--i:4">
+        <article class="doss" id="additional" style="--i:4">
           <div class="doss-tab"><span>Additional Work</span></div>
           <div class="doss-face">
             <div class="doss-in">
@@ -1576,25 +1902,25 @@ footer>span:last-child{justify-self:end}
                   <img src="img/eyh.jpg" loading="lazy"
                        alt="A crewed surface base on Mars"></div>
                 <div class="pl-slide">
-                  <img src="img/cfd.jpg" loading="lazy"
+                  <img src="img/cfd.webp" loading="lazy"
                        alt="Computed velocity field of a turbulent jet"></div>
                 <div class="pl-slide">
-                  <img src="img/gec.jpg" loading="lazy"
+                  <img src="img/gec.webp" loading="lazy"
                        alt="An electric city bus in service in Johannesburg"></div>
               </div>
               <div class="doss-txt">
                 <h3>Additional work</h3>
                 <div class="tags">TEAM CHALLENGES · ANALYSIS ·&nbsp;COURSEWORK</div>
-                <p class="beat"><b>Engineering You're Hired</b>, 2026 — led the team that designed and pitched a self-sufficient life-support solution for Mars mission expansion; voted most effective solution and&nbsp;presentation.</p>
+                <p class="beat"><b>Engineering You're Hired</b>, 2026. I led the team that designed and pitched a self-sufficient life-support solution for Mars mission expansion, and we were voted most effective solution and&nbsp;presentation.</p>
                 <p class="beat"><b>Computational Fluid Dynamics</b> coursework: meshing, solver setup and validation, written up against the analytical&nbsp;result.</p>
-                <p class="beat"><b>Global Engineering Challenge</b>, 2025 — a sustainable rural transport scheme for South Africa, taken to a team presentation and awarded a&nbsp;Distinction.</p>
+                <p class="beat"><b>Global Engineering Challenge</b>, 2025. A sustainable rural transport scheme for South Africa, taken to a team presentation and awarded a&nbsp;Distinction.</p>
                 <div class="plate-links">
                   <a href="files/eyh-presentation.pdf" target="_blank" rel="noopener"
                      data-kind="Slides · 13pp" data-shot="img/pv-eyh-presentation.jpg">EYH ↗</a>
                   <a href="files/cfd-analysis.pdf" target="_blank" rel="noopener"
-                     data-kind="PDF · 12pp" data-shot="img/pv-cfd-analysis.jpg">CFD ↗</a>
+                     data-kind="PDF · 12pp" data-shot="img/pv-cfd-analysis.webp">CFD ↗</a>
                   <a href="files/gec-presentation.pdf" target="_blank" rel="noopener"
-                     data-kind="Slides · 15pp" data-shot="img/pv-gec-presentation.jpg">GEC ↗</a>
+                     data-kind="Slides · 15pp" data-shot="img/pv-gec-presentation.webp">GEC ↗</a>
                 </div>
               </div>
             </div>
@@ -1635,10 +1961,6 @@ footer>span:last-child{justify-self:end}
           <h3>Communication</h3>
           <ul><li>Technical Pitching</li><li>Report Writing</li><li>Team Leadership</li></ul>
         </div>
-        <div class="skl-group">
-          <h3>Personal</h3>
-          <ul><li>French (Working Proficiency)</li><li>Reliable</li><li>Punctual</li><li>Quick Learner</li></ul>
-        </div>
       </div>
     </div>
     </div>
@@ -1673,7 +1995,18 @@ footer>span:last-child{justify-self:end}
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- ---- THREE.JS LIVES IN THE REPO ----
+     This was fetched from cdnjs, and it was the only thing on the page that
+     depended on someone else's server staying up. It is also the thing the
+     whole opening rests on: no THREE means no WebGL name, which means no
+     exploded assembly and no dimensions — the page drops silently to the flat
+     2D name instead. Every time cdnjs was slow, blocked by a network, or just
+     unlucky, that fallback is what you saw, and it is exactly the "sometimes
+     the intro doesn't load". It is a file like every other file here, so it
+     is committed like every other file here. Cloudflare Pages serves it from
+     the same origin, on the same connection, with no third-party DNS or TLS
+     handshake in front of the first frame. -->
+<script src="vendor/three.min.js"></script>
 <script>
 /* ==========================================================================
    EDIT ZONE
@@ -1710,8 +2043,13 @@ const ROLL = { minH:12, maxH:76, fade:55 };
    step is the whole point — it means the next folder is already on its way up
    before the one beneath it has finished covering the screen. rise: the swing
    angle in degrees, alternating side to side about the hinge below the page. */
-const DOSS = { hold:0.12, step:0.55, dur:0.6, rest:0.22, rise:7,
-               base:33, sep:0, par:0.68, under:220, lastDrop:44 };
+/* rise: 7 degrees was more than a real folder swings, and the overhang needed
+   to hide the tilted corners scales with tan(rise) — so every degree is paid
+   for in the area of every sheet, on every frame. 4 degrees still reads
+   clearly as paper being swung up and needs 43% less overhang:
+   tan(4)/tan(7) = 0.0699/0.1228 = 0.57. --ovX follows it, below. */
+const DOSS = { hold:0.12, step:0.55, dur:0.6, rest:0.22, rise:4,
+               base:22, sep:0, par:0.68, under:220, lastDrop:44 };
 /* sep:   each folder comes to rest this many px LOWER than the one behind it,
           so the stack cascades and every tab above stays in view instead of
           the files piling on one another at the foot of the screen.
@@ -1891,6 +2229,10 @@ const mix=(c1,c2,t)=>`rgb(${Math.round(lerp(c1[0],c2[0],t))},${Math.round(lerp(c
    Declared here because update() reads it and runs before the touch handlers
    further down are reached. */
 let M={}, mouseX=-1, mouseY=-1, grabbed=null;
+/* Corner geometry is pointer-driven, not scroll-driven. The fold is expensive
+   because its clipped, shadowed shape changes; there is no reason to rewrite
+   it on a scroll frame when the pointer has not moved. */
+let cornerDirty=true;
 /* false until the first pointer event has given the grid cursor a real
    position — see the reveal in update() and the .cursor-live gate in the CSS */
 let cursorLive=false;
@@ -1920,14 +2262,48 @@ const dossVids=dossEls.map(el=>[...el.querySelectorAll("video")]);
 const dossShown=dossEls.map(()=>null);     // last visibility state written
 const dossTf=dossEls.map(()=>"");          // last transform string written
 const dossOp=dossEls.map(()=>"");          // last opacity written
+/* A clip is supporting evidence, not a second animation fighting the folder.
+   The incoming project gets a generous play window; only its live carousel
+   slide may decode, and the previous project is paused before the next starts. */
+let activeDossVideo=-1;
+/* ---- HOW A FEED DOES IT ----
+   A clip is not given its source until it is the one being watched, and the
+   source is taken away again once its folder is off screen — which hands the
+   decoder back instead of leaving one attached per file. play() is also
+   RETRIED on canplay: with nothing preloaded the first call lands before there
+   is anything to play, the promise rejects, and since this function only runs
+   when the CHOICE changes, nothing ever asked again. That is why the two films
+   were sitting on their posters. */
+function syncDossVideo(next,force=false){
+  if(!force&&next===activeDossVideo) return;
+  activeDossVideo=next;
+  dossVids.forEach((videos,i)=>videos.forEach(v=>{
+    const live=i===next&&v.parentElement.classList.contains("on")&&!reduce;
+    if(live){
+      if(!v.getAttribute("src")&&v.dataset.src){
+        v.setAttribute("src",v.dataset.src); v.load();
+      }
+      const go=()=>{ if(activeDossVideo===i) v.play().catch(()=>{}) };
+      if(v.readyState>=2) go(); else v.addEventListener("canplay",go,{once:true});
+    }else{
+      v.pause();
+      /* off screen entirely: give the decoder back */
+      if(dossShown[i]===false&&v.getAttribute("src")){
+        v.removeAttribute("src"); v.load();
+      }
+    }
+  }));
+}
 
 /* the skills list — an ordinary section, its groups fading up in order */
 const skillsEl=document.getElementById("sklStack"),
       sklGroups=[...document.querySelectorAll(".skl-group")];
+const sklState=sklGroups.map(()=>"");
 
 /* the two halves of the closing line, and the section they live in */
 const contactEl=document.getElementById("contact"),
       slideEls=[...document.querySelectorAll(".slide-l,.slide-r")];
+const slideState=slideEls.map(()=>"");
 
 /* ---- THE TAB ROW ----
    Every tab is cut to the SAME width — the widest label decides it — and they
@@ -2191,6 +2567,18 @@ function build3D(){
 
 function renderGL(){ if(R3&&R3.ready) R3.renderer.render(R3.scene,R3.camera) }
 
+/* A browser can take the GL context away at any time — a long-lived tab, a GPU
+   process restart, a machine waking up. Nothing throws when it does: draw calls
+   simply stop having any effect, and the page would sit there with an empty
+   canvas over a hidden name. Catch it and hand over to the 2D name, the same
+   way the error path does. */
+if(glCanvas) glCanvas.addEventListener("webglcontextlost",e=>{
+  e.preventDefault();
+  R3=null; glCanvas.style.display="none"; nameEl.style.opacity="1";
+  M.W=0; stage.style.height=Math.round((M.vh||innerHeight)*1.5)+"px";
+  measure(); update();
+},{passive:false});
+
 /* ---- intro timeline (ms): fade in → letters cascade home → leaders fade →
    full-stop screw spins home → plate turns iso → front → rises to rest ---- */
 let introStarted=false, introDone=false, introRAF=0, introFinishCb=null, introFired=false;
@@ -2236,9 +2624,23 @@ function finishIntro(){
 }
 /* A real gesture — not a scroll position — is what skips the animation. The
    browser adjusts scrollTop on its own while the page settles, and treating
-   that as intent is what let a layout twitch cut the intro off. */
+   that as intent is what let a layout twitch cut the intro off.
+   ---- BUT A GESTURE HAS TO BE ONE ----
+   Any wheel event at all used to end it, and a trackpad does not send one
+   wheel event: it sends a stream of them, including the tail of the momentum
+   from whatever you did BEFORE the reload. A 2px drift from a flick that had
+   already finished was enough to cut the opening off — which is the other
+   half of "sometimes the animation doesn't play". Two guards now:
+     GRACE  nothing counts for the first fifth of a second, which covers the
+            momentum tail and the click that gave the window focus;
+     DY     a wheel has to be a push rather than a drift.
+   Neither delays a reader who actually wants to move on: a real scroll clears
+   both on its first event. */
 const SKIP=["wheel","touchstart","keydown","pointerdown"];
-function skipIntro(){
+const SKIP_GRACE=420, SKIP_DY=16;
+function skipIntro(e){
+  if(performance.now()-introT0 < SKIP_GRACE) return;
+  if(e && e.type==="wheel" && Math.abs(e.deltaY) < SKIP_DY) return;
   SKIP.forEach(t=>removeEventListener(t,skipIntro));
   if(introStarted&&!introDone) finishIntro();
 }
@@ -2247,7 +2649,10 @@ function start3DIntro(){
      alternate frames, and the assembly would shake between them */
   if(introStarted||introDone) return;
   introStarted=true;
-  SKIP.forEach(t=>addEventListener(t,skipIntro,{passive:true,once:true}));
+  /* NOT {once:true}: an event we deliberately ignore would still have spent
+     the listener, so the next one — the real gesture — would never arrive.
+     finishIntro() and skipIntro() both unbind explicitly instead. */
+  SKIP.forEach(t=>addEventListener(t,skipIntro,{passive:true}));
   const t0=introT0=performance.now();
   (function step(now){
     if(introDone) return;
@@ -2351,6 +2756,9 @@ function measure(){
      scrollbar, which the fixed sheet and the vh unit exclude. */
   const doc=document.documentElement;
   const vw=doc.clientWidth, vh=doc.clientHeight, U=GRID.unit;
+  /* Layout is sampled here, not in the scroll loop. lockGrid refreshes the
+     two flow-section positions once its final padding has been applied. */
+  M.dossY=M.skillsY=M.contactY=M.skillsSpan=M.maxScroll=undefined;
   const small=vw<820;
   /* A 33px border is fine on a 1400px sheet and absurd on a 390px one — it ate
      nearly a third of the width, because the drawing area is rounded DOWN to
@@ -2433,6 +2841,14 @@ function measure(){
   nameEl.style.setProperty("--sw",sw0.toFixed(2)+"px");
   const r0=words[0].getBoundingClientRect();
   const lh=r0.height;
+  /* ---- STACK THE LINES ----
+     Both .word divs are absolutely positioned at top:0, which is invisible
+     while the 3D name is up — the DOM copy is held at opacity 0 and exists to
+     be measured and read aloud. But the moment anything tears the 3D down
+     (WebGL context lost, three.js not loading) the catch reveals that copy,
+     and it came up with LEON printed straight through PANJWANI. The fallback
+     has to be a name whether or not it is ever needed. */
+  words.forEach((w,i)=>{ w.style.top=(i*lh).toFixed(1)+"px" });
 
   /* The block is centred in the frame, snapped to whole cells — the tour
      spins the name about the sheet's middle, which is also what EXT assumed
@@ -2604,9 +3020,36 @@ function measure(){
   const foot=Math.round(vh*0.03);
   doc.style.setProperty("--foot",foot+"px");
   doc.style.setProperty("--lastDrop",DOSS.lastDrop+"px");
-  doc.style.setProperty("--contentH",
-    Math.max(240,Math.round(vh-tabH-foot-DOSS.base-DOSS.lastDrop
-             -Math.max(0,dossEls.length-1)*DOSS.sep))+"px");
+  /* ---- THE CONTENT IS CENTRED ON THE SCREEN ----
+     A folder covers the screen exactly, so the gap above its contents and the
+     gap below them are what centre it. They used to be different numbers — the
+     tab's height and the last file's drop above, the base and foot below — so
+     the block sat 20-odd pixels high. The same gap top and bottom instead, and
+     the height that frees goes to the type. */
+  /* ---- CENTRED UNDER THE ISLANDS ----
+     headZ, not headH: the nav does not start at the top of the screen, it
+     hangs a cell below it, so the page a reader sees starts at the islands'
+     BOTTOM edge — 121px down, not 55. Taking off only their height left the
+     block low by the difference, which is exactly the gap that read as
+     off-centre. The rest is split evenly: DOSS.base under the contents, headZ
+     plus the same above them. */
+  const contentH=Math.max(240,Math.round(vh-headZ-2*DOSS.base
+             -Math.max(0,dossEls.length-1)*DOSS.sep));
+  doc.style.setProperty("--contentH",contentH+"px");
+  /* ---- THE PLATE'S CEILING ----
+     The plate is SQUARE and sized from its COLUMN, which is half the viewport
+     WIDTH. The box it sits in is sized from the viewport HEIGHT. On any window
+     wider than about 2:1 — an ultrawide, or an ordinary screen with a short
+     browser window — those two disagree: the square comes out taller than the
+     row it has to sit in, and since the face clips, the top and bottom of every
+     picture were simply cut off. It looked like the images had stopped
+     responding to the window; in fact they were responding to one axis of it.
+     This is the tallest a plate may be — the content area less its own padding
+     and the plate's margins — and because a square's height IS its width, it is
+     applied as a max on the width. Solved here rather than typed into the
+     stylesheet, so it re-solves on every resize like every other box. */
+  const PLATE_PAD=2*22 + 2*22;         // .doss-in padding + .doss-img margin
+  doc.style.setProperty("--plateMax",Math.max(120,contentH-PLATE_PAD)+"px");
 
   layoutTabs();
   dossOn = dossEls.length>0 && !small;   /* scroll-linked, so it stays on */
@@ -2621,8 +3064,10 @@ function measure(){
         Math.round(vh*(1+DOSS.hold+M.dossS+DOSS.rest))+"px";
     }else{
       M.dossS=0; dossStack.style.height="";
-      dossEls.forEach(el=>{el.style.transform="";el.style.opacity=""});
+      dossEls.forEach(el=>{el.style.transform="";el.style.opacity="";
+                           el.style.removeProperty("--cy")});
     }
+    M.dossY=dossStack.getBoundingClientRect().top+scrollY;
   }
 
   /* ---- THE PORTRAIT ----
@@ -2658,85 +3103,46 @@ function measure(){
 /* ==========================================================================
    SCROLL → STATE
    ========================================================================== */
-function update(){
-  /* Read the height FRESH every frame. M.vh is captured at measure() time, and
-     on mobile the viewport grows by ~60px the moment the URL bar slides away —
-     a stale height made the clip too shallow, which is exactly the bug where
-     blueprint stayed visible below the roll. */
-  /* iOS reports two different heights while the toolbars are sliding:
-     clientHeight is the LAYOUT viewport and lags behind, innerHeight is the
-     visual one and is the larger of the two. A fixed inset:0 element fills the
-     larger — so the max is what actually matches the sheet on screen. Taking
-     the smaller is what made the roll appear late and leave a gap above it. */
+/* ==========================================================================
+   WRITE ONLY WHAT CHANGED
+   --------------------------------------------------------------------------
+   update() runs on every scroll frame, and it used to run on every pointer
+   move as well. Most of what it writes is the same string it wrote last time:
+   the clip-path when you are not scrolling, the header inks once the paper has
+   gone, the roll's opacity for the whole length of the page. Assigning a style
+   property the value it already holds is not free — it invalidates that
+   element's computed style, and for a clip-path on a full-viewport fixed layer
+   it can cost a repaint of the whole screen.
+   One map of the last value written per key. A string compare instead of a
+   style invalidation.
+   ========================================================================== */
+const WROTE={};
+function wr(el,prop,val,key){
+  if(WROTE[key]===val) return;
+  WROTE[key]=val; el.style[prop]=val;
+}
+function wrv(el,prop,val,key){
+  if(WROTE[key]===val) return;
+  WROTE[key]=val; el.style.setProperty(prop,val);
+}
+
+/* ==========================================================================
+   POINTER STATE — the grid cursor and the corner peel
+   --------------------------------------------------------------------------
+   These are the only two things on the page that answer the MOUSE rather than
+   the wheel, and they used to be driven by calling the whole of update() on
+   every pointer event: the sheet's clip-path, the roll, the header inks, five
+   folders' transforms, the skills fades and the closing line, all recomputed
+   because the cursor moved eleven pixels. That is why moving the mouse felt
+   as heavy as scrolling.
+   Split out. update() still calls this — the page moving under a stationary
+   pointer changes which cell the pointer is in — but a pointer move no longer
+   calls update().
+   ========================================================================== */
+function updatePointer(){
+  if(!M.U) return;                       // before the first measure()
   const vh=vhNow();
-  /* The roll rides the top edge of the white page, so "paper leaving" and
-     "page arriving" are literally the same number. */
-  const rollY=content.getBoundingClientRect().top;
-  const travel=content.offsetTop||1;            // scroll distance for a full roll
-  const p=clamp(1-rollY/travel);                 // 0 = untouched sheet, 1 = rolled away
-
-  /* The first M.W px of that travel are the pinned view walkthrough: the paper
-     doesn't start moving until p passes pW. pW=0 when there's no 3D, which
-     drops the whole tour and starts the roll immediately. */
-  const pW=(M.W||0)/travel;
-
-  /* Clip in PERCENT of the sheet's own box rather than in measured pixels. 100%
-     is the element's true height by definition, so the cut cannot drift from
-     the roll no matter what the viewport does underneath it — but only if no
-     measured height gets mixed back in. Clamping rollY to a JS-read height did
-     exactly that, and cut the sheet short of the roll. max() does the clamping
-     in CSS instead, against the same 100% that defines the cut. */
-  sheet.style.clipPath=
-    `inset(0 0 max(0px, calc(100% - ${Math.max(0,rollY).toFixed(1)}px)) 0)`;
-
-  /* place the roll; the tube thickens as more paper winds onto it */
-  const tubeH=lerp(ROLL.minH,ROLL.maxH,p);
-  /* generous margin: the two viewport heights disagree by up to a toolbar's
-     worth mid-scroll, and being late here is what hid the roll entirely */
-  const onScreen=rollY>-(tubeH+120) && rollY<vh+160;
-  /* Fade the tube out the moment the paper is used up (rollY 0 → −44) rather
-     than letting it ride the top of the screen for another 200px of scroll.
-     It was hanging over the header, and — since "keep scrolling until the
-     roll is gone" is what everyone naturally does — it pushed the About
-     landing 200px past its framed position. Now the roll disappearing and
-     the section sitting centred are the same scroll. */
-  roll.style.opacity=onScreen?clamp(1+rollY/ROLL.fade):0;
-  if(onScreen){
-    roll.style.transform=`translateY(${rollY}px)`;
-    tube.style.height=tubeH+"px";
-  }
-
-  /* How far the paper's edge has swept past the header zone. 0 = paper still
-     across the top, 1 = paper gone and the blueprint bar has taken over. The
-     bar is flush with the top of the viewport, so the header never travels —
-     it just resolves into place as the paper clears it. */
-  const paperT=clamp((110-rollY)/110);
-
-  /* The name does not move. It is printed on the sheet, it stays in the front
-     elevation the intro left it in, and the roll's clip-path takes it away
-     with the paper — so the blueprint is still carrying the thing you came to
-     look at right up to the moment it leaves. All that's left here is its ink,
-     which is white for its whole life now that it never reaches the page. */
-  nameEl.style.setProperty("--ink","rgb(255,255,255)");
-  nameEl.style.setProperty("--fillC","rgba(255,255,255,.07)");
-
-  /* Both islands ride up from the frame line as the paper clears, fading in on
-     the way — the wordmark and the menu appear together, which is the whole
-     reason the name no longer has to travel up there itself. */
-  const drop=`translateY(${lerp(M.headFrom-M.headTo,0,paperT).toFixed(1)}px)`;
-  headbar.style.opacity=menubar.style.opacity=paperT;
-  headbar.style.transform=menubar.style.transform=drop;
-  headbar.style.pointerEvents=menubar.style.pointerEvents=paperT>.6?"auto":"none";
-  menu.style.setProperty("--mink",mix(RGB.white,RGB.tomato,paperT));
-  menu.classList.toggle("paper",paperT<.5);
-  /* The wordmark is the drawn name at header size, so its ink follows the
-     SURFACE the same way the hero's used to: white on the blueprint, tomato
-     once the page has taken over, with a translucent fill of the same colour
-     behind the outline. */
-  const ig=Math.round(lerp(255,99,paperT)), ib=Math.round(lerp(255,71,paperT));
-  headbar.style.setProperty("--bink",`rgb(255,${ig},${ib})`);
-  headbar.style.setProperty("--bfill",`rgba(255,${ig},${ib},.14)`);
-  headbar.style.setProperty("--bfillH",`rgba(255,${ig},${ib},.34)`);
+  const rollY=travelNow()-scrollY;
 
   /* ---- grid cursor ----
      Snap to the cell the pointer is inside, measured back from the grid's
@@ -2755,12 +3161,14 @@ function update(){
     const cy=onPaper ? M.BA-Math.ceil((M.BA-mouseY)/U)*U
                      : Math.floor(mouseY/U)*U;
     /* +1px centres the 9px tile inside its 11px cell */
-    cursorEl.style.transform=`translate(${cx+1}px,${cy+1}px)`;
+    wr(cursorEl,"transform",`translate(${cx+1}px,${cy+1}px)`,"cur");
     /* Readout shows the SNAPPED cell, not the raw pointer, so the numbers agree
        with where the cross actually is. Zero-padded so the line doesn't jitter
        in width as the digits change. */
     const pad4=v=>(v<0?"-":"")+String(Math.abs(Math.round(v))).padStart(4,"0");
-    cxEl.textContent="X "+pad4(cx); cyEl.textContent="Y "+pad4(cy);
+    const tx="X "+pad4(cx), ty="Y "+pad4(cy);
+    if(WROTE.cxT!==tx){ WROTE.cxT=tx; cxEl.textContent=tx }
+    if(WROTE.cyT!==ty){ WROTE.cyT=ty; cyEl.textContent=ty }
     coord.classList.add("on");
     /* Reveal only now, in the same frame the transform above was written —
        flipping it on from the pointer handler instead would show one frame of
@@ -2771,16 +3179,160 @@ function update(){
       cursorEl.classList.remove("gone");
     }
   }
+
+  /* ---- corner curl: the corner is PINCHED AND CARRIED to the pointer ----
+     Pinch corner C, drag it to P, and the crease is the perpendicular bisector
+     of CP — meeting the edges at Lx=(a²+b²)/2a and Ly=(a²+b²)/2b. The key
+     point I had wrong before: the flap's tip is P itself (C reflected in the
+     crease), NOT the far corner of a box. Pinning the tip to the pointer is
+     what makes the corner travel *with* the cursor instead of away from it. */
+  /* ---- TOUCH ----
+     On a phone the corner is DRAGGED, not hovered: only the corner currently
+     held by a finger (or springing back from one) curls, and its tip tracks the
+     touch exactly — grab = 1, no distance falloff — so it behaves like lifting
+     a page. See the touch handlers below. */
+  if(!reduce&&cornerDirty){
+    cornerDirty=false;
+    corners.forEach(c=>{
+    const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:vh;
+    const el=c.el;
+    const idle = coarse ? c!==grabbed : mouseX<0;
+    if(idle || rollY<=py+10){
+      wr(el,"width","0px","cw"+c.x+c.y); wr(el,"height","0px","ch"+c.x+c.y); return;
+    }
+
+    let dx=mouseX-px, dy=mouseY-py;
+    const raw=Math.hypot(dx,dy);
+    /* Cap the peel on touch, or you can drag the entire sheet off the screen.
+       tanh rather than a hard clamp: it tracks the finger 1:1 while the fold is
+       small and then eases asymptotically into the limit, so the corner feels
+       like it meets resistance instead of hitting a wall. */
+    if(coarse && raw>0){
+      const R=Math.min(M.vw,vh)*0.42, k=R*Math.tanh(raw/R)/raw;
+      dx*=k; dy*=k;
+    }
+    const grab=coarse?1:clamp((330-raw)/170);   // desktop eases in, so nothing pops
+    let a=Math.abs(dx)*grab, b=Math.abs(dy)*grab;
+    if(a<1&&b<1){
+      wr(el,"width","0px","cw"+c.x+c.y); wr(el,"height","0px","ch"+c.x+c.y); return;
+    }
+    /* stop a near-zero leg sending the other one to infinity */
+    a=Math.max(a,b*0.22); b=Math.max(b,a*0.22);
+
+    const s=a*a+b*b, Lx=s/(2*a), Ly=s/(2*b);
+    const W=Math.max(Lx,a), H=Math.max(Ly,b);
+    wr(el,"width",W.toFixed(1)+"px","cw"+c.x+c.y);
+    wr(el,"height",H.toFixed(1)+"px","ch"+c.x+c.y);
+
+    /* (u,v) measured inward from the corner → element-local px */
+    const fx=c.x==="l"?(u=>u):(u=>W-u), fy=c.y==="t"?(v=>v):(v=>H-v);
+    const pt=(u,v)=>`${fx(u).toFixed(1)}px ${fy(v).toFixed(1)}px`;
+    const A=pt(Lx,0), B=pt(0,Ly);
+    wr(c.hole,"clipPath",`polygon(${pt(0,0)},${A},${B})`,"chc"+c.x+c.y);
+    wr(c.flap,"clipPath",`polygon(${A},${B},${pt(a,b)})`,"cfc"+c.x+c.y);
+    });
+  }
+}
+
+/* The scroll distance for a full roll — content.offsetTop. Reading offsetTop
+   FLUSHES LAYOUT, and this was read on every scroll frame and every pointer
+   move for a number that only changes when the sections are re-padded. Cached,
+   and invalidated by measure() (which rebuilds M) and by lockGrid(). */
+function travelNow(){
+  return M.travel||(M.travel=content.offsetTop||1);
+}
+
+function update(){
+  /* Read the height FRESH every frame. M.vh is captured at measure() time, and
+     on mobile the viewport grows by ~60px the moment the URL bar slides away —
+     a stale height made the clip too shallow, which is exactly the bug where
+     blueprint stayed visible below the roll. */
+  /* iOS reports two different heights while the toolbars are sliding:
+     clientHeight is the LAYOUT viewport and lags behind, innerHeight is the
+     visual one and is the larger of the two. A fixed inset:0 element fills the
+     larger — so the max is what actually matches the sheet on screen. Taking
+     the smaller is what made the roll appear late and leave a gap above it. */
+  const vh=vhNow();
+  /* The roll rides the top edge of the white page, so "paper leaving" and
+     "page arriving" are literally the same number. */
+  const travel=travelNow();                     // scroll distance for a full roll
+  const rollY=travel-scrollY;                   // content is not transformed
+  const p=clamp(1-rollY/travel);                 // 0 = untouched sheet, 1 = rolled away
+
+  /* The first M.W px of that travel are the pinned view walkthrough: the paper
+     doesn't start moving until p passes pW. pW=0 when there's no 3D, which
+     drops the whole tour and starts the roll immediately. */
+  const pW=(M.W||0)/travel;
+
+  /* Clip in PERCENT of the sheet's own box rather than in measured pixels. 100%
+     is the element's true height by definition, so the cut cannot drift from
+     the roll no matter what the viewport does underneath it — but only if no
+     measured height gets mixed back in. Clamping rollY to a JS-read height did
+     exactly that, and cut the sheet short of the roll. max() does the clamping
+     in CSS instead, against the same 100% that defines the cut. */
+  wr(sheet,"clipPath",
+     `inset(0 0 max(0px, calc(100% - ${Math.max(0,rollY).toFixed(1)}px)) 0)`,"clip");
+
+  /* place the roll; the tube thickens as more paper winds onto it */
+  const tubeH=lerp(ROLL.minH,ROLL.maxH,p);
+  /* generous margin: the two viewport heights disagree by up to a toolbar's
+     worth mid-scroll, and being late here is what hid the roll entirely */
+  const onScreen=rollY>-(tubeH+120) && rollY<vh+160;
+  /* Fade the tube out the moment the paper is used up (rollY 0 → −44) rather
+     than letting it ride the top of the screen for another 200px of scroll.
+     It was hanging over the header, and — since "keep scrolling until the
+     roll is gone" is what everyone naturally does — it pushed the About
+     landing 200px past its framed position. Now the roll disappearing and
+     the section sitting centred are the same scroll. */
+  wr(roll,"opacity",String(onScreen?clamp(1+rollY/ROLL.fade):0),"rollOp");
+  if(onScreen){
+    wr(roll,"transform",`translateY(${rollY.toFixed(1)}px)`,"rollTf");
+    wr(tube,"height",tubeH.toFixed(1)+"px","tubeH");
+  }
+
+  /* How far the paper's edge has swept past the header zone. 0 = paper still
+     across the top, 1 = paper gone and the blueprint bar has taken over. The
+     bar is flush with the top of the viewport, so the header never travels —
+     it just resolves into place as the paper clears it. */
+  const paperT=clamp((110-rollY)/110);
+
+  /* The name does not move. It is printed on the sheet, it stays in the front
+     elevation the intro left it in, and the roll's clip-path takes it away
+     with the paper — so the blueprint is still carrying the thing you came to
+     look at right up to the moment it leaves. All that's left here is its ink,
+     which is white for its whole life now that it never reaches the page. */
+  wrv(nameEl,"--ink","rgb(255,255,255)","nInk");
+  wrv(nameEl,"--fillC","rgba(255,255,255,.07)","nFill");
+
+  /* Both islands ride up from the frame line as the paper clears, fading in on
+     the way — the wordmark and the menu appear together, which is the whole
+     reason the name no longer has to travel up there itself. */
+  const drop=`translateY(${lerp(M.headFrom-M.headTo,0,paperT).toFixed(1)}px)`;
+  const hOp=paperT.toFixed(3), hPe=paperT>.6?"auto":"none";
+  wr(headbar,"opacity",hOp,"hbOp");   wr(menubar,"opacity",hOp,"mbOp");
+  wr(headbar,"transform",drop,"hbTf");wr(menubar,"transform",drop,"mbTf");
+  wr(headbar,"pointerEvents",hPe,"hbPe"); wr(menubar,"pointerEvents",hPe,"mbPe");
+  wrv(menu,"--mink",mix(RGB.white,RGB.tomato,paperT),"mink");
+  menu.classList.toggle("paper",paperT<.5);
+  /* The wordmark is the drawn name at header size, so its ink follows the
+     SURFACE the same way the hero's used to: white on the blueprint, tomato
+     once the page has taken over, with a translucent fill of the same colour
+     behind the outline. */
+  const ig=Math.round(lerp(255,99,paperT)), ib=Math.round(lerp(255,71,paperT));
+  wrv(headbar,"--bink",`rgb(255,${ig},${ib})`,"bink");
+  wrv(headbar,"--bfill",`rgba(255,${ig},${ib},.14)`,"bfill");
+  wrv(headbar,"--bfillH",`rgba(255,${ig},${ib},.34)`,"bfillH");
+
   /* white over the paper, navy once the page has taken over — and the halo
      flips with it, dark behind white ink and pale behind navy */
-  coord.style.setProperty("--ink",mix(RGB.white,RGB.navy,paperT));
-  coord.style.setProperty("--halo",paperT<.5?"rgba(9,16,42,.55)":"rgba(255,255,255,.9)");
+  wrv(coord,"--ink",mix(RGB.white,RGB.navy,paperT),"cInk");
+  wrv(coord,"--halo",paperT<.5?"rgba(9,16,42,.55)":"rgba(255,255,255,.9)","cHalo");
 
   /* the readout slides from its blueprint berth to the screen corner as the
      paper clears, on the same motion the name rides */
   if(M.cB){
-    coord.style.left=Math.round(lerp(M.cB.x,M.cA.x,paperT))+"px";
-    coord.style.top =Math.round(lerp(M.cB.y,M.cA.y,paperT))+"px";
+    wr(coord,"left",Math.round(lerp(M.cB.x,M.cA.x,paperT))+"px","cL");
+    wr(coord,"top", Math.round(lerp(M.cB.y,M.cA.y,paperT))+"px","cT");
   }
 
   /* ---- 3D name: the pinned camera walkthrough ----
@@ -2829,7 +3381,8 @@ function update(){
     /* clamped to the schedule PLUS the tail, so the folders carry on climbing
        through it — the last file gets its moment on screen without the page
        going dead under the wheel */
-    const sc=clamp(-dossStack.getBoundingClientRect().top/vh-DOSS.hold,
+    const dossY=M.dossY??(dossStack.getBoundingClientRect().top+scrollY);
+    const sc=clamp((scrollY-dossY)/vh-DOSS.hold,
                    0,M.dossS+DOSS.rest);
     /* In px, not %, because the offsets are a fixed cascade rather than a
        fraction of anything. The rise is LINEAR — an eased one decelerates into
@@ -2846,10 +3399,13 @@ function update(){
        It used to overshoot to that line and then ease back to a resting
        offset, which read as a bounce at the top and a straighten-out after it.
        Arithmetic, so nothing here needs the DOM. */
+    /* how far a landed sheet has climbed past its landing — the parallax, and
+       the reason its contents would otherwise drift off centre */
+    const lagAt=i=>DOSS.par*vh*Math.max(0,sc-i*DOSS.step-DOSS.dur);
     const yAt=i=>{
       const start=i*DOSS.step;
       const k=clamp((sc-start)/DOSS.dur);
-      const lag=DOSS.par*vh*Math.max(0,sc-start-DOSS.dur);
+      const lag=lagAt(i);
       /* every file lands on the same line, the last one included — resting it
          lower was what stopped it ever being the whole screen. DOSS.lastDrop
          still shortens its CONTENT, which is what took the dead space off it */
@@ -2875,13 +3431,14 @@ function update(){
        a tab is only as wide as its label. A folder still mid-swing does not
        count, because a tilted top edge crosses the screen on a slant and
        leaves a wedge of what is behind it showing. */
-    const ys=[], fs=[], cover=[];
+    const ys=[], fs=[], phases=[], cover=[];
     for(let i=0;i<n;i++){
       ys[i]=yAt(i);
       /* the swing finishes WITH the rise, so the sheet is horizontal at the
          moment its edge reaches the top — it used to run on past the landing
          and straighten out afterwards */
-      fs[i]=clamp((sc-i*DOSS.step)/DOSS.dur);
+      phases[i]=(sc-i*DOSS.step)/DOSS.dur;
+      fs[i]=clamp(phases[i]);
     }
     for(let i=n-1,m=1e9;i>=0;i--){
       cover[i]=m;
@@ -2917,20 +3474,46 @@ function update(){
         /* release the compositing layer too, or the folder keeps a raster of
            itself alive for the whole section */
         el.style.willChange=shown?"transform":"auto";
-        dossVids[i].forEach(v=>{
-          if(!shown) v.pause();
-          /* only the slide on show gets to play again — the carousel owns
-             which one that is */
-          else if(v.parentElement.classList.contains("on")) v.play().catch(()=>{});
-        });
       }
       if(!shown) return;                      // nothing worth writing
       if(dossOp[i]!==op){ dossOp[i]=op; el.style.opacity=op }
       const f=fs[i];
-      const tf=`translateY(${y.toFixed(1)}px) `+
-               `rotate(${(sgn*(1-f)*dossTilt).toFixed(2)}deg)`;
+      /* ---- A LANDED SHEET IS NOT ROTATED, IT IS MOVED ----
+         A rotation makes the browser RE-RASTER the layer every frame; a pure
+         translation only moves an existing raster on the compositor. These
+         layers are the most expensive thing on the page to rasterise — each
+         folder is about 1.34 screens in both directions, which at 2x is
+         roughly fourteen million device pixels, and up to three are live at
+         once. A folder is only actually tilted while it is swinging; for the
+         whole of the rest of its life the angle rounds to zero. Emitting the
+         rotate() anyway kept every landed sheet on the expensive path for
+         nothing. */
+      const deg=sgn*(1-f)*dossTilt;
+      const tf=Math.abs(deg)<0.01
+        ? `translateY(${y.toFixed(1)}px)`
+        : `translateY(${y.toFixed(1)}px) rotate(${deg.toFixed(2)}deg)`;
       if(dossTf[i]!==tf){ dossTf[i]=tf; el.style.transform=tf }
+      /* (The contents used to be given the climb back here, to hold them
+         still while the sheet moved. They ride with the paper now — see
+         .doss-in — so there is nothing left to write per frame, which also
+         takes a custom-property write off every folder on every frame. A
+         custom property invalidates the style of the whole subtree under it,
+         and the subtree here is a full-page folder.) */
     });
+
+    /* One clip at a time, and not while its own sheet is still flying: the
+       window opens at 0.9 — a hair before the folder lands — rather than at
+       0.35, which had a 1000px video decoding through the fastest part of the
+       rise, on the same frames as two oversized sheets being rastered. That
+       overlap is what made the two folders with film in them drag. It still
+       closes at 1.45, so the clip is running for the whole time the folder is
+       actually there to be watched. The newest eligible folder wins, so one is
+       stopped before the next begins decoding. */
+    let videoDoss=-1;
+    for(let i=0;i<n;i++){
+      if(dossShown[i]&&phases[i]>=0.9&&phases[i]<=1.45) videoDoss=i;
+    }
+    syncDossVideo(videoDoss);
 
     /* ---- THE READOUT OVER DARK STOCK ----
        One of the folders is cut from the blueprint itself, and the coordinate
@@ -2941,8 +3524,8 @@ function update(){
     for(let i=dossEls.length-1;i>=0;i--){
       if(tops[i]<=cy){
         if(dossEls[i].dataset.ink==="light"){
-          coord.style.setProperty("--ink","#ffffff");
-          coord.style.setProperty("--halo","rgba(9,16,42,.55)");
+          wrv(coord,"--ink","#ffffff","cInk");
+          wrv(coord,"--halo","rgba(9,16,42,.55)","cHalo");
         }
         break;
       }
@@ -2957,7 +3540,7 @@ function update(){
     if(aboutEl){
       const f0=(1-clamp(sc/DOSS.dur))*(vh+DOSS.under);
       const push=Math.min(DOSS.par*vh*sc, Math.max(0,vh-f0), vh);
-      aboutEl.style.transform=push>0.5?`translateY(${(-push).toFixed(1)}px)`:"";
+      wr(aboutEl,"transform",push>0.5?`translateY(${(-push).toFixed(1)}px)`:"","abTf");
     }
   }
 
@@ -2967,12 +3550,16 @@ function update(){
      panel holds the screen. SKL.step and .dur are fractions of that budget;
      what is left over at the end is the pause. */
   if(sklGroups.length&&skillsEl){
-    const span=Math.max(1,skillsEl.offsetHeight-vh);   // the pinned budget
+    const skillsY=M.skillsY??(skillsEl.getBoundingClientRect().top+scrollY);
+    const span=Math.max(1,M.skillsSpan??(skillsEl.offsetHeight-vh)); // pinned budget
     const lead=vh*SKL.lead;                            // and the run-up to it
-    const p=clamp((lead-skillsEl.getBoundingClientRect().top)/(lead+span));
+    const p=clamp((lead-(skillsY-scrollY))/(lead+span));
     sklGroups.forEach((g,i)=>{
-      g.style.setProperty("--sk",
-        ease(clamp((p-i*SKL.step)/SKL.dur)).toFixed(3));
+      const next=ease(clamp((p-i*SKL.step)/SKL.dur)).toFixed(3);
+      if(sklState[i]!==next){
+        sklState[i]=next;
+        g.style.setProperty("--sk",next);
+      }
     });
   }
 
@@ -2985,63 +3572,27 @@ function update(){
        more scroll than the document has left, the halves are still short of
        the middle at the bottom and can never close. So the span is whichever
        is shorter — the usual two thirds of a screen, or all that remains. */
-    const top=contactEl.getBoundingClientRect().top;
-    const maxScroll=Math.max(1,(document.documentElement.scrollHeight||0)-vh);
-    const start=top+scrollY-vh;
+    const contactY=M.contactY??(contactEl.getBoundingClientRect().top+scrollY);
+    const top=contactY-scrollY;
+    const maxScroll=Math.max(1,M.maxScroll??((document.documentElement.scrollHeight||0)-vh));
+    const start=contactY-vh;
     const span=Math.max(1,Math.min(vh*0.66,maxScroll-start));
     const q=ease(clamp((scrollY-start)/span));
     const off=((1-q)*62).toFixed(1);
-    slideEls.forEach(el=>{
-      el.style.setProperty("--sx",
-        (el.classList.contains("slide-l")?"-":"")+off+"vw");
-      el.style.setProperty("--so",q.toFixed(3));
+    slideEls.forEach((el,i)=>{
+      const sx=(el.classList.contains("slide-l")?"-":"")+off+"vw";
+      const so=q.toFixed(3), next=sx+"|"+so;
+      if(slideState[i]===next) return;
+      slideState[i]=next;
+      el.style.setProperty("--sx",sx);
+      el.style.setProperty("--so",so);
     });
   }
 
-  /* ---- corner curl: the corner is PINCHED AND CARRIED to the pointer ----
-     Pinch corner C, drag it to P, and the crease is the perpendicular bisector
-     of CP — meeting the edges at Lx=(a²+b²)/2a and Ly=(a²+b²)/2b. The key
-     point I had wrong before: the flap's tip is P itself (C reflected in the
-     crease), NOT the far corner of a box. Pinning the tip to the pointer is
-     what makes the corner travel *with* the cursor instead of away from it. */
-  /* ---- TOUCH ----
-     On a phone the corner is DRAGGED, not hovered: only the corner currently
-     held by a finger (or springing back from one) curls, and its tip tracks the
-     touch exactly — grab = 1, no distance falloff — so it behaves like lifting
-     a page. See the touch handlers below. */
-  if(!reduce) corners.forEach(c=>{
-    const px=c.x==="l"?0:M.vw, py=c.y==="t"?0:vh;
-    const el=c.el;
-    const idle = coarse ? c!==grabbed : mouseX<0;
-    if(idle || rollY<=py+10){ el.style.width=el.style.height="0px"; return; }
-
-    let dx=mouseX-px, dy=mouseY-py;
-    const raw=Math.hypot(dx,dy);
-    /* Cap the peel on touch, or you can drag the entire sheet off the screen.
-       tanh rather than a hard clamp: it tracks the finger 1:1 while the fold is
-       small and then eases asymptotically into the limit, so the corner feels
-       like it meets resistance instead of hitting a wall. */
-    if(coarse && raw>0){
-      const R=Math.min(M.vw,vh)*0.42, k=R*Math.tanh(raw/R)/raw;
-      dx*=k; dy*=k;
-    }
-    const grab=coarse?1:clamp((330-raw)/170);   // desktop eases in, so nothing pops
-    let a=Math.abs(dx)*grab, b=Math.abs(dy)*grab;
-    if(a<1&&b<1){ el.style.width=el.style.height="0px"; return; }
-    /* stop a near-zero leg sending the other one to infinity */
-    a=Math.max(a,b*0.22); b=Math.max(b,a*0.22);
-
-    const s=a*a+b*b, Lx=s/(2*a), Ly=s/(2*b);
-    const W=Math.max(Lx,a), H=Math.max(Ly,b);
-    el.style.width=W.toFixed(1)+"px"; el.style.height=H.toFixed(1)+"px";
-
-    /* (u,v) measured inward from the corner → element-local px */
-    const fx=c.x==="l"?(u=>u):(u=>W-u), fy=c.y==="t"?(v=>v):(v=>H-v);
-    const pt=(u,v)=>`${fx(u).toFixed(1)}px ${fy(v).toFixed(1)}px`;
-    const A=pt(Lx,0), B=pt(0,Ly);
-    c.hole.style.clipPath=`polygon(${pt(0,0)},${A},${B})`;   // page revealed
-    c.flap.style.clipPath=`polygon(${A},${B},${pt(a,b)})`;   // tip at the cursor
-  });
+  /* The cursor and the corner peel are pointer state, not scroll state — but
+     the page moving under a stationary pointer changes which cell it is in, so
+     the scroll pass still has to run them. The reverse is no longer true. */
+  updatePointer();
 }
 
 /* ==========================================================================
@@ -3101,6 +3652,38 @@ function lockGrid(){
     const over=Math.round(s.getBoundingClientRect().height)%SQ;
     s.style.paddingBottom=(PAD+(over?SQ-over:0))+"px";
   });
+  /* ---- THE CONTACT LINKS, ONTO THE GRID ----
+     They are centred, and centring a box of arbitrary width inside a box of
+     whole squares lands its edges wherever the text happens to end — which is
+     the one place on the page where an edge was not on a line. The visible
+     edge of each of these is real: the email links carry an underline the
+     full width of the box, and the button carries a border.
+     So each row is widened to the largest whole-cell box that still holds its
+     text, with a whole number of cells of air either side. --wrapW is a whole
+     number of squares and --wrapL is on a line, so both edges of every row
+     then land on the lattice, and the three rows share the same two lines.
+     Width is CLEARED before measuring: this runs again on every resize, and
+     measuring a box we widened last time would ratchet it wider each pass. */
+  const wrapWpx=parseFloat(getComputedStyle(document.documentElement)
+                           .getPropertyValue("--wrapW"))||0;
+  /* A GROUP shares one width — the widest member's, snapped. Snapping each row
+     on its own put both edges on the lattice but left the two email rules
+     different lengths, which reads as two things that missed each other rather
+     than as a block. The two links are one pair and take one measure; the
+     button is its own object and takes its own. */
+  const snapCentred=els=>{
+    if(!els.length||!wrapWpx) return;
+    els.forEach(el=>{ el.style.width="" });          // measure natural, never our own
+    let nat=0;
+    els.forEach(el=>{ nat=Math.max(nat,el.getBoundingClientRect().width) });
+    if(nat<=0||nat>wrapWpx) return;                  // wider than the page measure
+    const inset=Math.max(0,Math.floor((wrapWpx-nat)/(2*GRID.unit)))*GRID.unit;
+    const w=(wrapWpx-2*inset)+"px";
+    els.forEach(el=>{ el.style.width=w });
+  };
+  snapCentred([...document.querySelectorAll(".fin-details .email")]);
+  snapCentred([...document.querySelectorAll(".fin-details .btn")]);
+
   /* ---- the close, onto the grid ----
      Last, because the padding pass above is what decides where Contact
      starts. The leading is set from the size the type actually renders at
@@ -3119,11 +3702,32 @@ function lockGrid(){
     const off=(((mid-U/2)%U)+U)%U;
     doc.style.setProperty("--finFix",(off>U/2?U-off:-off).toFixed(1)+"px");
   }
+  /* The scroll loop only needs positions, not fresh layout reads. Refresh them
+     after the final sizing pass so dossier, Skills and Contact can animate
+     from scrollY alone. */
+  /* the roll's travel is content.offsetTop, and the padding pass above is
+     exactly what moves it — recompute it here rather than per frame */
+  M.travel=content.offsetTop||1;
+  if(dossStack) M.dossY=dossStack.getBoundingClientRect().top+scrollY;
+  if(skillsEl){
+    M.skillsY=skillsEl.getBoundingClientRect().top+scrollY;
+    M.skillsSpan=Math.max(1,skillsEl.offsetHeight-vhNow());
+  }
+  if(contactEl) M.contactY=contactEl.getBoundingClientRect().top+scrollY;
+  M.maxScroll=Math.max(1,(doc.scrollHeight||0)-vhNow());
 }
 
 let ticking=false;
 function onScroll(){
   if(!ticking){ticking=true;requestAnimationFrame(()=>{update();ticking=false})}
+}
+/* The pointer's own rAF gate. A mouse move used to call onScroll(), which ran
+   the entire scroll pipeline; now it runs the cursor and the fold and nothing
+   else. Separate flags, so a scroll frame and a pointer frame do not cancel
+   one another. */
+let pTicking=false;
+function onPointer(){
+  if(!pTicking){pTicking=true;requestAnimationFrame(()=>{updatePointer();pTicking=false})}
 }
 addEventListener("scroll",onScroll,{passive:true});
 let rsz, lastW=innerWidth;
@@ -3144,7 +3748,8 @@ addEventListener("resize",()=>{
 });
 addEventListener("mousemove",e=>{
   mouseX=e.clientX; mouseY=e.clientY;
-  onScroll();                              // rAF-throttled, so this is cheap
+  cornerDirty=true;
+  onPointer();                             // cursor + fold only, not the page
 },{passive:true});
 /* ==========================================================================
    PLATES — each project's files, one at a time
@@ -3164,6 +3769,22 @@ document.querySelectorAll("#work .plate-links a").forEach(a=>{
   a.textContent=""; a.appendChild(lbl);
 });
 
+/* ---- ONE INK BLOCK PER FOLDER ----
+   The printed-ink mask used to be applied to every heading, tag line and
+   paragraph separately — 39 masked elements across the five folders, each its
+   own masked layer, all inside sheets that re-raster when they move. The
+   wrapper is built here rather than written into the markup because it is a
+   rendering mechanism and not content: it changes nothing about the copy, the
+   reading order or the accessibility tree beyond adding a plain div.
+   It stops before .plate-links, deliberately — see the .doss-ink rule. */
+document.querySelectorAll("#work .doss-txt").forEach(txt=>{
+  const links=txt.querySelector(".plate-links");
+  const ink=document.createElement("div");
+  ink.className="doss-ink";
+  while(txt.firstChild&&txt.firstChild!==links) ink.appendChild(txt.firstChild);
+  txt.insertBefore(ink,links);
+});
+
 document.querySelectorAll("#work .doss-img").forEach(plate=>{
   const slides=[...plate.querySelectorAll(".pl-slide")];
   if(!slides.length) return;
@@ -3181,8 +3802,10 @@ document.querySelectorAll("#work .doss-img").forEach(plate=>{
       s.classList.toggle("on",k===i);
       /* a video that isn't showing shouldn't be decoding frames */
       const v=s.querySelector("video");
-      if(v){ if(k===i){ if(!reduce) v.play().catch(()=>{}) } else v.pause() }
+      if(v) v.pause();
     });
+    /* Changing a carousel slide must not bypass the dossier play window. */
+    syncDossVideo(activeDossVideo,true);
     dots.forEach((d,k)=>d.setAttribute("aria-current",k===i?"true":"false"));
   };
   if(slides.length>1){
@@ -3294,9 +3917,34 @@ document.querySelectorAll("#work .doss-img").forEach(plate=>{
 /* ==========================================================================
    MENU — collapsed on mobile
    ========================================================================== */
+const projectMenu=document.getElementById("projectMenu"),
+      projectToggle=document.getElementById("projectToggle");
+function setProjectMenu(open){
+  projectMenu.classList.toggle("open",open);
+  projectToggle.setAttribute("aria-expanded",open?"true":"false");
+}
+projectToggle.addEventListener("click",e=>{
+  e.stopPropagation();
+  setProjectMenu(!projectMenu.classList.contains("open"));
+});
+/* A grace period on the way out. The pointer has to cross from the label to
+   the panel, and any moment it spends on neither would otherwise close it —
+   the panel disappearing exactly as you reach for it. */
+let pmHold=0;
+projectMenu.addEventListener("mouseenter",()=>{clearTimeout(pmHold);setProjectMenu(true)});
+projectMenu.addEventListener("mouseleave",()=>{
+  clearTimeout(pmHold); pmHold=setTimeout(()=>setProjectMenu(false),240);
+});
+projectMenu.addEventListener("focusin",()=>setProjectMenu(true));
+projectMenu.addEventListener("focusout",()=>{
+  requestAnimationFrame(()=>{
+    if(!projectMenu.contains(document.activeElement)) setProjectMenu(false);
+  });
+});
 function setMenu(open){
   menu.classList.toggle("open",open);
   burger.setAttribute("aria-expanded",open?"true":"false");
+  if(!open) setProjectMenu(false);
 }
 burger.addEventListener("click",e=>{
   e.stopPropagation();                       // don't trip the close-on-outside
@@ -3323,6 +3971,12 @@ function navY(id){
   if(id==="work"&&dossOn)
     return dossStack.getBoundingClientRect().top+scrollY
            +vh*(DOSS.hold+DOSS.dur);
+  /* Project shortcuts land when the chosen folder has filled the screen. This
+     keeps the direct route as complete as the guided scroll route. */
+  const dossIndex=dossEls.findIndex(el=>el.id===id);
+  if(dossIndex>=0&&dossOn)
+    return dossStack.getBoundingClientRect().top+scrollY
+           +vh*(DOSS.hold+dossIndex*DOSS.step+DOSS.dur);
   /* Skills sits high in its own section, so that the reader meets it right
      under the foot of the last folder. Arriving by MENU has no such approach —
      land on the block itself, centred, wherever it sits in the section. */
@@ -3356,11 +4010,17 @@ addEventListener("keydown",e=>{ if(e.key==="Escape") setMenu(false) });
 
 /* hide the grid cursor when the pointer leaves the window. A class, not an
    inline opacity, so nothing else writing styles can fight it. */
-addEventListener("mouseleave",()=>cursorEl.classList.add("gone"),{passive:true});
+addEventListener("mouseleave",()=>{
+  cursorEl.classList.add("gone");
+  mouseX=mouseY=-1;                        // so the fold retracts, as it should
+  cornerDirty=true;
+  onPointer();
+},{passive:true});
 /* only if we have a position to come back to — coming in from a corner before
    any movement would otherwise flash the tile wherever it last sat */
 addEventListener("mouseenter",()=>{
   if(cursorLive) cursorEl.classList.remove("gone");
+  cornerDirty=true;
 },{passive:true});
 
 /* the header wordmark goes home rather than leaving a bare "#" in the URL */
@@ -3405,7 +4065,7 @@ document.getElementById("brand").addEventListener("click",e=>{
    shows through, exactly as the project plates behave.
    ========================================================================== */
 const FACE = {
-  src:"img/leon.jpg",
+  src:"img/leon.webp",
   /* square taken from the source, normalised centre and side. Loose enough to
      leave the chin clear of the dissolve at the bottom edge. */
   crop:{cx:0.50, cy:0.50, s:0.82},
@@ -3448,22 +4108,95 @@ const FACE = {
      only runs while the pointer is near the portrait or energy remains;
      at rest the canvas is exactly the static grid it always was. */
   let tiles=[], W=0, H=0, ox,oy,vx,vy, animRAF=0, live=false;
+  /* ---- THE TWO SIZES, AND WHY THEY DRIFT APART ----
+     A canvas has a BITMAP size (cv.width/height, what draw() paints into) and
+     a BOX size (CSS, width:100% of a square column). Nothing keeps them in
+     step: CSS simply stretches whatever bitmap is there to fill whatever box
+     there is. An undrawn canvas has a bitmap of 300x150, so until the first
+     successful draw the portrait is a 300x150 image stretched into a 550px
+     square — and if a draw ever fails after that, the LAST bitmap gets
+     stretched into the NEW box. Nine-pixel tiles on an eleven-pixel pitch stop
+     being either. That is the portrait "invisible, or the wrong size and out
+     of position".
+     draw() has three ways to quietly do nothing — the photo has not decoded,
+     the box has not been laid out, getImageData threw on a tainted canvas —
+     and the observer that was supposed to start it disconnected itself after
+     the first try. Recording the box we actually drew for is what lets a stale
+     canvas be spotted and redrawn, without having to know which of the three
+     fired. */
+  let drawnW=0, drawnH=0, tries=0;
+
+  /* ---- THE RECT, CACHED ----
+     tick() measured the canvas with getBoundingClientRect() on every animation
+     frame, and the wake-up listener measured it on every mouse move. Each of
+     those is a forced synchronous layout: the browser has to flush all pending
+     style and layout work before it can answer, on a page carrying three
+     sticky panels and five transformed full-page folders. The box only moves
+     when the page scrolls or the window resizes, so it is read at most once
+     per scroll frame now instead of once per pointer event. */
+  let rect=null;
+  const readRect=()=>(rect=cv.getBoundingClientRect());
+  const getRect =()=>rect||readRect();
+  let lastSync=0;
+  addEventListener("scroll",()=>{
+    rect=null;
+    /* While the portrait is anywhere near the screen, look often enough to
+       catch a bitmap that has gone and rarely enough that the check is free.
+       Twice a second is far below what anyone would notice and far above what
+       anything costs. */
+    const t=performance.now();
+    if(near&&t-lastSync>500){ lastSync=t; sync() }
+  },{passive:true});
+  /* Coming back to a backgrounded tab is exactly when the backing store will
+     have been reclaimed, so it is exactly when to check. */
+  addEventListener("visibilitychange",()=>{ if(!document.hidden){ rect=null; sync() } });
 
   /* Nothing is touched until the portrait is near the screen. The downsample,
      key, sharpen and tile passes are the most expensive thing on the page, and
      running them at load put a stutter right through the opening animation —
      while About is a screen and a half below the fold anyway. */
   let near=false;
+  /* ---- AND IT STAYS OBSERVED ----
+     This used to disconnect itself the first time the portrait came near, on
+     the reasoning that the work only has to happen once. It does not: if that
+     one attempt landed while the photo was still decoding or the column had
+     not been laid out, there was nothing left to try again. It stays
+     connected, and every arrival re-checks. */
   if("IntersectionObserver" in window){
     const pio=new IntersectionObserver(es=>{
-      if(es.some(e=>e.isIntersecting)){ pio.disconnect(); near=true; draw() }
+      near=es.some(e=>e.isIntersecting);
+      if(near){ readRect(); sync() }
     },{rootMargin:"300px 0px"});
     pio.observe(cv);
   }else near=true;
 
+  /* Two integer compares, and the answer to every way this could go missing.
+     Cheap enough to ask whenever the section comes back into view or the box
+     changes; capped so a photo that genuinely yields no tiles is not retried
+     for ever. */
+  function sync(){
+    if(!ready||!near) return;
+    if(!tiles.length&&tries>3) return;              // it is not going to work
+    const r=getRect();
+    const w=Math.round(r.width), h=Math.round(r.height);
+    if(w<GRID.unit||h<GRID.unit) return;            // not laid out yet
+    const dpr=Math.min(devicePixelRatio||1,2);
+    /* Compare the BITMAP against the box, not the box against the box. Three
+       ways to be stale and this catches all of them:
+         - the box changed size under a bitmap drawn for the old one;
+         - the bitmap was never the right size (the first draw was skipped, so
+           it is still the 300x150 default being stretched into a 550px square);
+         - the browser threw the backing store away. It is allowed to, at any
+           time — a backgrounded tab, memory pressure, a GPU process restart —
+           and nothing tells you when it has. A canvas is not storage. */
+    if(cv.width===Math.round(w*dpr)&&cv.height===Math.round(h*dpr)&&
+       w===drawnW&&h===drawnH&&tiles.length) return;
+    draw();
+  }
+
   function draw(){
     if(!ready||!near) return;
-    const U=GRID.unit, r=cv.getBoundingClientRect();
+    const U=GRID.unit, r=readRect();
     W=Math.round(r.width); H=Math.round(r.height);
     if(W<U||H<U) return;
     const cols=Math.max(1,Math.round(W/U)), rows=Math.max(1,Math.round(H/U)),
@@ -3561,14 +4294,55 @@ const FACE = {
        resize, and a settled portrait starts settled */
     ox=new Float32Array(tiles.length); oy=new Float32Array(tiles.length);
     vx=new Float32Array(tiles.length); vy=new Float32Array(tiles.length);
+    moved.length=0;
+    /* Claim this box ONLY on success. A draw that produced no tiles must not
+       record it, or sync() would decide the canvas was current and the retry
+       would never happen. */
+    if(tiles.length){ drawnW=W; drawnH=H; tries=0 } else tries++;
+    renderStill();
     paint();
+  }
+
+  /* ---- THE PORTRAIT AT REST, BAKED ONCE ----
+     paint() ran a fillRect for every tile — around two thousand of them — on
+     every frame of the spring animation, to move the handful that were
+     actually near the pointer. The resting portrait never changes between
+     rebuilds, so it is drawn once into an off-screen canvas and blitted as a
+     single image; only the displaced tiles are lifted off their cells and set
+     down again. Same pixels, two thousand operations a frame down to about
+     two hundred. */
+  const still=document.createElement("canvas"), stx=still.getContext("2d");
+  let moved=[];
+  function renderStill(){
+    if(!W||!H){ still.width=0; return }
+    const U=GRID.unit, dpr=Math.min(devicePixelRatio||1,2);
+    still.width=Math.round(W*dpr); still.height=Math.round(H*dpr);
+    stx.setTransform(dpr,0,0,dpr,0,0);
+    stx.clearRect(0,0,W,H);
+    for(let i=0;i<tiles.length;i++){
+      const t=tiles[i];
+      stx.globalAlpha=t.a;
+      stx.fillStyle=`rgb(${t.r},${t.g},${t.b})`;
+      stx.fillRect(t.gx*U+1,t.gy*U+1,9,9);
+    }
+    stx.globalAlpha=1;
   }
 
   function paint(){
     const U=GRID.unit;
     ctx.clearRect(0,0,W,H);
-    for(let i=0;i<tiles.length;i++){
-      const t=tiles[i];
+    if(!still.width) return;
+    ctx.drawImage(still,0,0,W,H);              // the whole portrait, at rest
+    if(!moved.length) return;
+    /* Two passes, not one: a displaced tile can land on another displaced
+       tile's home cell, so every hole has to be opened before anything is set
+       down — otherwise clearing the second one punches through the first. */
+    for(let k=0;k<moved.length;k++){
+      const t=tiles[moved[k]];
+      ctx.clearRect(t.gx*U+1,t.gy*U+1,9,9);
+    }
+    for(let k=0;k<moved.length;k++){
+      const i=moved[k], t=tiles[i];
       /* no colour change while displaced — the motion is the interaction */
       ctx.globalAlpha=t.a;
       ctx.fillStyle=`rgb(${t.r},${t.g},${t.b})`;
@@ -3583,11 +4357,12 @@ const FACE = {
      tile already pushed aside keeps being herded rather than snapping through
      the pointer; the spring constant and damping settle it in ~half a second. */
   function tick(){
-    const r=cv.getBoundingClientRect();
+    const r=getRect();
     const mx=mouseX-r.left, my=mouseY-r.top;
     const inside=mx>-44&&my>-44&&mx<r.width+44&&my<r.height+44;
     const U=GRID.unit, R=6*U, R2=R*R;
     let energy=0;
+    moved.length=0;
     for(let i=0;i<tiles.length;i++){
       const t=tiles[i];
       const px=t.gx*U+5.5+ox[i], py=t.gy*U+5.5+oy[i];
@@ -3603,6 +4378,9 @@ const FACE = {
       vx[i]*=0.80;       vy[i]*=0.80;         // damping
       ox[i]+=vx[i];      oy[i]+=vy[i];
       energy+=vx[i]*vx[i]+vy[i]*vy[i];
+      /* Below a tenth of a pixel a tile is indistinguishable from home, and
+         home is already in the baked bitmap — so it does not need patching. */
+      if(ox[i]>0.1||ox[i]<-0.1||oy[i]>0.1||oy[i]<-0.1) moved.push(i);
     }
     paint();
     if(inside||energy>0.15) animRAF=requestAnimationFrame(tick);
@@ -3611,6 +4389,7 @@ const FACE = {
          on the grid again rather than a fraction of a pixel off it */
       live=false;
       ox.fill(0); oy.fill(0); vx.fill(0); vy.fill(0);
+      moved.length=0;
       paint();
     }
   }
@@ -3620,7 +4399,7 @@ const FACE = {
      pointers and no motion under reduced motion: the portrait just stands. */
   if(!coarse&&!reduce) addEventListener("mousemove",()=>{
     if(!tiles.length||live) return;
-    const r=cv.getBoundingClientRect();
+    const r=getRect();
     if(mouseX>r.left-44&&mouseX<r.right+44&&mouseY>r.top-44&&mouseY<r.bottom+44){
       live=true; animRAF=requestAnimationFrame(tick);
     }
@@ -3628,18 +4407,23 @@ const FACE = {
 
   img.onload=()=>{
     ready=true;
-    /* drop the placeholder, or it shows through every gap the dissolve leaves */
+    /* drop the placeholder, or it shows through every gap the dissolve leaves.
+       It is the "file is missing" frame, and the file is plainly not missing. */
     const ph=cv.parentNode&&cv.parentNode.querySelector(".ph");
     if(ph) ph.remove();
-    draw();
+    sync();
   };
   img.onerror=()=>{ cv.remove() };
   img.src=FACE.src;
 
   /* redraw whenever the box changes — a resize, the reveal transition
      finishing, lockGrid settling the row */
-  addEventListener("resize",draw);
-  if("ResizeObserver" in window) new ResizeObserver(draw).observe(cv);
+  /* Both go through sync() rather than straight to draw(): a resize fires for
+     every scrollbar that appears and every toolbar that slides, and rebuilding
+     two thousand tiles for a box that has not actually changed size is the
+     most expensive no-op on the page. */
+  addEventListener("resize",()=>{ rect=null; sync() });
+  if("ResizeObserver" in window) new ResizeObserver(()=>{ rect=null; sync() }).observe(cv);
 })();
 
 /* ==========================================================================
@@ -3673,7 +4457,7 @@ addEventListener("touchstart",e=>{
   const t=e.touches[0], c=cornerNear(t.clientX,t.clientY);
   if(!c) return;
   cancelAnimationFrame(springRAF);
-  grabbed=c; mouseX=t.clientX; mouseY=t.clientY; onScroll();
+  grabbed=c; mouseX=t.clientX; mouseY=t.clientY; cornerDirty=true; onPointer();
 },{passive:true});
 
 /* non-passive: holding a corner has to be able to stop the page scrolling */
@@ -3681,7 +4465,7 @@ addEventListener("touchmove",e=>{
   if(!grabbed) return;
   e.preventDefault();
   const t=e.touches[0];
-  mouseX=t.clientX; mouseY=t.clientY; onScroll();
+  mouseX=t.clientX; mouseY=t.clientY; cornerDirty=true; onPointer();
 },{passive:false});
 
 /* spring back: ease-out, so it drops away quickly and settles, like paper */
@@ -3692,10 +4476,10 @@ function letGo(){
   const x0=mouseX, y0=mouseY, t0=performance.now(), D=340;
   (function step(now){
     const k=clamp((now-t0)/D), s=1-Math.pow(1-k,3);
-    mouseX=lerp(x0,px,s); mouseY=lerp(y0,py,s);
-    update();
+    mouseX=lerp(x0,px,s); mouseY=lerp(y0,py,s); cornerDirty=true;
+    updatePointer();
     if(k<1){ springRAF=requestAnimationFrame(step) }
-    else   { grabbed=null; mouseX=mouseY=-1; update() }
+    else   { grabbed=null; mouseX=mouseY=-1; cornerDirty=true; updatePointer() }
   })(t0);
 }
 addEventListener("touchend",letGo,{passive:true});
@@ -3768,8 +4552,26 @@ addEventListener("load",()=>lockGrid(),{once:true});
 
 document.getElementById("year").textContent=new Date().getFullYear();
 
-if(document.fonts&&document.fonts.ready){document.fonts.ready.then(intro)}
-else{addEventListener("load",intro)}
+/* ---- WHEN THE PAGE IS ALLOWED TO START ----
+   document.fonts.ready is the correct signal: the hero size is SOLVED from the
+   font's own metrics, so starting before the face has landed measures the
+   fallback and lays the name out against the wrong numbers. But it is a
+   promise that resolves only when a third-party font server answers, and if
+   that server is slow the reader sits looking at an empty blueprint for as
+   long as it takes.
+   So: whichever comes first, the fonts or a deadline. If the deadline wins,
+   the intro runs on the fallback metrics and the page re-measures the moment
+   the real font lands — a name that resizes once is better than a name that
+   never arrives. `booted` makes the two paths idempotent. */
+let booted=false;
+function boot(){ if(booted) return; booted=true; intro() }
+if(document.fonts&&document.fonts.ready){
+  document.fonts.ready.then(()=>{
+    if(!booted) return boot();
+    measure(); lockGrid(); update();     // the face landed late — re-solve
+  });
+  setTimeout(boot,1200);
+}else addEventListener("load",boot);
 </script>
 </body>
 </html>
