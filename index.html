@@ -3101,7 +3101,18 @@ function measure(){
      white page has no frame line to respect. Neither is sized here any more:
      each is a real box with its content (the nav, the wordmark) in flow
      inside it, so the browser does the sizing. */
-  const headTop=U;
+  /* ---- WHERE THE ISLANDS SIT ----
+     DESKTOP: one cell down from the top, floating clear of the edge — they are
+     islands on a white page, and the inset is what makes them read as objects
+     ON it rather than as a chrome bar.
+     PHONE: hard against the top edge, because the glass behind them IS a bar
+     and a bar is attached to the edge it runs along. The cell of inset was
+     making that bar 66px tall to hold 21px of ink — 27px of empty glass above
+     the type and 18 below. At 0 the bar is exactly one square, 55px, with the
+     ink centred in it: 16 above, 18 below. Everything downstream follows from
+     this one number — --headZ, the ride distance --hdropMax, and therefore the
+     bar's own height and overhang — so nothing else has to be told. */
+  const headTop=(vw<=820)?0:U;
   menubar.style.top=headTop+"px"; menubar.style.right=fx+"px";
 
   /* ---- THE READOUT AND THE WORDMARK ----
