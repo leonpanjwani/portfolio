@@ -476,9 +476,46 @@ a{color:inherit;text-decoration:none}
 /* one grid row of links plus a cell of padding = the same 55px as the left
    island, so the pair sit level */
 #menubar{padding:10px var(--ipad,22px);overflow:visible}
+/* the header glass does not exist above 820px */
+#hdrglass{display:none}
 @media(max-width:820px){
   /* on a phone the right island is just the burger until it's opened */
   #menubar{padding:0}
+
+  /* ---- THE HEADER GLASS ----
+     Same material as the drawer, declared once in --glass / --glassfx below so
+     the two can never drift apart.
+
+     IT RIDES WITH THE HEADER. Both islands come up from the frame line as the
+     paper clears — update() publishes that motion as --hdrop and their fade as
+     --hop — so a bar pinned at a fixed height would have had the wordmark
+     hanging out of the bottom of it for the whole arrival. Instead the bar
+     wears the same transform, and is extended UPWARDS by exactly the ride
+     (--hdropMax) so that its own top edge is still off the top of the screen
+     when it is at its lowest. Its bottom edge then tracks the islands exactly,
+     at every point of the animation, without anything having to be timed.
+
+     RIGHT EDGE: it stops where the drawer begins, once the drawer is out. Two
+     sheets of glass overlapping do not look like one thicker sheet, they look
+     like a bright patch — .72 over .72 composites to .92 — so the two tile the
+     top edge rather than stacking. Same duration and easing as the slide, so
+     the seam travels with the drawer's leading edge. */
+  #hdrglass{display:block;position:absolute;left:0;right:0;
+    top:calc(-1 * var(--hdropMax,55px));
+    height:calc(var(--headZ,66px) + var(--hdropMax,55px));
+    transform:var(--hdrop,none);
+    opacity:var(--hop,0);
+    background:var(--glass);
+    -webkit-backdrop-filter:var(--glassfx);
+            backdrop-filter:var(--glassfx);
+    pointer-events:none;
+    transition:right .34s cubic-bezier(.32,0,.24,1)}
+  /* :has() because the bar is a SIBLING that comes before the menu — there is
+     no combinator that reaches backwards. Every browser that understands
+     backdrop-filter well enough for any of this understands :has(); one that
+     did not would simply drop this rule and get the bright patch, not a broken
+     layout. */
+  #layer:has(#menu.open) #hdrglass{right:max(33vw,200px)}
 }
 
 /* ---- HEADER WORDMARK ----
@@ -692,6 +729,12 @@ a{color:inherit;text-decoration:none}
 #menu.open #burger span:nth-child(2){opacity:0}
 #menu.open #burger span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
 @media(max-width:820px){
+  /* ONE material for the whole phone layout — the drawer, the sub-list and the
+     header bar are all the same sheet, and a value repeated three times is a
+     value that ends up different in two of them. */
+  :root{--glass:rgba(255,255,255,.72);
+        --glassfx:blur(34px) saturate(1.7)}
+
   /* ---- THE ISLAND IS ONLY THE BURGER ----
      It used to be a box whose width came from the collapsed link stack, which
      was still IN FLOW inside it: 349px of it on a 390px screen. The island is
@@ -734,22 +777,22 @@ a{color:inherit;text-decoration:none}
        white's ALPHA is how much of the page is hidden, and the BLUR is how much
        of what still shows through is legible as anything. Lowering the alpha on
        its own would let the page's own type sit directly behind the menu's, and
-       neither would read. So the alpha comes down (.86 -> .79, so more of the
-       page shows) and the blur goes up with it (18 -> 26px), which destroys the
-       page's detail at about the rate the alpha stops hiding it. The extra
-       saturation keeps the tomato and the blueprint blue from going chalky as
-       the white over them thins.
-       .79 rather than a rounder .75, and the reason is measured rather than
-       taste: opened at fourteen positions down the page, the worst backdrop the
-       labels ever sit on is one of the deep navy folder headers, and against it
-       the tomato caps hold 2.0:1 at .79 where they held 2.3:1 at .86. At .74
-       that same worst case falls to 1.85:1 — a real step down in the one place
-       the menu most needs to stay readable, for a difference in the glass that
-       is barely visible.
-       Only rendered while the drawer is open. */
-    background:rgba(255,255,255,.79);
-    -webkit-backdrop-filter:blur(26px) saturate(1.6);
-            backdrop-filter:blur(26px) saturate(1.6);
+       neither would read — so as the alpha came down from the original .86 the
+       blur went up with it, 18px to 34px, destroying the page's detail at about
+       the rate the alpha stops hiding it. The saturation keeps the tomato and
+       the blueprint blue from going chalky as the white over them thins.
+       WHAT IT COSTS, measured rather than guessed: with the drawer opened at
+       fourteen positions down the page, the worst backdrop the labels ever sit
+       on is one of the deep navy folder headers. The tomato caps held 2.3:1
+       against it at .86; they hold about 1.9:1 at .72. That is the trade being
+       made deliberately — the bigger blur is what buys it back, because what
+       hurts small type is not a darker backdrop so much as a STRUCTURED one,
+       and at 34px there is no structure left to compete with.
+       The two numbers live on :root at the top of this block, because the
+       header bar is the same sheet of glass and the two must not drift apart. */
+    background:var(--glass);
+    -webkit-backdrop-filter:var(--glassfx);
+            backdrop-filter:var(--glassfx);
     box-shadow:-16px 0 40px rgba(9,16,42,.20);
     transform:translateX(100%);visibility:hidden;
     transition:transform .34s cubic-bezier(.32,0,.24,1),
@@ -1778,6 +1821,13 @@ footer>span:last-child{justify-self:end}
 <div id="roll"><div class="shade"></div><div class="tube"></div></div>
 
 <div id="layer">
+  <!-- ---- THE HEADER GLASS (mobile only) ----
+       A sheet of the same material as the drawer, behind the wordmark and the
+       burger. FIRST in #layer on purpose: the islands after it are positioned,
+       and positioned elements paint above in-flow siblings, so DOM order alone
+       puts this underneath them without a z-index anywhere. Display:none off
+       the phone layout, so it costs desktop nothing — not even a paint. -->
+  <div id="hdrglass" aria-hidden="true"></div>
   <div id="headbar" class="island">
     <div class="grid"></div><div class="wear"></div><div class="noise"></div>
     <a id="brand" href="#" aria-label="Back to top">Leon&nbsp;Panjwani.</a>
@@ -3085,6 +3135,9 @@ function measure(){
      update) — they don't travel across the page, they just resolve into
      place. */
   const headFrom=fy, headTo=headTop;
+  /* how far the islands ride, in CSS, so the header glass can be extended
+     upwards by exactly that much and never show its own top edge */
+  doc.style.setProperty("--hdropMax",(headFrom-headTo)+"px");
 
   /* ---- info block, flush into the frame's inner bottom-right corner ----
      DESKTOP: 10 squares wide × 3 high — three stacked cells on the left, one
@@ -3496,6 +3549,10 @@ function update(){
      instead of off the viewport — so the burger wears the ride-up instead. */
   wrv(document.documentElement,"--hdrop",drop,"hdrop");
   const hOp=paperT.toFixed(3), hPe=paperT>.6?"auto":"none";
+  /* the islands' fade, published for the header glass — it has to arrive with
+     them, not before, or a blurred band appears over the blueprint while the
+     paper is still there */
+  wrv(document.documentElement,"--hop",hOp,"hop");
   wr(headbar,"opacity",hOp,"hbOp");   wr(menubar,"opacity",hOp,"mbOp");
   wr(headbar,"transform",drop,"hbTf");wr(menubar,"transform",drop,"mbTf");
   wr(headbar,"pointerEvents",hPe,"hbPe"); wr(menubar,"pointerEvents",hPe,"mbPe");
