@@ -692,20 +692,73 @@ a{color:inherit;text-decoration:none}
 #menu.open #burger span:nth-child(2){opacity:0}
 #menu.open #burger span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
 @media(max-width:820px){
-  #burger{display:flex}
-  /* the row becomes a stack, collapsed until the burger opens it — the island
-     itself grows, rather than a separate panel dropping below it */
-  #links{flex-direction:column;align-items:stretch;gap:0;
-    overflow:hidden;max-height:0;transition:max-height .28s ease}
-  #menu.open #links{max-height:360px}
-  #links a{text-align:right;padding:0 14px}
-  .project-menu{display:flex;flex-wrap:wrap;justify-content:flex-end}
-  .project-toggle{margin-right:8px}
+  /* ---- THE ISLAND IS ONLY THE BURGER ----
+     It used to be a box whose width came from the collapsed link stack, which
+     was still IN FLOW inside it: 349px of it on a 390px screen. The island is
+     anchored by its RIGHT edge, so the wider that stack was the further LEFT
+     the box began — and the burger, being the first thing in it, ended up
+     sitting exactly on top of the wordmark. Nothing was mispositioned; the box
+     was just far bigger than it looked. Taking the drawer out of flow (fixed,
+     below) leaves the burger as the island's only content, so the island is as
+     wide as the burger and lands where it was always anchored: the corner. */
+  #burger{display:flex;position:relative;z-index:2;transform:var(--hdrop,none)}
+  /* update() writes a translateY here every frame, and ANY transform makes an
+     element the containing block for its fixed descendants — which would peg
+     the drawer to this 54px box instead of to the viewport. The ride-up moves
+     to the burger, which is not an ancestor of the drawer. */
+  #menubar{transform:none!important}
+
+  /* ---- THE DRAWER ----
+     Parked off the right edge of the screen and slid in on a transform, so the
+     motion is composited rather than laid out. Full height of the small
+     viewport, white, about a third of the screen wide — with a floor, because
+     a third of a 390px phone is 130px and the project names do not fit in it.
+     visibility rather than pointer-events alone: parked off-screen it must
+     also be out of the tab order, and the 0s delay holds it visible for
+     exactly as long as the slide-out takes. */
+  #links{position:fixed;top:0;right:0;z-index:1;
+    width:max(33vw,200px);height:100vh;height:100svh;
+    flex-direction:column;align-items:stretch;gap:0;
+    max-height:none;overflow-y:auto;overscroll-behavior:contain;
+    padding:77px 0 33px;
+    background:var(--white);
+    box-shadow:-16px 0 40px rgba(9,16,42,.20);
+    transform:translateX(100%);visibility:hidden;
+    transition:transform .34s cubic-bezier(.32,0,.24,1),
+               visibility 0s linear .34s}
+  #menu.open #links{transform:none;visibility:visible;
+    transition:transform .34s cubic-bezier(.32,0,.24,1),visibility 0s}
+  /* ranged down the left edge of the panel, and tall enough to be a thumb
+     target rather than a 33px line of type */
+  #links a{display:block;text-align:left;height:auto;line-height:1.3;
+    padding:13px 18px 13px 22px}
+  /* Skills and Contact sit at the FOOT of the panel. An auto top margin on the
+     first of the pair eats all the free space in the column, which pushes it
+     and everything after it to the bottom. */
+  #links > a[href="#skills"]{margin-top:auto}
+
+  /* Projects and its chevron share a row; the list wraps below them */
+  .project-menu{display:flex;flex-wrap:wrap;align-items:center;
+    justify-content:flex-start}
+  .project-toggle{width:30px;height:30px;margin:0}
+  /* ---- THE SUB-LIST ----
+     grid-template-rows 0fr -> 1fr animates to the content's OWN height. The
+     max-height trick this replaces has to guess a number, and the guess was
+     180px against about 210px of content — so the fifth project was being
+     clipped when open, and any number large enough to avoid that makes the
+     close look late, because the transition spends its first frames travelling
+     through height the content never occupied. */
   .project-popover{position:static;width:100%;padding:0;border:0;box-shadow:none;
-    max-height:0;overflow:hidden;opacity:1;transform:none;pointer-events:none;
-    transition:max-height .22s ease}
-  .project-menu.open .project-popover{max-height:180px;pointer-events:auto}
-  .project-popover a{padding-right:40px!important;color:var(--mink,var(--tomato))!important}
+    opacity:1;transform:none;pointer-events:none;
+    display:grid;grid-template-rows:0fr;
+    transition:grid-template-rows .3s cubic-bezier(.32,0,.24,1)}
+  .project-menu.open .project-popover{grid-template-rows:1fr;pointer-events:auto}
+  .pp-inner{overflow:hidden;min-height:0}
+  /* indented, so they read as sitting UNDER Projects rather than beside it,
+     and a step smaller so the longest name still holds one line at 200px */
+  .project-popover a{padding:11px 14px 11px 44px!important;
+    color:var(--mink,var(--tomato))!important;
+    font-size:.72rem;letter-spacing:.06em;border-top:0}
 }
 .cell .info{font-family:var(--display);font-weight:700;font-size:.78rem;
   letter-spacing:.04em;text-transform:uppercase;
@@ -1683,13 +1736,17 @@ footer>span:last-child{justify-self:end}
                   aria-hidden="true" focusable="false"><path d="M1 1.6 6 6.4 11 1.6"
                   fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-          <div class="project-popover" id="projectPopover">
+          <!-- .pp-inner is a rendering mechanism, not content: on the drawer
+               layout the panel animates with grid-template-rows 0fr -> 1fr,
+               which needs exactly ONE child for the fraction to apply to. On
+               desktop it is an ordinary block and changes nothing. -->
+          <div class="project-popover" id="projectPopover"><div class="pp-inner">
             <a href="#auv">Biomimetic AUV</a>
             <a href="#helmet">Inflatable Helmet</a>
             <a href="#efw">EfW Facility</a>
             <a href="#website">Website Design</a>
             <a href="#additional">Additional Work</a>
-          </div>
+          </div></div>
         </div>
         <a href="#skills">Skills</a><a href="#contact">Contact</a>
       </div>
@@ -3308,6 +3365,12 @@ function update(){
      the way — the wordmark and the menu appear together, which is the whole
      reason the name no longer has to travel up there itself. */
   const drop=`translateY(${lerp(M.headFrom-M.headTo,0,paperT).toFixed(1)}px)`;
+  /* The same motion, published for anything that cannot take it on the island
+     itself. On the drawer layout the menu island must carry NO transform — a
+     transformed element becomes the containing block for its fixed
+     descendants, and the drawer would then hang off the burger's own box
+     instead of off the viewport — so the burger wears the ride-up instead. */
+  wrv(document.documentElement,"--hdrop",drop,"hdrop");
   const hOp=paperT.toFixed(3), hPe=paperT>.6?"auto":"none";
   wr(headbar,"opacity",hOp,"hbOp");   wr(menubar,"opacity",hOp,"mbOp");
   wr(headbar,"transform",drop,"hbTf");wr(menubar,"transform",drop,"mbTf");
@@ -3931,16 +3994,52 @@ projectToggle.addEventListener("click",e=>{
    the panel, and any moment it spends on neither would otherwise close it —
    the panel disappearing exactly as you reach for it. */
 let pmHold=0;
-projectMenu.addEventListener("mouseenter",()=>{clearTimeout(pmHold);setProjectMenu(true)});
+/* ---- HOVER AND FOCUS ARE DESKTOP AFFORDANCES ----
+   On the drawer layout the list is opened by TAPPING Projects, and both of
+   these get in the way of that. Not merely redundantly — they INVERT it. A tap
+   fires, in order, focus → focusin → click; and on a hybrid device or any
+   browser that synthesises mouse events from touch, mouseenter as well. Each of
+   those opened the list, so by the time the tap's own click arrived the list was
+   already open, the toggle read it as such, and closed it again. The panel
+   looked as though it were ignoring the tap.
+   Desktop keeps both: hover to reveal, focus so the shortcuts are reachable by
+   keyboard. The drawer needs neither — Enter on the link fires a click, which
+   is the same path a tap takes. */
+const deskMenu=()=>document.documentElement.clientWidth>820;
+projectMenu.addEventListener("mouseenter",()=>{
+  if(!deskMenu()) return;
+  clearTimeout(pmHold);setProjectMenu(true);
+});
 projectMenu.addEventListener("mouseleave",()=>{
+  if(!deskMenu()) return;
   clearTimeout(pmHold); pmHold=setTimeout(()=>setProjectMenu(false),240);
 });
-projectMenu.addEventListener("focusin",()=>setProjectMenu(true));
+projectMenu.addEventListener("focusin",()=>{ if(deskMenu()) setProjectMenu(true) });
 projectMenu.addEventListener("focusout",()=>{
+  if(!deskMenu()) return;
   requestAnimationFrame(()=>{
     if(!projectMenu.contains(document.activeElement)) setProjectMenu(false);
   });
 });
+/* ---- "PROJECTS" ON THE DRAWER ----
+   On desktop the label is a direct link to the Work section and the chevron
+   reveals the shortcuts beside it. In the drawer there is no beside: the five
+   projects belong under the label, and a tap that navigated would close the
+   menu before the list it had just opened could be seen. So on this layout the
+   label opens the list, and the five entries under it are the way into the
+   section.
+   CAPTURE phase, on the container: the anchor already carries two listeners of
+   its own — one that closes the menu, one that scrolls the page — registered
+   before this file gets here. A capture listener on the parent runs ahead of
+   both, and stopImmediatePropagation is what keeps them from running at all. */
+document.getElementById("links").addEventListener("click",e=>{
+  if(document.documentElement.clientWidth>820) return;   // desktop is unchanged
+  const a=e.target.closest&&e.target.closest('a[href="#work"]');
+  if(!a) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  setProjectMenu(!projectMenu.classList.contains("open"));
+},true);
+
 function setMenu(open){
   menu.classList.toggle("open",open);
   burger.setAttribute("aria-expanded",open?"true":"false");

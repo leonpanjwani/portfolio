@@ -337,6 +337,38 @@ placeholder frame shows, exactly as the project plates behave.
   **`.plate-links` is deliberately left outside it:** a mask CLIPS its element
   to the border box, and the link-preview cards are absolutely positioned and
   hang below theirs. Mask any ancestor of those cards and they are cut off.
+- **An out-of-flow child still sizes its parent — until it isn't.** The mobile
+  burger appeared on top of the wordmark, in the top LEFT. Nothing was
+  mispositioned: `#menubar` is anchored by its RIGHT edge and sizes to its
+  contents, and the collapsed `#links` stack was still in flow inside it —
+  349px of it on a 390px screen. So the island began at x=11 and the burger,
+  first thing in it, landed exactly on the wordmark. Making the drawer
+  `position:fixed` took it out of flow, and the island collapsed to the width
+  of the burger and landed where it had always been anchored. Fixing the
+  position was not the fix; fixing the width was.
+- **A transform makes you the containing block for your fixed descendants.**
+  `update()` writes `translateY(...)` to both islands every frame, and `none` is
+  the ONLY value that doesn't create a containing block — `translateY(0px)` still
+  does. A `position:fixed` drawer inside `#menubar` would therefore hang off the
+  burger's own 54px box rather than off the viewport. On the drawer layout
+  `#menubar` takes `transform:none!important` and the ride-up moves to `#burger`,
+  which is not an ancestor of the drawer, via the `--hdrop` custom property
+  `update()` publishes.
+- **A tap fires focus before click, and both cannot toggle the same thing.**
+  Tapping "Projects" runs focus → focusin → click, plus mouseenter on anything
+  that synthesises mouse events from touch. Each of those opened the shortcut
+  list, so the tap's own click found it already open and closed it again: the
+  panel looked as though it were ignoring taps. Hover and focus opening are now
+  gated to `deskMenu()` (>820px). Desktop keeps both; the drawer is click-driven,
+  and Enter on the link takes the same path a tap does.
+- **`max-height` cannot animate to a height it does not know.** The mobile
+  shortcut list transitioned `max-height` to 180px against about 210px of
+  content, so the fifth project was clipped whenever it was open — and any value
+  large enough to fix that makes the close look late, because the transition
+  spends its first frames travelling through height the content never occupied.
+  `grid-template-rows: 0fr → 1fr` animates to the content's own height exactly.
+  It needs precisely ONE child for the fraction to apply to, which is what
+  `.pp-inner` is for.
 - **A square sized from the width lives in a box sized from the height.** The
   project plate is `aspect-ratio: 1` at 95% of its COLUMN — half the viewport
   width — inside a row whose height comes from `--contentH`, which is solved
