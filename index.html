@@ -717,11 +717,25 @@ a{color:inherit;text-decoration:none}
      also be out of the tab order, and the 0s delay holds it visible for
      exactly as long as the slide-out takes. */
   #links{position:fixed;top:0;right:0;z-index:1;
-    width:max(33vw,200px);height:100vh;height:100svh;
+    width:max(33vw,200px);
+    /* ---- THE WHOLE SCREEN, WHATEVER THE TOOLBARS ARE DOING ----
+       svh is the SMALL viewport — the height you get with every browser bar
+       showing. When Safari's bottom bar is collapsed the visible area is taller
+       than that, so the panel stopped short of the bottom of the screen. dvh is
+       the viewport as it is RIGHT NOW and follows the bars as they slide, which
+       is the only one of the three that is always the whole screen. vh and svh
+       stay underneath it for anything that does not know dvh. */
+    height:100vh;height:100svh;height:100dvh;
     flex-direction:column;align-items:stretch;gap:0;
     max-height:none;overflow-y:auto;overscroll-behavior:contain;
     padding:77px 0 33px;
-    background:var(--white);
+    /* Slightly translucent, with a blur behind it: transparency alone would put
+       the page's own type directly behind the menu's, and neither would be
+       readable. The blur is what makes the translucency legible rather than
+       merely see-through. It is only rendered while the drawer is open. */
+    background:rgba(255,255,255,.86);
+    -webkit-backdrop-filter:blur(18px) saturate(1.4);
+            backdrop-filter:blur(18px) saturate(1.4);
     box-shadow:-16px 0 40px rgba(9,16,42,.20);
     transform:translateX(100%);visibility:hidden;
     transition:transform .34s cubic-bezier(.32,0,.24,1),
@@ -732,15 +746,23 @@ a{color:inherit;text-decoration:none}
      target rather than a 33px line of type */
   #links a{display:block;text-align:left;height:auto;line-height:1.3;
     padding:13px 18px 13px 22px}
-  /* Skills and Contact sit at the FOOT of the panel. An auto top margin on the
-     first of the pair eats all the free space in the column, which pushes it
-     and everything after it to the bottom. */
-  #links > a[href="#skills"]{margin-top:auto}
+  /* Skills and Contact follow Projects immediately. They used to be pinned to
+     the foot with an auto top margin, which meant the shortcut list opening
+     changed nothing about where they sat — the free space simply absorbed it.
+     In normal flow the list pushes them down as it expands, which is what shows
+     that the list belongs to Projects. */
 
-  /* Projects and its chevron share a row; the list wraps below them */
-  .project-menu{display:flex;flex-wrap:wrap;align-items:center;
+  /* ---- PROJECTS AND ITS CHEVRON ARE ONE ROW ----
+     The label takes all the width left over and the chevron sits at the end of
+     it, both stretched to the row's full height — so the open state's tomato
+     wash runs the whole width of the panel and takes the arrow with it, rather
+     than stopping at the end of the word. */
+  .project-menu{display:flex;flex-wrap:wrap;align-items:stretch;
     justify-content:flex-start}
-  .project-toggle{width:30px;height:30px;margin:0}
+  .project-menu > a[href="#work"]{flex:1 1 auto}
+  .project-toggle{flex:0 0 auto;width:44px;height:auto;align-self:stretch;margin:0}
+  .project-menu.open > a[href="#work"],
+  .project-menu.open > .project-toggle{background:rgba(255,99,71,.12)}
   /* ---- THE SUB-LIST ----
      grid-template-rows 0fr -> 1fr animates to the content's OWN height. The
      max-height trick this replaces has to guess a number, and the guess was
@@ -1300,11 +1322,25 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
      the same content is far taller than that, so everything past the solved
      height was being cut away. On a phone the card is just a card: its height
      comes from what is in it. */
-  .doss-in{grid-template-columns:1fr;gap:33px;padding:22px;height:auto}
+  /* transform:none — --lift is a CENTRING device. On the pinned desktop stack
+     the content block floats in a fixed-height row and the lift nudges it half
+     a square above dead centre. Here the block starts at the TOP of the sheet
+     and its height comes from its own content, so there is nothing to centre
+     and the lift simply drags the first line up through the folder's top edge:
+     the project title was being sliced off by its own paper. */
+  .doss-in{grid-template-columns:1fr;gap:33px;padding:22px;height:auto;
+    transform:none}
   /* and with no fixed height above it, the plate needs a shape of its own —
      it is a box of absolutely positioned slides, so it would otherwise
      collapse to its min-height */
-  .doss-img{margin:0}
+  /* Full width and stretched, so the picture is centred on the screen. It was
+     inheriting justify-self:start / end from the desktop stack, where the
+     plates deliberately alternate sides — in one column that just puts every
+     picture off-centre by the 5% it is not using. (The rule that meant to do
+     this sat EARLIER in the sheet than the base .doss-img rule, so it never
+     won; media queries carry no extra specificity, only source order.) */
+  .doss-img{margin:0;width:100%;justify-self:stretch}
+  .doss-img.browser{width:100%}
 }
 /* Plain paragraphs: no label column and no rule between them. The three
    beats read as one short account of the project rather than as a form with
@@ -2947,7 +2983,15 @@ function measure(){
   const cRect=coord.getBoundingClientRect();
   const cw=coarse?0:Math.ceil(cRect.width)+U;
   const coordIn=HEAD.coordIn*U;
-  const brandX=coordIn+cw+HEAD.brandGap*U;
+  /* On the drawer layout there is no coordinate readout to clear, so the
+     wordmark has nothing to sit in from — and parked at the desktop offset it
+     read as floating toward the middle of the bar. It mirrors the burger
+     instead: the burger is fx in from the right, so the wordmark is fx in from
+     the left, and the two sit the same distance into their own corners.
+     Gated on `!cw`, not on width alone: the readout is hidden on a COARSE
+     pointer, not on a narrow one, so a desktop window dragged under 820px still
+     has one — and the wordmark would have been parked straight on top of it. */
+  const brandX=(vw<=820 && !cw) ? fx+P : coordIn+cw+HEAD.brandGap*U;
   headbar.style.left=(brandX-P)+"px"; headbar.style.top=headTop+"px";
   /* Collision guard. On a narrow screen the readout plus the wordmark can run
      into the menu island, and both are sized by their own text so neither
@@ -4083,8 +4127,21 @@ function navY(id){
      group has come in, rather than at its top where they are all still out. */
   if(id==="skills"){
     const st=document.getElementById("sklStack");
-    if(st) return st.getBoundingClientRect().top+scrollY
-                  +Math.max(0,st.offsetHeight-vh)*0.66;
+    if(st){
+      const top=st.getBoundingClientRect().top+scrollY;
+      const pin=st.querySelector(".skl-pin");
+      /* PINNED (desktop): land far enough into the panel's own scroll budget
+         that every group has come in.
+         FLOWING (phone): the panel is not pinned and is shorter than the
+         screen, so landing on its top put the heading directly under the fixed
+         header — "Skills" and the wordmark on top of one another. Centre the
+         block on the screen instead: (section height - screen) / 2 is negative
+         when the section is the shorter of the two, which is exactly the lift
+         that centres it. */
+      if(pin&&getComputedStyle(pin).position==="sticky")
+        return top+Math.max(0,st.offsetHeight-vh)*0.66;
+      return top+(st.offsetHeight-vh)/2;
+    }
   }
   const el=document.getElementById(id);
   if(!el) return 0;

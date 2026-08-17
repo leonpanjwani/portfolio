@@ -337,6 +337,23 @@ placeholder frame shows, exactly as the project plates behave.
   **`.plate-links` is deliberately left outside it:** a mask CLIPS its element
   to the border box, and the link-preview cards are absolutely positioned and
   hang below theirs. Mask any ancestor of those cards and they are cut off.
+- **`svh` is not "the screen".** It is the SMALL viewport — the height you get
+  with every browser bar showing. With Safari's bottom bar collapsed the visible
+  area is taller than that, so a `100svh` drawer stopped short of the bottom of
+  the screen. `dvh` is the viewport as it is right now and follows the bars as
+  they slide; it is the only one of the three that is always the whole screen.
+  (`svh` is still right for `#stage`, where a height that CHANGES mid-scroll
+  would move the roll — the two want opposite things.)
+- **`--lift` is a centring device, and there is nothing to centre in flow.** On
+  the pinned desktop stack a folder's contents float in a fixed-height row and
+  the lift nudges them half a square above dead centre. Stacked on a phone the
+  block starts at the TOP of the sheet with its own content's height, so the
+  lift simply dragged the first line up through the folder's top edge and the
+  project title was sliced off by its own paper. `transform:none` on the phone.
+- **The readout is hidden by POINTER, not by WIDTH.** `#coord` goes on
+  `pointer:coarse`, so a desktop window dragged under 820px still has one. The
+  mobile wordmark moves into the corner only when there is genuinely no readout
+  to clear (`!cw`), or it would be parked straight on top of it.
 - **An out-of-flow child still sizes its parent — until it isn't.** The mobile
   burger appeared on top of the wordmark, in the top LEFT. Nothing was
   mispositioned: `#menubar` is anchored by its RIGHT edge and sizes to its
