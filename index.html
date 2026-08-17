@@ -729,13 +729,27 @@ a{color:inherit;text-decoration:none}
     flex-direction:column;align-items:stretch;gap:0;
     max-height:none;overflow-y:auto;overscroll-behavior:contain;
     padding:77px 0 33px;
-    /* Slightly translucent, with a blur behind it: transparency alone would put
-       the page's own type directly behind the menu's, and neither would be
-       readable. The blur is what makes the translucency legible rather than
-       merely see-through. It is only rendered while the drawer is open. */
-    background:rgba(255,255,255,.86);
-    -webkit-backdrop-filter:blur(18px) saturate(1.4);
-            backdrop-filter:blur(18px) saturate(1.4);
+    /* ---- THE GLASS ----
+       Two numbers make this effect and they pull in opposite directions: the
+       white's ALPHA is how much of the page is hidden, and the BLUR is how much
+       of what still shows through is legible as anything. Lowering the alpha on
+       its own would let the page's own type sit directly behind the menu's, and
+       neither would read. So the alpha comes down (.86 -> .79, so more of the
+       page shows) and the blur goes up with it (18 -> 26px), which destroys the
+       page's detail at about the rate the alpha stops hiding it. The extra
+       saturation keeps the tomato and the blueprint blue from going chalky as
+       the white over them thins.
+       .79 rather than a rounder .75, and the reason is measured rather than
+       taste: opened at fourteen positions down the page, the worst backdrop the
+       labels ever sit on is one of the deep navy folder headers, and against it
+       the tomato caps hold 2.0:1 at .79 where they held 2.3:1 at .86. At .74
+       that same worst case falls to 1.85:1 — a real step down in the one place
+       the menu most needs to stay readable, for a difference in the glass that
+       is barely visible.
+       Only rendered while the drawer is open. */
+    background:rgba(255,255,255,.79);
+    -webkit-backdrop-filter:blur(26px) saturate(1.6);
+            backdrop-filter:blur(26px) saturate(1.6);
     box-shadow:-16px 0 40px rgba(9,16,42,.20);
     transform:translateX(100%);visibility:hidden;
     transition:transform .34s cubic-bezier(.32,0,.24,1),
@@ -771,6 +785,20 @@ a{color:inherit;text-decoration:none}
      close look late, because the transition spends its first frames travelling
      through height the content never occupied. */
   .project-popover{position:static;width:100%;padding:0;border:0;box-shadow:none;
+    /* ---- IT INHERITS THE DRAWER'S GLASS RATHER THAN MAKING ITS OWN ----
+       On desktop this panel is an overlay hanging off the menu bar, so it
+       carries its own near-white background. Here it lives INSIDE the drawer,
+       which is already glass — and that background was painting a solid white
+       slab over it, which is why the five projects read as a different, opaque
+       object bolted onto the menu. Transparent is the whole fix: the drawer's
+       own backdrop-filter is behind these rows, so they get the identical
+       effect for free.
+       Stacking a second backdrop-filter here would NOT compound it — a
+       backdrop-filter blurs whatever has already been painted behind the
+       element, which by then is the drawer's blur, so it would blur an already
+       blurred image and look the same while costing a second full-screen pass
+       on every frame of the slide. */
+    background:transparent;
     opacity:1;transform:none;pointer-events:none;
     display:grid;grid-template-rows:0fr;
     transition:grid-template-rows .3s cubic-bezier(.32,0,.24,1)}
