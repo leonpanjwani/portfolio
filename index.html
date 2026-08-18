@@ -2153,7 +2153,17 @@ footer>span:last-child{justify-self:end}
       <div class="fin-details">
         <a class="email slide-l" href="mailto:hello@leonpanjwani.com"><span>→</span> hello@leonpanjwani.com</a>
         <a class="email slide-r" href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener"><span>→</span> linkedin.com/in/leonpanjwani</a>
-        <a class="btn slide-l" href="cv.pdf" download>Download CV</a>
+        <!-- THE URL AND THE SAVED FILENAME ARE TWO DIFFERENT THINGS, and the
+             attribute is what separates them. The file on disk has no spaces,
+             so the URL stays clean — a space in an href is not a URL, and
+             although browsers encode it for you, anything that autolinks plain
+             text (chat, email) truncates at the first space instead. The
+             `download` VALUE then names the copy that lands in the reader's
+             Downloads folder, where "cv.pdf" would be the fiftieth one.
+             Keep the two in step: this attribute is not cosmetic, it is the
+             only name the person on the other end ever sees. -->
+        <a class="btn slide-l" href="LeonPanjwaniCV.pdf"
+           download="Leon Panjwani CV.pdf">Download CV</a>
       </div>
     </div>
   </section>

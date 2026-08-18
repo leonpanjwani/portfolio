@@ -6,21 +6,12 @@ serves the repo root as-is — pushing to `main` on GitHub is the deploy.
 
 ```
 index.html         everything
-vendor/three.min.js  three.js r128, vendored — see below
 cv.pdf             linked from About
 favicon.png
 img/leon.jpg       the About portrait (900×900, same-origin — see below)
-img/               the project and carousel images — WebP, mostly (see below)
+img/               the project and carousel images are still MISSING
 .claude/serve.py   local dev server
 ```
-
-**three.js is vendored, not fetched.** It used to come from cdnjs. It was the
-only thing the page needed from someone else's server, and it is the thing the
-whole opening rests on: no `THREE` means no WebGL name, which means no exploded
-assembly and no dimensions — the page falls back silently to the flat 2D name.
-Every slow or blocked cdnjs response was an intro that "didn't load". Keep it in
-the repo. Cloudflare Pages serves it same-origin, with no third-party DNS or TLS
-handshake ahead of the first frame.
 
 Section order is **About → Work → Skills → Contact**. About comes first
 deliberately; the nav and the info block on the sheet follow the same order.
@@ -58,15 +49,6 @@ Break it and the page stops looking like a drawing sheet.
 If you add a box, size it from `SQ` in `measure()` and expose it as a CSS
 custom property. Do not type a pixel height into the stylesheet.
 
-Three deliberate offsets exist, all whole (or half) squares so nothing leaves
-the lattice:
-
-| token | where | what |
-|---|---|---|
-| `--lift` | `.doss-in` | half a square UP, so a folder's contents sit a little above dead centre of the sheet |
-| `--sklUp` | `.skl-wrap` | one square UP, pinned layouts only — a relative offset moves the paint, not the box, so on a phone it would print over the folder above |
-| `margin-right` | `.about-copy` | one square LEFT, off the gutter edge; a margin rather than a transform, so the copy stays in flow and both its edges stay on lines |
-
 ## Palette
 
 Five colours, plus one accent. Everything else is an alpha of one of these.
@@ -79,19 +61,6 @@ Five colours, plus one accent. Everything else is an alpha of one of these.
 | `--paper` | `#e9ebf3` | flat light panels |
 | `--white` | `#ffffff` | |
 | `--tomato` | `#FF6347` | accent: hover states and the cursor |
-
-Type: `--display` (Chakra Petch) is the drawing face — the hero, the section
-headings, the header wordmark, the folder tabs **and the nav**. `--body` (Inter)
-is prose. `--mono` (Share Tech Mono) is instrumentation: the readout, the tags,
-the captions. The nav was set in Rokkitt, a slab serif, which was a second voice
-on a page that only has one; it is cut from the tab labels' face now and set
-exactly as one is: 700, 0.92rem, uppercase, .13em of tracking. At that size the
-caps are signage rather than prose, which is what a nav is, and it matches the
-labels on the files it points at. The shortcut panel follows it a step smaller.
-Only the weights the
-stylesheet actually sets are requested in the font link: ask for one nothing
-uses and it costs a download, set one nothing asked for and the browser
-synthesises it and the letterforms change shape.
 
 Shadow ink goes darker than any of them and is written as **literal**
 `rgba(9,16,42,a)` — never `rgba(var(--x),a)`. That substitution is invalid at
@@ -196,37 +165,12 @@ A tuning change is one constant — but check it against the real photo, not by
 reasoning about it. The failure mode is a navy blob that looks plausible in
 code review.
 
-**A canvas has two sizes and nothing keeps them in step.** The BITMAP
-(`cv.width/height`, what `draw()` paints into) and the BOX (CSS, `width:100%` of
-a square column) are independent: CSS stretches whatever bitmap is there to fill
-whatever box there is. An undrawn canvas has a bitmap of 300×150, so before the
-first successful draw the portrait is a 300×150 image stretched into a 550px
-square — and if a draw ever fails afterwards, the last bitmap is stretched into
-the new box. Nine-pixel tiles on an eleven-pixel pitch stop being either. That
-is the portrait "invisible, or the wrong size and out of position".
-
-`draw()` has three ways to quietly do nothing — the photo has not decoded, the
-box has not been laid out, `getImageData` threw on a tainted canvas — and the
-IntersectionObserver that started it used to disconnect after the first attempt,
-so there was nothing left to try again. It stays connected now, and `sync()`
-compares the BITMAP against the BOX (not the box against the box) on every
-arrival, twice a second while the portrait is near the screen, and on
-`visibilitychange`. A browser may throw a canvas's backing store away at any
-time — a backgrounded tab, memory pressure, a GPU process restart — and nothing
-tells you when it has. A canvas is not storage.
-
 The tiles are live under the pointer: `draw()` computes them, `paint()`
 renders them at sprung offsets, and a repulsion field around the cursor shoves
 nearby tiles off their cells — a spring pulls each one home. The displacement
 is the whole interaction: tiles keep their own colour. The rAF loop runs
-only while the pointer is near the portrait or energy remains, and on sleep the
-offsets are zeroed so the tiles sit exactly back on the grid. `paint()` used to
-run a `fillRect` for every tile — about two thousand of them — on every frame,
-in order to move the handful actually near the pointer. The resting portrait is
-baked once into an off-screen canvas (`renderStill`) and blitted as a single
-image; only the tiles in `moved` are lifted off their cells and set down again,
-in two passes, because a displaced tile can land on another displaced tile's
-home cell. Skipped on
+only while the pointer is near the portrait or energy remains, and on sleep
+the offsets are zeroed so the tiles sit exactly back on the grid. Skipped on
 coarse pointers and under reduced motion.
 
 The image must be same-origin or `getImageData` taints the canvas and the
@@ -248,51 +192,6 @@ placeholder frame shows, exactly as the project plates behave.
   `pointer-events:none` or the menu becomes unclickable while looking fine.
 - **Stacked `drop-shadow` on a per-frame `clip-path`** (the corner peel) is the
   most expensive thing on the page. Three shadows on mobile, four on desktop.
-- **A landed sheet is not rotated, it is moved.** A `rotate()` makes the browser
-  RE-RASTER the layer every frame; a pure `translate()` only moves an existing
-  raster on the compositor. A folder is about 1.34 screens in both directions —
-  roughly fourteen million device pixels at 2x — and up to three are live at
-  once, so this is the most expensive rasterisation on the page. A folder is
-  only tilted while it is actually swinging; for the whole of the rest of its
-  life the angle rounds to zero, and emitting `rotate(0.00deg)` anyway kept
-  every landed sheet on the expensive path for nothing. `update()` omits the
-  rotate below 0.01°.
-- **A pointer move is not a scroll.** `mousemove` used to call `onScroll()`,
-  which ran the whole scroll pipeline — clip-path, roll, header inks, five
-  folder transforms, the skills fades — because the cursor had moved eleven
-  pixels. Pointer state (the grid cursor, the corner peel) is `updatePointer()`
-  now, on its own rAF gate. `update()` still calls it, because the page moving
-  under a stationary pointer changes which cell it is in; the reverse is no
-  longer true.
-- **Writing a style property its current value is not free.** It invalidates the
-  element's computed style, and for a `clip-path` on a full-viewport fixed layer
-  it can cost a screen repaint. Everything written per frame goes through `wr()`
-  / `wrv()`, which hold the last value written per key and skip the write when
-  nothing moved.
-- **`offsetTop` and `getBoundingClientRect()` FLUSH LAYOUT.** `content.offsetTop`
-  was read on every scroll frame and every pointer move for a number that only
-  changes when the sections are re-padded; it is `travelNow()` now, cached and
-  invalidated by `measure()` and `lockGrid()`. The portrait was measuring its
-  own canvas every animation frame and on every mouse move, for the same reason.
-- **A skip gesture has to be a gesture.** Any wheel event at all used to end the
-  opening animation, and a trackpad does not send one wheel event — it sends a
-  stream, including the tail of the momentum from before the reload. A 2px drift
-  was cutting the intro off. `SKIP_GRACE` (nothing counts for the first 420ms)
-  and `SKIP_DY` (a wheel has to be a push, not a drift) fix it between them —
-  and the SKIP listeners must NOT be `{once:true}`, because an event
-  deliberately ignored would spend the listener and the real gesture would then
-  never arrive.
-- **`document.fonts.ready` is a promise on someone else's server.** The hero is
-  SIZED from the font's own metrics, so it is the right thing to wait for — but
-  if the font host is slow the reader sits on an empty blueprint until it
-  answers. `boot()` races it against a 1.2s deadline and re-measures if the face
-  lands late.
-- **What is printed on the sheet travels with the sheet.** `.doss-in` carried a
-  `--cy` counter-climb, equal and opposite to the parallax, so the contents held
-  still on screen while the paper moved under them. It read as a bug rather than
-  as depth. Gone. How far a project rides before the next file covers it is
-  `DOSS.par` × `DOSS.step` — 0.68 × 0.55, about a third of a screen. Lower `par`
-  if a project should stay readable for longer.
 - **Five folders is four too many.** Each `.doss` is a sheet wider and taller
   than the screen, carrying a `mix-blend-mode` grain layer and a video. All
   five exist for the whole Work section, so the browser was compositing five
@@ -312,123 +211,67 @@ placeholder frame shows, exactly as the project plates behave.
   **alpha** channel as well as colour, so a filter tuned as if it produced
   opaque grey lands at about half the intended weight — and one written
   straight into alpha is a flat black wash with no grain in it at all. The
-  tile carries the fine grain and the coarse mottle. Measured on the shipped
-  file: mean transmission **0.9816**, sd 0.0074, range 0.965–1.000 — at most a
-  3.5% darkening, which is the "nothing you can pick out at arm's length" it is
-  meant to be.
-- **And the multiply is baked, not computed.** `background-blend-mode: multiply`
-  is far cheaper than `mix-blend-mode` (it never reads the backdrop) but it is
-  not free: it is recomputed every time the layer rasters, and these layers run
-  to about 9.5 million device pixels each with up to three live. The multiply is
-  arithmetic that never changes, so it is done offline — `img/stock-*.png`, one
-  tile per stock with the grain already multiplied into its own colour, selected
-  by `--stock-grain` alongside `--stock`. The blend is gone and the paint is a
-  plain image tile, which is the cheapest thing a background can be.
-  `img/grain.png` stays as the master; regenerate all five if a stock colour
-  changes. `background-color` stays underneath as the fallback, so a folder
-  whose tile fails to load is flat paper rather than no paper.
-- **One ink mask per block, not one per element.** `--ink-mask` used to name
-  five selectors, which came to **39 separately masked elements** across the
-  five folders — every heading, tag line, paragraph and link its own masked
-  layer, inside sheets that raster whenever they move. `.doss-ink` is a wrapper
-  built in script around the heading, the tags and the paragraphs; the mask goes
-  on that, so the ink runs continuously down the block instead of restarting at
-  every paragraph — which is what a real press does anyway. 39 down to 19.
-  **`.plate-links` is deliberately left outside it:** a mask CLIPS its element
-  to the border box, and the link-preview cards are absolutely positioned and
-  hang below theirs. Mask any ancestor of those cards and they are cut off.
-- **`svh` is not "the screen".** It is the SMALL viewport — the height you get
-  with every browser bar showing. With Safari's bottom bar collapsed the visible
-  area is taller than that, so a `100svh` drawer stopped short of the bottom of
-  the screen. `dvh` is the viewport as it is right now and follows the bars as
-  they slide; it is the only one of the three that is always the whole screen.
-  (`svh` is still right for `#stage`, where a height that CHANGES mid-scroll
-  would move the roll — the two want opposite things.)
-- **`--lift` is a centring device, and there is nothing to centre in flow.** On
-  the pinned desktop stack a folder's contents float in a fixed-height row and
-  the lift nudges them half a square above dead centre. Stacked on a phone the
-  block starts at the TOP of the sheet with its own content's height, so the
-  lift simply dragged the first line up through the folder's top edge and the
-  project title was sliced off by its own paper. `transform:none` on the phone.
-- **The readout is hidden by POINTER, not by WIDTH.** `#coord` goes on
-  `pointer:coarse`, so a desktop window dragged under 820px still has one. The
-  mobile wordmark moves into the corner only when there is genuinely no readout
-  to clear (`!cw`), or it would be parked straight on top of it.
-- **An out-of-flow child still sizes its parent — until it isn't.** The mobile
-  burger appeared on top of the wordmark, in the top LEFT. Nothing was
-  mispositioned: `#menubar` is anchored by its RIGHT edge and sizes to its
-  contents, and the collapsed `#links` stack was still in flow inside it —
-  349px of it on a 390px screen. So the island began at x=11 and the burger,
-  first thing in it, landed exactly on the wordmark. Making the drawer
-  `position:fixed` took it out of flow, and the island collapsed to the width
-  of the burger and landed where it had always been anchored. Fixing the
-  position was not the fix; fixing the width was.
-- **A transform makes you the containing block for your fixed descendants.**
-  `update()` writes `translateY(...)` to both islands every frame, and `none` is
-  the ONLY value that doesn't create a containing block — `translateY(0px)` still
-  does. A `position:fixed` drawer inside `#menubar` would therefore hang off the
-  burger's own 54px box rather than off the viewport. On the drawer layout
-  `#menubar` takes `transform:none!important` and the ride-up moves to `#burger`,
-  which is not an ancestor of the drawer, via the `--hdrop` custom property
-  `update()` publishes.
-- **A tap fires focus before click, and both cannot toggle the same thing.**
-  Tapping "Projects" runs focus → focusin → click, plus mouseenter on anything
-  that synthesises mouse events from touch. Each of those opened the shortcut
-  list, so the tap's own click found it already open and closed it again: the
-  panel looked as though it were ignoring taps. Hover and focus opening are now
-  gated to `deskMenu()` (>820px). Desktop keeps both; the drawer is click-driven,
-  and Enter on the link takes the same path a tap does.
-- **`max-height` cannot animate to a height it does not know.** The mobile
-  shortcut list transitioned `max-height` to 180px against about 210px of
-  content, so the fifth project was clipped whenever it was open — and any value
-  large enough to fix that makes the close look late, because the transition
-  spends its first frames travelling through height the content never occupied.
-  `grid-template-rows: 0fr → 1fr` animates to the content's own height exactly.
-  It needs precisely ONE child for the fraction to apply to, which is what
-  `.pp-inner` is for.
-- **A square sized from the width lives in a box sized from the height.** The
-  project plate is `aspect-ratio: 1` at 95% of its COLUMN — half the viewport
-  width — inside a row whose height comes from `--contentH`, which is solved
-  from the viewport HEIGHT. Past about a 2:1 window those two disagree: the
-  square comes out taller than the row, and the face clips, so the top and
-  bottom of every picture were cut off. It reads as the images having stopped
-  responding to the window; in fact they were responding to one axis of it.
-  `measure()` publishes `--plateMax` — the content area less its own padding
-  and the plate's margins — and the plate takes `min(95%, var(--plateMax))`.
-  Because a square's height IS its width, a max on the width is what caps the
-  height. The browser-window plate is not square (a 38px chrome bar over a 16:10
-  shot, plus 1px of border each side), so its cap is `1.6 × (plateMax − 40px)`.
-  Below 2:1 the column is still the smaller of the two and NOTHING changes —
-  verified identical at 1440×900, 1512×982, 1680×1050, 1920×1080, 2560×1440.
-- **Images are WebP — except three that are not.** Re-encoding is only a saving
-  if the source has headroom. `efw`, `eyh` and `pv-eyh-presentation` are already
-  such aggressive JPEGs that WebP has to spend bits reproducing their own
-  artefacts, and comes out 3–17% BIGGER. Each file is whichever format is
-  actually smaller; the mix is deliberate, not an oversight. Five files that
-  were being served far larger than they are ever displayed were also capped at
-  1400px on the long side. 2408 KB → 1587 KB, at ≥42 dB PSNR against the
-  original, which is visually indistinguishable. `img/grain.png` and the
-  `stock-*.png` tiles stay PNG: they are flat, few-colour images, and lossless
-  WebP is *larger* than a palette PNG for those.
-- **`--ovY` is a skirt, and it was nearly half margin.** It has to cover the
-  climb a landed sheet makes before the next lands on it — `par × step` = 0.374
-  of a screen, plus the tab, about 376px at 1440×900. It was 558px. It is 420px
-  now. Do not reason about this one: a sweep of the whole Work section at every
-  scroll step, counting bare-page pixels anywhere on screen, is the way to check
-  it — that sweep is clean at half the current value, and a control with no
-  skirt at all lights up with thousands of exposed pixels. Between the two
-  trims a folder face is 1668×1280 rather than 1794×1419: 8.5 megapixels at 2x
-  instead of 10.2, none of which was ever visible.
-- **`DOSS.rise` and `--ovX` are one number.** The overhang needed to keep a
-  tilted corner out of shot is `1.3 × screen height × tan(rise)`. At 7° that is
-  0.16 of a screen; at 4° it is 0.091. Change one without the other and either a
-  corner swings into view or you are paying to raster sheet nobody can see. It
-  is 4° now — still plainly paper being swung up, with 43% less overhang.
+  tile carries the fine grain and the coarse mottle at the transmission the
+  original two-layer version worked out to: `0.745 + 0.17·fine + 0.085·mottle`,
+  mean **0.8725**. Multiply, so each stock keeps its own hue. Regenerate at
+  that mean if it ever needs redoing.
 - **`visibility` is inherited, and a child can undo it.** `.pl-slide.on` used to
   set `visibility:visible`, which reappears inside a `visibility:hidden`
   ancestor — so a culled folder still painted its carousel image, left hanging
   over whatever you had scrolled to. It is `visibility:inherit` now. Anything
   that has to disappear with a culled folder must inherit, not assert.
+- **A `backdrop-filter` does not compound through a nested one.** The mobile
+  drawer is glass; the Projects sub-list inside it was reading as a solid white
+  slab because the mobile block reset the desktop popover's `padding`, `border`
+  and `box-shadow` but not its `background`. The fix is `background:transparent`,
+  not a second `backdrop-filter` on the sub-list: the filter blurs what has
+  *already been painted behind* the element, which by then is the drawer's own
+  blurred result — so nesting one costs a second full-screen pass per frame and
+  looks identical. Inherit the glass; don't restate it.
+- **The phone layout's glass is ONE material, `--glass` / `--glassfx` on
+  `:root` inside the mobile block.** The drawer, its sub-list and the header bar
+  are the same sheet; a value written out three times is a value that ends up
+  different in two of them.
+- **The drawer's white is an alpha/blur trade, and the numbers came from
+  measurement.** Alpha is how much of the page is hidden; blur is how legible
+  whatever still shows through is. Opened at fourteen positions down the page,
+  the tomato labels' worst backdrop is a navy folder header, and the contrast
+  against it goes `.86`+`blur(18px)` → **2.3:1**, `.79`+`blur(26px)` → **2.0:1**,
+  the current `.72`+`blur(34px)` → **1.8:1**. Raising the blur alongside the
+  alpha is what makes that survivable: what hurts small type is a *structured*
+  backdrop more than a dark one, and at 34px there is no structure left. If this
+  is retuned again, re-run the sweep — the average backdrop is not the one that
+  breaks, and a white section will tell you everything is fine.
+- **Two sheets of glass overlapping is a bright patch, not a thicker sheet.**
+  `.72` over `.72` composites to `.92`. The header bar therefore stops at the
+  drawer's left edge while the drawer is out (`#layer:has(#menu.open)`), so the
+  two TILE the top edge rather than stack — measured, the drawer's top strip
+  reads 219 against its own body's 210 with the inset, and 236 without it.
+- **The header bar rides on the header's own published motion.** `update()`
+  publishes the islands' ride as `--hdrop` and their fade as `--hop`;
+  `measure()` publishes the size of the ride as `--hdropMax`. The bar wears the
+  same transform and is extended UPWARDS by exactly `--hdropMax`, so its bottom
+  edge tracks the wordmark at every point of the arrival (measured: a constant
+  2px clearance at every scroll position) and its top edge is never on screen.
+  A bar at a fixed height would have had the wordmark hanging out of the bottom
+  of it for the whole animation. Nothing is timed against anything.
+- **`headTop` is 0 on the phone and `U` on desktop, and everything else
+  follows from it.** On desktop the islands float a cell down from the top —
+  the inset is what makes them read as objects ON the page rather than as
+  chrome. On the phone the glass behind them IS a bar, and a bar is attached to
+  the edge it runs along; the cell of inset was making it 66px tall to hold
+  21px of ink. At 0 it is exactly one square, 55px, with the ink centred (16
+  above, 18 below). `--headZ`, the ride distance `--hdropMax`, the bar's height
+  and its overhang are all derived from it, so that one line is the whole
+  change — resist adding a second number for the bar.
+- **DOM order, not z-index, puts the bar under the islands.** `#hdrglass` is
+  first in `#layer`; the islands after it are positioned, and positioned
+  elements paint above in-flow siblings.
+- **The header is inert over the hero.** `#menu` carries `pointer-events:none`
+  and `#stage` paints over it for roughly the first quarter of the page, so any
+  test that opens the drawer must skip those positions (or assert, and discover
+  it the hard way as this one did).
+
 - **Never call `getBoundingClientRect()` inside the scroll loop** if the number
   can be arithmetic. The last sheet's foot used to be measured every frame,
   which is a forced layout every frame; it is now `y + tabH + M.faceH`, with
