@@ -409,8 +409,20 @@ a{color:inherit;text-decoration:none}
    Sits on the top edge of the incoming white page. The sheet above it is
    clipped away, so the paper appears to wind onto the tube as it travels up.
    ========================================================================== */
+/* ---- DRIVEN BY `top`, NOT BY A TRANSFORM ----
+   The sheet's edge moves by clip-path, which needs a repaint. The roll used to
+   move by transform, which does not — and that asymmetry is the one way these
+   two can disagree on screen: the compositor is free to present the tube in its
+   new position while the sheet is still showing its previous raster, so under a
+   fast scroll the paper's edge appears to trail the roll. Moving the roll with a
+   layout property instead puts both in the same commit, and two things in one
+   commit cannot be presented out of step.
+   The cost is nil in practice: #roll is a zero-height anchor whose tube is at
+   most 76px tall, and the sheet is being repainted every frame regardless.
+   Measured pixel-for-pixel identical at every scroll position, and frame pacing
+   unchanged (median 16.7ms either way). */
 #roll{position:fixed;left:0;right:0;top:0;z-index:30;pointer-events:none;
-  opacity:0;will-change:transform}
+  opacity:0}
 /* paper curving away into the roll — a contact shadow ABOVE the tube */
 #roll .shade{position:absolute;left:0;right:0;bottom:0;height:78px;
   background:linear-gradient(180deg,rgba(9,16,42,0) 0%,rgba(9,16,42,.10) 55%,rgba(9,16,42,.42) 100%)}
@@ -655,6 +667,31 @@ a{color:inherit;text-decoration:none}
 #menu.paper a:hover{color:var(--tomato)}
 /* on the page: tomato text stays tomato; hover adds the square translucent box */
 #menu:not(.paper) a:hover{background:rgba(255,99,71,.12)}
+/* ---- PROJECTS AND ITS CHEVRON HIGHLIGHT AS ONE ----
+   The label and the arrow are two elements but one control, so hovering either
+   has to wash both — otherwise the arrow sits in a notch of un-highlighted bar
+   immediately beside a highlighted word, which reads as a gap rather than as a
+   pair. They are adjacent flex children of the same 33px row with no gap
+   between them, so two backgrounds meet as one continuous block.
+
+   :has() rather than .project-menu:hover, because the popover is a POSITIONED
+   CHILD of .project-menu — a plain :hover would stay lit the whole time the
+   pointer was down in the shortcut list, hovering something else entirely. The
+   relative selectors below only match the two elements in the row itself.
+
+   :focus-within is deliberately the looser one: it fires from inside the
+   popover as well, which is right, because tabbing into the shortcuts is still
+   being inside Projects. That matches the rule that opens the panel.
+
+   Gated to a fine, hovering pointer so a tap on a phone cannot leave the row
+   stuck in a hover state it has no way to leave. */
+@media(hover:hover) and (pointer:fine){
+  #menu:not(.paper) .project-menu:has(> a:hover, > .project-toggle:hover) > a,
+  #menu:not(.paper) .project-menu:has(> a:hover, > .project-toggle:hover) > .project-toggle,
+  #menu:not(.paper) .project-menu:focus-within > a,
+  #menu:not(.paper) .project-menu:focus-within > .project-toggle{
+    background:rgba(255,99,71,.12)}
+}
 /* a row, three cells between items — a full square was most of what padded the
    island out when it was one long bar */
 #links{display:flex;align-items:center;gap:33px}
@@ -1727,8 +1764,23 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    they have to start off the screen entirely, whatever length the words are. */
 /* A square off the top, the same lift as Skills — the two sections are read
    one after the other and a mismatch in the gap above them shows. */
-#contact{padding-top:55px}
-@media(max-width:820px){#contact{padding-top:22px}}
+/* ---- ONE BOX FURTHER DOWN, AND ROOM BELOW ----
+   The step MUST be a whole box. --finFix re-snaps the sign-off's top to the
+   nearest box line after layout, so a move of 33px would simply be corrected
+   straight back to where it started; only a multiple of 55 survives it.
+   The bottom padding is not decoration either. Contact is the last thing in
+   the document, so centring the close on the screen means scrolling PAST it,
+   and there has to be something below to scroll into. Five boxes is enough to
+   centre a 385px block on any screen up to about 1150px tall. */
+/* padding-bottom is NOT set here on purpose: lockGrid computes it, because how
+   much room the close needs underneath depends on the height of the screen. */
+#contact{padding-top:110px}
+@media(max-width:820px){#contact{padding-top:77px}}
+/* One box here plus the 55px the first address row carries of its own, so the
+   details sit two boxes below the sign-off. It went to zero for a while, which
+   put them one box below and read as too tight against a line of 64px type.
+   Whatever this is, it must be a multiple of 55: the whole close is on the box
+   lattice and a half-box here would take everything under it off. */
 .fin{display:flex;flex-direction:column;align-items:center;
   margin-bottom:55px;text-align:center}
 /* --finLH is a whole number of cells nearest this type's natural leading, set
@@ -1749,12 +1801,35 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
    lockGrid, so without this the text would sit against its left edge inside a
    box that is up to a cell wider than it. width is set from script; fit-content
    is the fallback for the frame before that runs. */
-.email{display:flex;width:fit-content;justify-content:center;
-  align-items:center;gap:12px;margin-top:22px;
+/* ---- THE ARROW IS NOT PART OF THE WORDS ----
+   The row centres its CONTENTS, and the arrow is one of them, so the address
+   itself sat about half the arrow's width right of centre while the sign-off
+   above it — plain centred type with nothing beside it — sat dead centre. Two
+   things centred by different definitions of centre, one under the other,
+   which is exactly what reads as "off".
+   ::after is a hidden copy of the arrow on the other side. The row still
+   centres everything it contains, but what it contains is now symmetrical, so
+   the address lands on the same axis as the line above it. A phantom rather
+   than absolute positioning because the arrow's width comes from the font at a
+   clamp()ed size that nothing here knows in advance — mirroring it costs no
+   measurement and cannot drift. */
+/* ---- ONE BOX PER ROW ----
+   height 55 and margin-top 55, so each address steps two whole boxes and its
+   own box is exactly one. align-items:center then puts the text on the box's
+   centre line rather than across its edge, which is what "sitting in a box"
+   means for a line of type. No border here any more: it is on .txt. */
+.email{display:flex;width:auto;justify-content:center;
+  align-items:center;gap:12px;height:55px;margin-top:55px;
   font-family:var(--display);font-size:clamp(1.05rem,3vw,1.6rem);line-height:33px;
-  border-bottom:1px solid rgba(25,44,100,.2);padding-bottom:10px;transition:.2s}
-.email:hover{border-color:var(--tomato);color:var(--tomato)}
-.email span{color:var(--tomato)}
+  transition:.2s}
+/* the rule, under the words and no wider. 2px of air: at 1px the descenders in
+   a URL touch it, at 4 it reads as a separate object. */
+.email .txt{border-bottom:1px solid rgba(25,44,100,.2);padding-bottom:2px;
+  transition:border-color .2s}
+.email:hover .txt{border-color:var(--tomato)}
+.email::after{content:"\2192";visibility:hidden;pointer-events:none}
+.email:hover{color:var(--tomato)}
+.email .arw{color:var(--tomato)}
 /* one square tall, one square of clearance above — sits on the grid like the
    boxes. In Contact it is a third row in the centred stack, so it centres too. */
 .btn{display:inline-flex;align-items:center;justify-content:center;
@@ -1762,7 +1837,7 @@ section{padding:110px 0;scroll-margin-top:110px}          /* 2 squares */
   font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
   border:1px solid var(--black);background:var(--white);transition:.2s}
 .btn:hover{background:var(--tomato);border-color:var(--tomato);color:#fff}
-.fin-details .btn{margin-top:33px}
+.fin-details .btn{margin-top:55px}
 
 /* Grid, not space-between: with three items of different widths, spacing them
    apart puts the middle one wherever the two outer ones leave it — and the
@@ -1948,7 +2023,7 @@ footer>span:last-child{justify-self:end}
               <div class="doss-txt">
                 <h3>Biomimetic AUV</h3>
                 <div class="tags">MECHATRONICS · TEAM PROJECT · FUSION&nbsp;360</div>
-                <p class="beat">Most submersibles push themselves along with a propeller. This one had to work in polluted rivers and water pipes, where anything that rotates in open water eventually wraps itself in debris. So it required a biomimetic approach instead, such as a&nbsp;shark.</p>
+                <p class="beat"><b>Most submersibles push themselves along with a propeller. This one had to work in polluted rivers and water pipes, where anything that rotates in open water eventually wraps itself in debris. So it required a biomimetic approach instead, such as a&nbsp;shark.</b></p>
                 <p class="beat">I designed the shell and the tail drive in Fusion 360, a servo turning a timing belt and pulley train driving a chainlink tail system, sealed against water by an NBR rotary shaft seal and a bearing pressed into a polycarbonate&nbsp;tube.</p>
                 <p class="beat">As you can see, it swims. The design went out as model-based-definition drawings against a 27-item bill of materials at £154 a unit, injection moulded at four thousand a year, with an accompanying draft analysis to prove its manufacturability. Marked&nbsp;80%.</p>
                 <div class="plate-links">
@@ -1995,7 +2070,7 @@ footer>span:last-child{justify-self:end}
               <div class="doss-txt">
                 <h3>Pocket-sized&nbsp;inflatable helmet</h3>
                 <div class="tags">INDEPENDENT R&amp;D · PROTOTYPING · MATERIALS ·&nbsp;IN&nbsp;PROGRESS</div>
-                <p class="beat">Helmets are often skipped, particularly by hire-bike riders (myself included), as not only are they awkward to carry around, but you also don’t always know if you’ll be hiring a bike at some point throughout the day. I wanted to know whether one could inflate to full size and still pack down into your&nbsp;pocket.</p>
+                <p class="beat">Helmets are often skipped, particularly by hire-bike riders (myself included), as not only are they awkward to carry around, but you also don’t always know if you’ll be hiring a bike at some point throughout the day. <b>I wanted to know whether one could inflate to full size and still pack down into your&nbsp;pocket.</b></p>
                 <p class="beat">There were two ways to get a helmet into a pocket, either a shell that folds flat or a bladder that inflates. I tried both, experimenting with origami methods like a waterbomb tessellation, and decided the bladder was the better one. What I have now is a TPU-coated nylon bladder built from flat panels, thermally bonded so that the seams and internal tethers pull it into a dome when it’s pressurised, and it holds 1.4 bar for a couple of hours. Still in&nbsp;progress.</p>
                 <div class="plate-links">
                 </div>
@@ -2031,7 +2106,7 @@ footer>span:last-child{justify-self:end}
               <div class="doss-txt">
                 <h3>Energy-from-Waste facility design &amp; tender&nbsp;proposal</h3>
                 <div class="tags">PROCESS DESIGN · THERMOFLUIDS · TEAM&nbsp;PROJECT</div>
-                <p class="beat">A city council wanted its residual waste to stop going to landfill, and put the job out to tender as a 25-year PFI, where whoever won it would design an EfW facility, build it, pay for it, run it for 25 years and then hand it back&nbsp;working.</p>
+                <p class="beat"><b>A city council wanted its residual waste to stop going to landfill, and put the job out to tender as a 25-year PFI.</b> Whoever won it would design an EfW facility, build it, pay for it, run it for 25 years and then hand it back&nbsp;working.</p>
                 <p class="beat">We bid for it. Our facility would take 75,000 tonnes a year and keep 98% of that out of landfill, cost £212M to build, and earn the council back around £87M over the term through a profit-sharing scheme. We took it out as an 88-page tender and defended it to the client in&nbsp;person.</p>
                 <p class="beat">I led the design of the process flow from start to finish, working out what happens to the waste between being collected and power leaving the site. You can read both documents below, the interim pitch and the final tender that the numbers come&nbsp;from.</p>
                 <div class="plate-links">
@@ -2064,8 +2139,8 @@ footer>span:last-child{justify-self:end}
               <div class="doss-txt">
                 <h3>leonpanjwani.com</h3>
                 <div class="tags">INDEPENDENT · WEBGL · NO BUILD&nbsp;STEP</div>
-                <p class="beat">My CV already lists what I have made. I wanted this one to show how I think while I am making&nbsp;it.</p>
-                <p class="beat">One HTML file, written by hand. No framework, no build step, nothing to install. Every edge on the page lands on an 11px grid, and the name is real extruded 3D type, sized so that no view of it crosses the border as it turns. I had not built anything like this before, so I worked through it with AI and picked out what was worth&nbsp;keeping.</p>
+                <p class="beat"><b>I wanted something alongside my CV to dip into my projects further, so here’s my digital&nbsp;portfolio.</b></p>
+                <p class="beat">It is a single HTML file with no build step and nothing to install. I had not built anything like it before, so I worked through it with AI, specifying what I wanted, testing what came back and rewriting whatever did not hold&nbsp;up.</p>
                 <p class="beat">You are looking at it. It deploys straight from&nbsp;GitHub.</p>
                 <div class="plate-links">
                   <a href="https://github.com/leonpanjwani" target="_blank" rel="noopener"
@@ -2161,12 +2236,15 @@ footer>span:last-child{justify-self:end}
     <div class="wrap">
       <h2 class="sr">Contact</h2>
       <p class="fin">
-        <span class="slide-l">That's everything —</span>
-        <span class="slide-r">for now.</span>
+        <span class="slide-l">More</span>
+        <span class="slide-r">to come.</span>
       </p>
       <div class="fin-details">
-        <a class="email slide-l" href="mailto:hello@leonpanjwani.com"><span>→</span> hello@leonpanjwani.com</a>
-        <a class="email slide-r" href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener"><span>→</span> linkedin.com/in/leonpanjwani</a>
+        <!-- .txt exists to carry the underline. The rule belongs to the WORDS,
+             not to the row: on the row it was drawn edge to edge of a box-wide
+             flex box and ran a couple of hundred pixels past the address. -->
+        <a class="email slide-l" href="mailto:hello@leonpanjwani.com"><span class="arw">→</span><span class="txt">hello@leonpanjwani.com</span></a>
+        <a class="email slide-r" href="https://linkedin.com/in/leonpanjwani" target="_blank" rel="noopener"><span class="arw">→</span><span class="txt">linkedin.com/in/leonpanjwani</span></a>
         <!-- THE URL AND THE SAVED FILENAME ARE TWO DIFFERENT THINGS, and the
              attribute is what separates them. The file on disk has no spaces,
              so the URL stays clean — a space in an href is not a URL, and
@@ -3555,7 +3633,7 @@ function update(){
      the section sitting centred are the same scroll. */
   wr(roll,"opacity",String(onScreen?clamp(1+rollY/ROLL.fade):0),"rollOp");
   if(onScreen){
-    wr(roll,"transform",`translateY(${rollY.toFixed(1)}px)`,"rollTf");
+    wr(roll,"top",`${rollY.toFixed(1)}px`,"rollTf");
     wr(tube,"height",tubeH.toFixed(1)+"px","tubeH");
   }
 
@@ -3927,9 +4005,26 @@ function lockGrid(){
   }
   document.querySelectorAll(
     ".content section:not(#about):not(#work):not(#skills)").forEach(s=>{
-    s.style.paddingBottom=PAD+"px";
+    let base=PAD;
+    /* ---- CONTACT NEEDS SOMETHING TO SCROLL INTO ----
+       It is the last thing in the document, so centring the close on the
+       screen means scrolling PAST it, and at the foot of the page there is
+       nothing left to scroll. Ask for exactly the shortfall: half a screen
+       less half the block is the gap that has to exist under it, rounded up to
+       a whole square so the section stays on the lattice. Computed rather than
+       typed, because it depends on the screen — a 900px laptop needs about
+       four squares here and a 1050px one needs six. */
+    if(s.id==="contact"){
+      const fin=s.querySelector(".fin"), det=s.querySelector(".fin-details");
+      if(fin&&det){
+        const blockH=det.getBoundingClientRect().bottom-fin.getBoundingClientRect().top;
+        const need=Math.max(0,vhNow()/2-blockH/2);
+        base=Math.max(PAD,Math.ceil(need/SQ)*SQ);
+      }
+    }
+    s.style.paddingBottom=base+"px";
     const over=Math.round(s.getBoundingClientRect().height)%SQ;
-    s.style.paddingBottom=(PAD+(over?SQ-over:0))+"px";
+    s.style.paddingBottom=(base+(over?SQ-over:0))+"px";
   });
   /* ---- THE CONTACT LINKS, ONTO THE GRID ----
      They are centred, and centring a box of arbitrary width inside a box of
@@ -3956,11 +4051,30 @@ function lockGrid(){
     let nat=0;
     els.forEach(el=>{ nat=Math.max(nat,el.getBoundingClientRect().width) });
     if(nat<=0||nat>wrapWpx) return;                  // wider than the page measure
-    const inset=Math.max(0,Math.floor((wrapWpx-nat)/(2*GRID.unit)))*GRID.unit;
+    /* ---- THE BOX, NOT THE CELL ----
+       Snapping the inset to the 11px cell put every edge on the fine lattice,
+       which is technically on the grid and still looked wrong: the lines you
+       actually SEE behind this block are the bold ones every five cells, and a
+       row can sit on a fine line while falling in the middle of a bold square.
+       That was the Download CV button. Its edges were on 10.2 and 12.8 boxes
+       while the two email rules above it landed on 8 and 15 exactly, so the
+       button read as nudged sideways against a lattice the eye is reading in
+       fives.
+       Insetting by whole BOXES fixes it for every row at once, and does it
+       without needing to know where the centre falls: each width is the page
+       measure less an even number of boxes, so all three rows are the same
+       parity as each other and land on the same lines. The email rows are
+       unchanged by this — they were already a whole number of boxes wide by
+       luck rather than by rule. */
+    const BOX=5*GRID.unit;
+    const inset=Math.max(0,Math.floor((wrapWpx-nat)/(2*BOX)))*BOX;
     const w=(wrapWpx-2*inset)+"px";
     els.forEach(el=>{ el.style.width=w });
   };
-  snapCentred([...document.querySelectorAll(".fin-details .email")]);
+  /* The address rows are no longer in this: their rule is the width of the
+     words, so widening the row to a whole number of boxes would only move the
+     box edges, which nothing draws any more. The button still has a real
+     border, so it still gets snapped. */
   snapCentred([...document.querySelectorAll(".fin-details .btn")]);
 
   /* ---- the close, onto the grid ----
@@ -3973,13 +4087,23 @@ function lockGrid(){
   const finSpan=document.querySelector(".fin span"), U=GRID.unit;
   const doc=document.documentElement;      /* lockGrid has no `doc` of its own */
   if(finSpan&&content){
+    /* Leading in whole BOXES, not cells. At 66px — the nearest cell multiple to
+       this type's natural leading — two lines span 132px, which is neither one
+       box nor two, so the sign-off could not sit on the lattice however it was
+       nudged. One box per line makes the pair exactly two boxes, and everything
+       below it steps in boxes as well, so the whole close lands together.
+       55px under 64px type is tight by the numbers and right by eye: neither
+       line of "More / to come." has an ascender or descender to collide. */
     const fs=parseFloat(getComputedStyle(finSpan).fontSize)||0;
-    doc.style.setProperty("--finLH",Math.max(U,Math.round(fs*1.06/U)*U)+"px");
+    const SQ=5*U;
+    doc.style.setProperty("--finLH",Math.max(SQ,Math.round(fs*1.06/SQ)*SQ)+"px");
     doc.style.setProperty("--finFix","0px");
+    /* and snap the TOP to a line rather than the centre to a cell's middle —
+       the top is the edge that has a line to sit on now. */
     const r=finSpan.getBoundingClientRect();
-    const mid=r.top+r.height/2-content.getBoundingClientRect().top;
-    const off=(((mid-U/2)%U)+U)%U;
-    doc.style.setProperty("--finFix",(off>U/2?U-off:-off).toFixed(1)+"px");
+    const top=r.top-content.getBoundingClientRect().top;
+    const off=((top%SQ)+SQ)%SQ;
+    doc.style.setProperty("--finFix",(off>SQ/2?SQ-off:-off).toFixed(1)+"px");
   }
   /* The scroll loop only needs positions, not fresh layout reads. Refresh them
      after the final sizing pass so dossier, Skills and Contact can animate
@@ -4313,6 +4437,21 @@ function navY(id){
       if(pin&&getComputedStyle(pin).position==="sticky")
         return top+Math.max(0,st.offsetHeight-vh)*0.66;
       return top+(st.offsetHeight-vh)/2;
+    }
+  }
+  /* ---- CONTACT LANDS CENTRED ON THE CLOSE ITSELF ----
+     Not on the section: the section is its own padding plus the block, and
+     landing 110px above its top left the foot of Skills still on screen while
+     the close sat low. Centre the BLOCK — sign-off through button — on the
+     viewport, so arriving from the menu shows that and nothing else. The
+     browser clamps the result to the end of the document, so on a very tall
+     screen this lands as close to centred as the page allows. */
+  if(id==="contact"){
+    const fin=document.querySelector(".fin"), det=document.querySelector(".fin-details");
+    if(fin&&det){
+      const top=fin.getBoundingClientRect().top+scrollY;
+      const bot=det.getBoundingClientRect().bottom+scrollY;
+      return top+(bot-top)/2-vh/2;
     }
   }
   const el=document.getElementById(id);

@@ -255,6 +255,20 @@ placeholder frame shows, exactly as the project plates behave.
   2px clearance at every scroll position) and its top edge is never on screen.
   A bar at a fixed height would have had the wordmark hanging out of the bottom
   of it for the whole animation. Nothing is timed against anything.
+- **One edge moved by `clip-path`, another by `transform`, is how the roll and
+  the paper come apart.** clip-path needs a repaint; a transform does not, so the
+  compositor is free to present the tube in its new position over a stale raster
+  of the sheet, and under a fast scroll the paper's edge trails the roll. Both
+  are written from the same `rollY` in the same frame, so no amount of staring at
+  the JS finds it. `#roll` is driven by `top` for this reason: a layout property
+  puts it in the same commit as the clip. Do not "optimise" it back to a
+  transform.
+- **Measuring this needs a majority, not a sample.** Three attempts to detect the
+  fault from pixels all failed, each by trusting one pixel: the LAST blue row on
+  screen finds a navy folder tab further down the page; the FIRST non-blue row
+  finds a ruler tick 23px in; a row-majority scan that stops at the first
+  non-blue row stops at the frame line. Score whole rows and keep going.
+
 - **`headTop` is 0 on the phone and `U` on desktop, and everything else
   follows from it.** On desktop the islands float a cell down from the top —
   the inset is what makes them read as objects ON the page rather than as
@@ -280,6 +294,16 @@ placeholder frame shows, exactly as the project plates behave.
 
 ## Conventions
 
+- **No em or en dashes anywhere in reader-facing copy.** Where one feels
+  necessary the sentence usually wants a comma, a full stop, or a paired
+  construction (`either… or…`).
+- **No setup-then-payoff punctuation.** A colon or semicolon mid-sentence whose
+  second half is the interesting bit reads as advertising rather than as a
+  person talking: "We bid for it; 75,000 tonnes a year, 98% kept out of
+  landfill" had no verb in it at all. Make the withheld thing the subject of an
+  ordinary clause. It usually gets shorter.
+- Every `.beat` ends with `&nbsp;` between its last two words, so a paragraph
+  cannot strand one word on its own line in a narrow folder column.
 - Comments explain **why**, not what. This file is dense and the reasoning is
   the only thing that makes it maintainable — match that density.
 - Respect `prefers-reduced-motion`: the 3D canvas, dimensions, view label and
